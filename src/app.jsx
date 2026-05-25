@@ -6,6 +6,10 @@ const supabase = createClient(
   "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
 );
 
+const GOOGLE_CLIENT_ID = "508681493155-5msupgr4oi2sp66odsfnh4t3t6s99r0o.apps.googleusercontent.com";
+const CALENDAR_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+const CALENDAR_REDIRECT = "https://www.textreminder.co.uk/auth/calendar/callback";
+
 // ── Theme ──────────────────────────────────────────
 const T = {
   pink:"#ec4899", purple:"#a855f7", green:"#22c55e",
@@ -184,8 +188,6 @@ function HomePage({ onSignup, onLogin }) {
 
   return (
     <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:T.text, background:T.white }}>
-
-      {/* Nav */}
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(255,255,255,0.95)",
         backdropFilter:"blur(12px)", borderBottom:`1px solid ${T.border}`, padding:"0 24px" }}>
         <div style={{ maxWidth:1000, margin:"0 auto", display:"flex", alignItems:"center",
@@ -208,7 +210,6 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </nav>
 
-      {/* Hero */}
       <section style={{ background:"linear-gradient(160deg,#fdf4ff 0%,#faf5ff 50%,#f0fdf4 100%)",
         padding:"80px 24px 64px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-100, right:-100, width:500, height:500, borderRadius:"50%",
@@ -236,8 +237,7 @@ function HomePage({ onSignup, onLogin }) {
               {TRADES[tradeIdx]}
             </span>
           </div>
-          <p style={{ fontSize:15, color:T.muted, lineHeight:1.75, maxWidth:500,
-            margin:"0 auto 32px" }}>
+          <p style={{ fontSize:15, color:T.muted, lineHeight:1.75, maxWidth:500, margin:"0 auto 32px" }}>
             Connect your calendar. TextReminder sends automatic SMS, email and WhatsApp
             reminders 24 hours before every appointment.
           </p>
@@ -247,8 +247,6 @@ function HomePage({ onSignup, onLogin }) {
           </div>
           <div style={{ fontSize:12, color:T.muted }}>No credit card required · 14-day free trial · 5 minutes to set up</div>
         </div>
-
-        {/* SMS preview */}
         <div style={{ maxWidth:440, margin:"48px auto 0" }}>
           <div style={{ background:"#fff", borderRadius:20, padding:22,
             boxShadow:"0 20px 60px rgba(168,85,247,0.14)", border:`1px solid ${T.border}`,
@@ -288,7 +286,6 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </section>
 
-      {/* Trust bar */}
       <div style={{ background:"#fff", borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}`, padding:"16px 24px" }}>
         <div style={{ maxWidth:900, margin:"0 auto", display:"flex", alignItems:"center",
           justifyContent:"center", gap:28, flexWrap:"wrap" }}>
@@ -300,7 +297,6 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </div>
 
-      {/* Features */}
       <section style={{ padding:"72px 24px", background:T.light }}>
         <div style={{ maxWidth:1000, margin:"0 auto" }}>
           <div style={{ textAlign:"center", marginBottom:48 }}>
@@ -324,7 +320,6 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </section>
 
-      {/* How it works */}
       <section style={{ padding:"72px 24px", background:"#fff" }}>
         <div style={{ maxWidth:860, margin:"0 auto" }}>
           <h2 style={{ fontSize:"clamp(24px,4vw,36px)", fontWeight:800, textAlign:"center",
@@ -352,7 +347,6 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </section>
 
-      {/* Pricing */}
       <section style={{ padding:"72px 24px", background:T.light }}>
         <div style={{ maxWidth:960, margin:"0 auto" }}>
           <div style={{ textAlign:"center", marginBottom:48 }}>
@@ -394,8 +388,7 @@ function HomePage({ onSignup, onLogin }) {
                 <div style={{ fontSize:12, color:plan.popular?"rgba(255,255,255,0.4)":T.muted,
                   marginBottom:20 }}>{plan.msgs===999?"Unlimited":plan.msgs} reminders/month</div>
                 {plan.features.map((f,j)=>(
-                  <div key={j} style={{ display:"flex", alignItems:"center", gap:8,
-                    marginBottom:8, fontSize:12,
+                  <div key={j} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, fontSize:12,
                     color:plan.popular?"rgba(255,255,255,0.8)":"#374151" }}>
                     <span style={{ color:T.green, flexShrink:0 }}>&#x2713;</span>{f}
                   </div>
@@ -403,8 +396,7 @@ function HomePage({ onSignup, onLogin }) {
                 <button onClick={onSignup} style={{ width:"100%", marginTop:20,
                   background:plan.popular?"linear-gradient(135deg,#ec4899,"+T.purple+")":"#f3e8ff",
                   color:plan.popular?"#fff":T.purple, border:"none", borderRadius:10,
-                  padding:"11px", fontSize:13, fontWeight:700, cursor:"pointer",
-                  fontFamily:"inherit" }}>
+                  padding:"11px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                   Start Free Trial
                 </button>
               </div>
@@ -423,12 +415,10 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </section>
 
-      {/* CTA */}
       <section style={{ padding:"72px 24px", background:"linear-gradient(135deg,#0f172a,#1e0a3c)" }}>
         <div style={{ maxWidth:560, margin:"0 auto", textAlign:"center" }}>
           <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}><Logo size={56}/></div>
-          <h2 style={{ fontSize:"clamp(24px,4vw,38px)", fontWeight:800, color:"#fff",
-            marginBottom:12, lineHeight:1.15 }}>Stop losing jobs to no-shows</h2>
+          <h2 style={{ fontSize:"clamp(24px,4vw,38px)", fontWeight:800, color:"#fff", marginBottom:12, lineHeight:1.15 }}>Stop losing jobs to no-shows</h2>
           <p style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:30, lineHeight:1.75 }}>
             5 minutes to set up. Pays for itself the first time a customer actually turns up.
           </p>
@@ -439,7 +429,6 @@ function HomePage({ onSignup, onLogin }) {
         </div>
       </section>
 
-      {/* Footer */}
       <footer style={{ background:"#070412", padding:"24px" }}>
         <div style={{ maxWidth:1000, margin:"0 auto", display:"flex", alignItems:"center",
           justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
@@ -521,13 +510,10 @@ function AuthPage({ mode, onSuccess, onSwitch }) {
         </div>
         <div style={{ background:"#fff", borderRadius:16, padding:28,
           boxShadow:"0 4px 24px rgba(168,85,247,0.1)", border:`1px solid ${T.border}` }}>
-
-          {/* Google button */}
           <button onClick={handleGoogle} style={{ width:"100%", display:"flex", alignItems:"center",
             justifyContent:"center", gap:10, padding:"11px 16px", borderRadius:10,
             border:"1px solid #e2e8f0", background:"#fff", fontSize:14, fontWeight:600,
-            color:"#374151", cursor:"pointer", fontFamily:"inherit", marginBottom:16,
-            transition:"all 0.2s" }}>
+            color:"#374151", cursor:"pointer", fontFamily:"inherit", marginBottom:16, transition:"all 0.2s" }}>
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 8 2.9l6-6C34.5 3.2 29.6 1 24 1 14.6 1 6.7 6.7 3.2 14.8l7 5.4C12 14.2 17.5 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-17.4z"/>
@@ -536,33 +522,28 @@ function AuthPage({ mode, onSuccess, onSwitch }) {
             </svg>
             Continue with Google
           </button>
-
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
             <div style={{ flex:1, height:1, background:T.border }}/>
             <div style={{ fontSize:11, color:T.muted, fontWeight:600 }}>OR</div>
             <div style={{ flex:1, height:1, background:T.border }}/>
           </div>
-
           <form onSubmit={handle}>
             {mode==="signup" && (
               <div style={{ marginBottom:14 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:"#475569", letterSpacing:"0.5px",
                   textTransform:"uppercase", marginBottom:6 }}>Business Name</div>
-                <Input value={business} onChange={e=>setBusiness(e.target.value)}
-                  placeholder="e.g. Four Shires Window Cleaning"/>
+                <Input value={business} onChange={e=>setBusiness(e.target.value)} placeholder="e.g. Four Shires Window Cleaning"/>
               </div>
             )}
             <div style={{ marginBottom:14 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#475569", letterSpacing:"0.5px",
                 textTransform:"uppercase", marginBottom:6 }}>Email</div>
-              <Input type="email" value={email} onChange={e=>setEmail(e.target.value)}
-                placeholder="you@example.com"/>
+              <Input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
             </div>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#475569", letterSpacing:"0.5px",
                 textTransform:"uppercase", marginBottom:6 }}>Password</div>
-              <Input type="password" value={password} onChange={e=>setPassword(e.target.value)}
-                placeholder="6+ characters"/>
+              <Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="6+ characters"/>
             </div>
             {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8,
               padding:"10px 12px", fontSize:13, color:"#dc2626", marginBottom:16 }}>{error}</div>}
@@ -594,8 +575,7 @@ function DashLayout({ page, setPage, user, onSignOut, children }) {
     { id:"settings",  icon:"⚙️", label:"Settings"     },
   ];
   return (
-    <div style={{ display:"flex", minHeight:"100vh", background:T.light,
-      fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
+    <div style={{ display:"flex", minHeight:"100vh", background:T.light, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
       <div style={{ width:220, background:"#0f172a", display:"flex", flexDirection:"column",
         flexShrink:0, position:"sticky", top:0, height:"100vh" }}>
         <div style={{ padding:"22px 18px 18px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
@@ -613,13 +593,11 @@ function DashLayout({ page, setPage, user, onSignOut, children }) {
         <nav style={{ padding:"14px 10px", flex:1 }}>
           {nav.map(n=>(
             <button key={n.id} onClick={()=>setPage(n.id)} style={{
-              display:"flex", alignItems:"center", gap:10,
-              padding:"9px 10px", borderRadius:8, marginBottom:2,
+              display:"flex", alignItems:"center", gap:10, padding:"9px 10px", borderRadius:8, marginBottom:2,
               fontSize:13, fontWeight:page===n.id?600:400,
               color:page===n.id?"#fff":"rgba(255,255,255,0.45)",
               background:page===n.id?"rgba(255,255,255,0.08)":"transparent",
-              border:"none", width:"100%", textAlign:"left", cursor:"pointer",
-              fontFamily:"inherit", transition:"all 0.15s",
+              border:"none", width:"100%", textAlign:"left", cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s",
             }}>
               <span style={{ fontSize:14 }}>{n.icon}</span>{n.label}
             </button>
@@ -629,8 +607,7 @@ function DashLayout({ page, setPage, user, onSignOut, children }) {
           <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:2,
             overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user?.email}</div>
           <button onClick={onSignOut} style={{ background:"none", border:"none",
-            color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer",
-            padding:0, fontFamily:"inherit", marginTop:4 }}>Sign out</button>
+            color:"rgba(255,255,255,0.3)", fontSize:12, cursor:"pointer", padding:0, fontFamily:"inherit", marginTop:4 }}>Sign out</button>
         </div>
       </div>
       <div style={{ flex:1, padding:"28px 32px", overflowY:"auto" }}>{children}</div>
@@ -662,10 +639,10 @@ function Dashboard({ user }) {
   const trialDays = profile?.trial_ends_at ? Math.max(0,Math.ceil((new Date(profile.trial_ends_at)-new Date())/(1000*60*60*24))) : 0;
 
   const stats = [
-    { icon:"📤", label:"Reminders sent",  value:sent,             sub:"All time" },
-    { icon:"👥", label:"Contacts",         value:contacts.length,  sub:"Active customers" },
+    { icon:"📤", label:"Reminders sent",  value:sent,            sub:"All time" },
+    { icon:"👥", label:"Contacts",         value:contacts.length, sub:"Active customers" },
     { icon:"📅", label:"This month",       value:reminders.filter(r=>new Date(r.created_at).getMonth()===new Date().getMonth()).length, sub:"Reminders sent" },
-    { icon:"⏰", label:"Trial days left",  value:trialDays,        sub:"Then £20/month" },
+    { icon:"⏰", label:"Trial days left",  value:trialDays,       sub:"Then £20/month" },
   ];
 
   if (loading) return <div style={{ textAlign:"center", padding:60, color:T.muted }}>Loading...</div>;
@@ -678,8 +655,7 @@ function Dashboard({ user }) {
       </div>
       {profile?.plan==="trial" && trialDays > 0 && (
         <div style={{ background:"linear-gradient(135deg,#fdf4ff,#faf5ff)", border:`1px solid ${T.border}`,
-          borderRadius:12, padding:"12px 18px", marginBottom:24, display:"flex",
-          alignItems:"center", justifyContent:"space-between" }}>
+          borderRadius:12, padding:"12px 18px", marginBottom:24, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ fontSize:13, color:"#7c3aed" }}><strong>{trialDays} days</strong> left on your free trial</div>
           <button style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", color:"#fff",
             borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, border:"none", cursor:"pointer" }}>
@@ -763,7 +739,6 @@ function Contacts({ user }) {
         </div>
         <Btn onClick={()=>setShowAdd(true)} style={{ padding:"9px 18px", fontSize:13 }}>+ Add Contact</Btn>
       </div>
-
       {showAdd && (
         <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.5)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}
@@ -789,7 +764,6 @@ function Contacts({ user }) {
           </div>
         </div>
       )}
-
       <Card>
         <div style={{ display:"grid", gridTemplateColumns:"2fr 1.5fr 1.5fr 80px",
           padding:"10px 20px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", gap:12 }}>
@@ -873,7 +847,7 @@ function MessageLog({ user }) {
 
 // ── UPCOMING ──────────────────────────────────────────
 function Upcoming({ user }) {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents]   = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -920,8 +894,7 @@ function Upcoming({ user }) {
                 </div>
               </div>
               <span style={{ display:"inline-block", background:isToday?"#fef3c7":"#f1f5f9",
-                color:isToday?"#92400e":"#475569", fontSize:11, fontWeight:700,
-                padding:"3px 8px", borderRadius:6 }}>
+                color:isToday?"#92400e":"#475569", fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:6 }}>
                 {isToday?"Today":"Upcoming"}
               </span>
             </div>
@@ -933,15 +906,15 @@ function Upcoming({ user }) {
 }
 
 // ── SETTINGS ──────────────────────────────────────────
-function Settings({ user }) {
+function Settings({ user, onCalendarConnected }) {
   const [form, setForm] = useState({
     business_name:"", phone:"",
     message_template:"Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.",
     reminder_hours:24,
   });
-  const [profile, setProfile]   = useState(null);
-  const [saving, setSaving]     = useState(false);
-  const [saved, setSaved]       = useState(false);
+  const [profile, setProfile]         = useState(null);
+  const [saving, setSaving]           = useState(false);
+  const [saved, setSaved]             = useState(false);
   const [calConnecting, setCalConnecting] = useState(false);
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
@@ -966,21 +939,22 @@ function Settings({ user }) {
     setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),2500);
   }
 
-  async function connectGoogleCalendar() {
+  function connectGoogleCalendar() {
     setCalConnecting(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: "https://www.textreminder.co.uk",
-        scopes: "https://www.googleapis.com/auth/calendar.readonly",
-        queryParams: { access_type: "offline", prompt: "consent" },
-      }
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: CALENDAR_REDIRECT,
+      response_type: "code",
+      scope: CALENDAR_SCOPES,
+      access_type: "offline",
+      prompt: "consent",
+      state: user.id,
     });
-    if (error) { alert("Failed to connect Google Calendar. Please try again."); setCalConnecting(false); }
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   }
 
   async function disconnectCalendar() {
-    await supabase.from("profiles").update({ calendar_provider:null, google_refresh_token:null }).eq("id",user.id);
+    await supabase.from("profiles").update({ calendar_provider:null, google_access_token:null, google_refresh_token:null }).eq("id",user.id);
     setProfile(p=>({...p, calendar_provider:null}));
   }
 
@@ -1044,8 +1018,6 @@ function Settings({ user }) {
 
       <SectionWrap title="Calendar Connection" sub="Connect your calendar to automatically import appointments">
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
-
-          {/* Google Calendar */}
           <div style={{ border:`1px solid ${profile?.calendar_provider==="google"?T.green:T.border}`,
             borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
             <div style={{ fontSize:24, marginBottom:6 }}>📅</div>
@@ -1066,27 +1038,20 @@ function Settings({ user }) {
               </button>
             )}
           </div>
-
-          {/* Apple Calendar */}
-          <div style={{ border:`1px solid ${T.border}`, borderRadius:10,
-            padding:"14px 16px", textAlign:"center", background:"#fff" }}>
+          <div style={{ border:`1px solid ${T.border}`, borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
             <div style={{ fontSize:24, marginBottom:6 }}>🍎</div>
             <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>Apple Calendar</div>
             <button style={{ fontSize:11, fontWeight:700, color:T.muted, background:"none",
               border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
               cursor:"not-allowed", fontFamily:"inherit" }}>Coming Soon</button>
           </div>
-
-          {/* Outlook */}
-          <div style={{ border:`1px solid ${T.border}`, borderRadius:10,
-            padding:"14px 16px", textAlign:"center", background:"#fff" }}>
+          <div style={{ border:`1px solid ${T.border}`, borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
             <div style={{ fontSize:24, marginBottom:6 }}>💼</div>
             <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>Outlook</div>
             <button style={{ fontSize:11, fontWeight:700, color:T.muted, background:"none",
               border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
               cursor:"not-allowed", fontFamily:"inherit" }}>Coming Soon</button>
           </div>
-
         </div>
       </SectionWrap>
 
@@ -1106,12 +1071,27 @@ function Settings({ user }) {
 
 // ── MAIN APP ──────────────────────────────────────────
 export default function App() {
-  const [view, setView]   = useState("home");
-  const [user, setUser]   = useState(null);
+  const [view, setView]       = useState("home");
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [dashPage, setDashPage] = useState("dashboard");
 
   useEffect(()=>{
+    // Check for Google Calendar OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    const code  = params.get("code");
+    const state = params.get("state");
+
+    if (code && state) {
+      // Save calendar connection to profile
+      supabase.from("profiles")
+        .update({ calendar_provider:"google", google_access_token: code })
+        .eq("id", state)
+        .then(()=>{
+          window.history.replaceState({}, "", "/");
+        });
+    }
+
     supabase.auth.getSession().then(({data:{session}})=>{
       setUser(session?.user??null);
       if(session?.user) setView("app");
