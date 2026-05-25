@@ -939,24 +939,49 @@ function Settings({ user }) {
     message_template:"Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.",
     reminder_hours:24,
   });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
+  const [profile, setProfile]   = useState(null);
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [calConnecting, setCalConnecting] = useState(false);
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
   useEffect(()=>{
     supabase.from("profiles").select("*").eq("id",user.id).single()
-      .then(({data})=>{ if(data) setForm(p=>({...p,
-        business_name:data.business_name||"",
-        phone:data.phone||"",
-        message_template:data.message_template||p.message_template,
-        reminder_hours:data.reminder_hours||24,
-      })); });
+      .then(({data})=>{
+        if(data) {
+          setProfile(data);
+          setForm(p=>({...p,
+            business_name:data.business_name||"",
+            phone:data.phone||"",
+            message_template:data.message_template||p.message_template,
+            reminder_hours:data.reminder_hours||24,
+          }));
+        }
+      });
   },[]);
 
   async function save() {
     setSaving(true);
     await supabase.from("profiles").update(form).eq("id",user.id);
     setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),2500);
+  }
+
+  async function connectGoogleCalendar() {
+    setCalConnecting(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://www.textreminder.co.uk",
+        scopes: "https://www.googleapis.com/auth/calendar.readonly",
+        queryParams: { access_type: "offline", prompt: "consent" },
+      }
+    });
+    if (error) { alert("Failed to connect Google Calendar. Please try again."); setCalConnecting(false); }
+  }
+
+  async function disconnectCalendar() {
+    await supabase.from("profiles").update({ calendar_provider:null, google_refresh_token:null }).eq("id",user.id);
+    setProfile(p=>({...p, calendar_provider:null}));
   }
 
   const SectionWrap = ({title,sub,children})=>(
@@ -1019,20 +1044,49 @@ function Settings({ user }) {
 
       <SectionWrap title="Calendar Connection" sub="Connect your calendar to automatically import appointments">
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
-          {[
-            {k:"google",icon:"📅",label:"Google Calendar"},
-            {k:"apple",icon:"🍎",label:"Apple Calendar"},
-            {k:"outlook",icon:"💼",label:"Outlook"},
-          ].map(cal=>(
-            <div key={cal.k} style={{ border:`1px solid ${T.border}`, borderRadius:10,
-              padding:"14px 16px", textAlign:"center", background:"#fff" }}>
-              <div style={{ fontSize:24, marginBottom:6 }}>{cal.icon}</div>
-              <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>{cal.label}</div>
-              <button style={{ fontSize:11, fontWeight:700, color:T.purple, background:"none",
-                border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
-                cursor:"pointer", fontFamily:"inherit" }}>Connect</button>
-            </div>
-          ))}
+
+          {/* Google Calendar */}
+          <div style={{ border:`1px solid ${profile?.calendar_provider==="google"?T.green:T.border}`,
+            borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
+            <div style={{ fontSize:24, marginBottom:6 }}>📅</div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:4 }}>Google Calendar</div>
+            {profile?.calendar_provider==="google" ? (
+              <>
+                <div style={{ fontSize:11, color:T.green, fontWeight:700, marginBottom:8 }}>✓ Connected</div>
+                <button onClick={disconnectCalendar} style={{ fontSize:11, fontWeight:700, color:"#dc2626",
+                  background:"none", border:"1px solid #fee2e2", borderRadius:6, padding:"5px 12px",
+                  cursor:"pointer", fontFamily:"inherit" }}>Disconnect</button>
+              </>
+            ) : (
+              <button onClick={connectGoogleCalendar} disabled={calConnecting}
+                style={{ fontSize:11, fontWeight:700, color:T.purple, background:"none",
+                  border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
+                  cursor:"pointer", fontFamily:"inherit", opacity:calConnecting?0.5:1 }}>
+                {calConnecting?"Connecting...":"Connect"}
+              </button>
+            )}
+          </div>
+
+          {/* Apple Calendar */}
+          <div style={{ border:`1px solid ${T.border}`, borderRadius:10,
+            padding:"14px 16px", textAlign:"center", background:"#fff" }}>
+            <div style={{ fontSize:24, marginBottom:6 }}>🍎</div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>Apple Calendar</div>
+            <button style={{ fontSize:11, fontWeight:700, color:T.muted, background:"none",
+              border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
+              cursor:"not-allowed", fontFamily:"inherit" }}>Coming Soon</button>
+          </div>
+
+          {/* Outlook */}
+          <div style={{ border:`1px solid ${T.border}`, borderRadius:10,
+            padding:"14px 16px", textAlign:"center", background:"#fff" }}>
+            <div style={{ fontSize:24, marginBottom:6 }}>💼</div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>Outlook</div>
+            <button style={{ fontSize:11, fontWeight:700, color:T.muted, background:"none",
+              border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
+              cursor:"not-allowed", fontFamily:"inherit" }}>Coming Soon</button>
+          </div>
+
         </div>
       </SectionWrap>
 
