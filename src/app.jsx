@@ -420,31 +420,7 @@ function HomePage({ onSignup, onLogin }) {
               <strong>Pro and Business plans:</strong> unused reminders roll over for one month so you never waste your allowance.
             </div>
           </div>
-          <div style={{ background:"linear-gradient(135deg,#0f172a,#1e0a3c)", borderRadius:20,
-            padding:"36px 32px", marginBottom:16 }}>
-            <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", letterSpacing:"2px",
-              textTransform:"uppercase", marginBottom:6 }}>Monthly</div>
-            <div style={{ fontSize:52, fontWeight:900, color:"#fff", lineHeight:1,
-              marginBottom:4 }}>£20<span style={{ fontSize:20, fontWeight:400,
-                color:"rgba(255,255,255,0.4)" }}>/month</span></div>
-            <div style={{ fontSize:13, color:"rgba(255,255,255,0.4)", marginBottom:24 }}>
-              or £180/year — save two months
-            </div>
-            {["Google, Apple & Outlook Calendar","SMS, Email & WhatsApp","Unlimited contacts",
-              "AI support assistant","Full message log","14-day free trial"].map((f,i)=>(
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:9, marginBottom:9 }}>
-                <span style={{ color:T.green }}>✓</span>
-                <span style={{ fontSize:13, color:"rgba(255,255,255,0.8)" }}>{f}</span>
-              </div>
-            ))}
-            <Btn onClick={onSignup} style={{ width:"100%", marginTop:22, fontSize:15, padding:15 }}>
-              Start Free Trial →
-            </Btn>
-            <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", marginTop:10 }}>
-              14-day free trial · No credit card required
-            </div>
-          </div>
-        </div>
+                  </div>
       </section>
 
       {/* CTA */}
