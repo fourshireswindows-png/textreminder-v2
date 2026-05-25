@@ -420,7 +420,7 @@ function HomePage({ onSignup, onLogin }) {
               <strong>Pro and Business plans:</strong> unused reminders roll over for one month so you never waste your allowance.
             </div>
           </div>
-                  </div>
+        </div>
       </section>
 
       {/* CTA */}
@@ -465,6 +465,13 @@ function AuthPage({ mode, onSuccess, onSwitch }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+
+  async function handleGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "https://www.textreminder.co.uk" }
+    });
+  }
 
   async function handle(e) {
     e.preventDefault();
@@ -514,6 +521,28 @@ function AuthPage({ mode, onSuccess, onSwitch }) {
         </div>
         <div style={{ background:"#fff", borderRadius:16, padding:28,
           boxShadow:"0 4px 24px rgba(168,85,247,0.1)", border:`1px solid ${T.border}` }}>
+
+          {/* Google button */}
+          <button onClick={handleGoogle} style={{ width:"100%", display:"flex", alignItems:"center",
+            justifyContent:"center", gap:10, padding:"11px 16px", borderRadius:10,
+            border:"1px solid #e2e8f0", background:"#fff", fontSize:14, fontWeight:600,
+            color:"#374151", cursor:"pointer", fontFamily:"inherit", marginBottom:16,
+            transition:"all 0.2s" }}>
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 8 2.9l6-6C34.5 3.2 29.6 1 24 1 14.6 1 6.7 6.7 3.2 14.8l7 5.4C12 14.2 17.5 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-17.4z"/>
+              <path fill="#FBBC05" d="M10.2 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.7-4.6l-7-5.4A23.9 23.9 0 0 0 0 24c0 3.9.9 7.6 2.6 10.8l7.6-6.2z"/>
+              <path fill="#34A853" d="M24 47c5.6 0 10.3-1.8 13.8-5l-7.4-5.7c-1.9 1.3-4.3 2.1-6.9 2.1-6.4 0-11.9-4.7-13.7-11.1l-7.6 6.2C6.7 41.3 14.6 47 24 47z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+            <div style={{ flex:1, height:1, background:T.border }}/>
+            <div style={{ fontSize:11, color:T.muted, fontWeight:600 }}>OR</div>
+            <div style={{ flex:1, height:1, background:T.border }}/>
+          </div>
+
           <form onSubmit={handle}>
             {mode==="signup" && (
               <div style={{ marginBottom:14 }}>
