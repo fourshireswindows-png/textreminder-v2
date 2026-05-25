@@ -1,0 +1,49 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #f8fafc; color: #0f172a; }
+input, textarea, select, button { font-family: inherit; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+a { text-decoration: none; color: inherit; }
+
+.btn-primary {
+  background: linear-gradient(135deg, #ec4899, #a855f7);
+  color: #fff; border: none; border-radius: 10px;
+  padding: 12px 24px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(168,85,247,0.3);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(168,85,247,0.45); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-outline {
+  background: transparent; color: #a855f7;
+  border: 2px solid #a855f7; border-radius: 10px;
+  padding: 11px 24px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-outline:hover { background: #a855f7; color: #fff; }
+
+.card {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 14px; overflow: hidden;
+}
+
+.input {
+  width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 10px 13px; font-size: 14px; color: #0f172a;
+  outline: none; background: #fff; transition: border-color 0.15s;
+}
+.input:focus { border-color: #a855f7; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
