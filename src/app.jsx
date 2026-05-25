@@ -565,6 +565,91 @@ function AuthPage({ mode, onSuccess, onSwitch }) {
   );
 }
 
+// ── UPGRADE PAGE ──────────────────────────────────────
+function UpgradePage({ user }) {
+  const plans = [
+    {
+      name:"Starter", price:"£9.99", msgs:40, popular:false,
+      features:["40 reminders/month","SMS, Email & WhatsApp","All calendar types","Message log","AI support"],
+    },
+    {
+      name:"Pro", price:"£19.99", msgs:100, popular:true,
+      features:["100 reminders/month","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","AI support"],
+    },
+    {
+      name:"Business", price:"£34.99", msgs:250, popular:false,
+      features:["250 reminders/month","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","Priority support"],
+    },
+    {
+      name:"Enterprise", price:"£59.99", msgs:999, popular:false,
+      features:["Unlimited reminders","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","Priority support"],
+    },
+  ];
+
+  return (
+    <div>
+      <div style={{ marginBottom:32 }}>
+        <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Upgrade Your Plan</h1>
+        <p style={{ fontSize:13, color:T.muted }}>Choose the plan that suits your business. All plans include a 14-day free trial.</p>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+        {plans.map((p,i)=>(
+          <div key={i} style={{
+            background:p.popular?"linear-gradient(135deg,#0f172a,#1e0a3c)":"#fff",
+            border:p.popular?`2px solid ${T.purple}`:`1px solid ${T.border}`,
+            borderRadius:16, padding:"24px 20px", position:"relative",
+          }}>
+            {p.popular && (
+              <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)",
+                background:"linear-gradient(135deg,#ec4899,#a855f7)", color:"#fff",
+                fontSize:10, fontWeight:700, padding:"4px 12px", borderRadius:20,
+                letterSpacing:"1px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
+                Most Popular
+              </div>
+            )}
+            <div style={{ fontSize:13, fontWeight:700, color:p.popular?"rgba(255,255,255,0.6)":T.muted,
+              textTransform:"uppercase", letterSpacing:"1px", marginBottom:8 }}>{p.name}</div>
+            <div style={{ fontSize:36, fontWeight:800, color:p.popular?"#fff":T.text, lineHeight:1, marginBottom:4 }}>
+              {p.price}<span style={{ fontSize:14, fontWeight:400, color:p.popular?"rgba(255,255,255,0.4)":T.muted }}>/mo</span>
+            </div>
+            <div style={{ fontSize:12, color:p.popular?"rgba(255,255,255,0.4)":T.muted, marginBottom:20 }}>
+              {p.msgs===999?"Unlimited":p.msgs} reminders/month
+            </div>
+            {p.features.map((f,j)=>(
+              <div key={j} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8,
+                fontSize:12, color:p.popular?"rgba(255,255,255,0.8)":"#374151" }}>
+                <span style={{ color:T.green, flexShrink:0 }}>✓</span>{f}
+              </div>
+            ))}
+            <button style={{
+              width:"100%", marginTop:20,
+              background:p.popular?"linear-gradient(135deg,#ec4899,#a855f7)":"#f3e8ff",
+              color:p.popular?"#fff":T.purple,
+              border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:700,
+              cursor:"pointer", fontFamily:"inherit",
+            }}>
+              Select {p.name}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background:"#fef9c3", borderRadius:12, padding:"14px 18px",
+        display:"flex", alignItems:"center", gap:12 }}>
+        <span style={{ fontSize:20 }}>💡</span>
+        <div style={{ fontSize:13, color:"#713f12" }}>
+          <strong>Pro and Business plans:</strong> unused reminders roll over for one month so you never waste your allowance.
+        </div>
+      </div>
+
+      <div style={{ textAlign:"center", marginTop:20, fontSize:12, color:T.muted }}>
+        Payments coming soon · Questions? Email <a href="mailto:hello@textreminder.co.uk" style={{ color:T.purple }}>hello@textreminder.co.uk</a>
+      </div>
+    </div>
+  );
+}
+
 // ── DASHBOARD LAYOUT ─────────────────────────────────
 function DashLayout({ page, setPage, user, onSignOut, children }) {
   const nav = [
@@ -573,6 +658,7 @@ function DashLayout({ page, setPage, user, onSignOut, children }) {
     { id:"contacts",  icon:"👥", label:"Contacts"     },
     { id:"log",       icon:"📋", label:"Message Log"  },
     { id:"settings",  icon:"⚙️", label:"Settings"     },
+    { id:"upgrade",   icon:"⚡", label:"Upgrade"      },
   ];
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:T.light, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
@@ -616,7 +702,7 @@ function DashLayout({ page, setPage, user, onSignOut, children }) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────
-function Dashboard({ user }) {
+function Dashboard({ user, setDashPage }) {
   const [reminders, setReminders] = useState([]);
   const [contacts, setContacts]   = useState([]);
   const [profile, setProfile]     = useState(null);
@@ -657,9 +743,9 @@ function Dashboard({ user }) {
         <div style={{ background:"linear-gradient(135deg,#fdf4ff,#faf5ff)", border:`1px solid ${T.border}`,
           borderRadius:12, padding:"12px 18px", marginBottom:24, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ fontSize:13, color:"#7c3aed" }}><strong>{trialDays} days</strong> left on your free trial</div>
-          <button style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", color:"#fff",
+          <button onClick={()=>setDashPage("upgrade")} style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", color:"#fff",
             borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, border:"none", cursor:"pointer" }}>
-            Upgrade — £20/month
+            Upgrade
           </button>
         </div>
       )}
@@ -1136,11 +1222,12 @@ export default function App() {
   if (view==="app" && user) return (
     <>
       <DashLayout page={dashPage} setPage={setDashPage} user={user} onSignOut={signOut}>
-        {dashPage==="dashboard" && <Dashboard user={user}/>}
+        {dashPage==="dashboard" && <Dashboard user={user} setDashPage={setDashPage}/>}
         {dashPage==="upcoming"  && <Upcoming user={user}/>}
         {dashPage==="contacts"  && <Contacts user={user}/>}
         {dashPage==="log"       && <MessageLog user={user}/>}
         {dashPage==="settings"  && <Settings user={user}/>}
+        {dashPage==="upgrade"   && <UpgradePage user={user}/>}
       </DashLayout>
       <AiChat/>
     </>
