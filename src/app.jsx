@@ -1170,13 +1170,28 @@ export default function App() {
 
     if (code && state) {
       // Save calendar connection to profile
-      supabase.from("profiles")
-        .update({ calendar_provider:"google", google_access_token: code })
-        .eq("id", state)
-        .then(()=>{
-          window.history.replaceState({}, "", "/");
-        });
+       fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ code, user_id: state })
+})
+  .then(async (res) => {
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Calendar connection failed:", data);
+      alert("Calendar connection failed. Please try again.");
+      return;
     }
+
+    console.log("Calendar connected:", data);
+    window.history.replaceState({}, "", "/");
+    window.location.href = "/";
+  })
+  .catch((err) => {
+    console.error("Calendar connection error:", err);
+    alert("Calendar connection failed. Please try again.");
+  });   }
 
     supabase.auth.getSession().then(({data:{session}})=>{
       setUser(session?.user??null);
