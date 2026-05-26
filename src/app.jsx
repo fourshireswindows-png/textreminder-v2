@@ -8,7 +8,7 @@ const supabase = createClient(
 
 const GOOGLE_CLIENT_ID = "508681493155-5msupgr4oi2sp66odsfnh4t3t6s99r0o.apps.googleusercontent.com";
 const CALENDAR_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
-const CALENDAR_REDIRECT = "https://www.textreminder.co.uk";
+const CALENDAR_REDIRECT = "https://www.textreminder.co.uk/";
 // ── Theme ──────────────────────────────────────────
 const T = {
   pink:"#ec4899", purple:"#a855f7", green:"#22c55e",
