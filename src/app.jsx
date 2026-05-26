@@ -1162,13 +1162,16 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [dashPage, setDashPage] = useState("dashboard");
 
+  const calendarCallbackRan = useRef(false);
+
   useEffect(()=>{
     // Check for Google Calendar OAuth callback
     const params = new URLSearchParams(window.location.search);
     const code  = params.get("code");
     const state = params.get("state");
 
-    if (code && state) {
+    if (code && state && !calendarCallbackRan.current) {
+      calendarCallbackRan.current = true;
       // Clear the URL params immediately so we don't re-run on reload
       window.history.replaceState({}, "", "/");
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1190,7 +1193,7 @@ export default function App() {
               return;
             }
             console.log("Calendar connected:", data);
-            alert("Google Calendar connected successfully!");
+            alert("Google Calendar connected successfully! Check the Upcoming tab.");
           })
           .catch((err) => {
             console.error("Calendar connection error:", err);
