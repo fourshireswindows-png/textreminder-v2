@@ -8,7 +8,7 @@ const supabase = createClient(
 
 const GOOGLE_CLIENT_ID = "508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com";
 const CALENDAR_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
-const CALENDAR_REDIRECT = "const CALENDAR_REDIRECT = "https://www.textreminder.co.uk";
+const CALENDAR_REDIRECT = "https://www.textreminder.co.uk/auth/calendar/callback";
 
 // ── Theme ──────────────────────────────────────────
 const T = {
@@ -1169,6 +1169,8 @@ export default function App() {
     const state = params.get("state");
 
     if (code && state) {
+      // Clear the URL params immediately so we don't re-run on reload
+      window.history.replaceState({}, "", "/");
       supabase.auth.getSession().then(({ data: { session } }) => {
         const jwt = session?.access_token ?? "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO";
         fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
@@ -1188,8 +1190,7 @@ export default function App() {
               return;
             }
             console.log("Calendar connected:", data);
-            window.history.replaceState({}, "", "/");
-            window.location.href = "/";
+            alert("Google Calendar connected successfully!");
           })
           .catch((err) => {
             console.error("Calendar connection error:", err);
