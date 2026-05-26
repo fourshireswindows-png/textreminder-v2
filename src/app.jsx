@@ -1169,29 +1169,33 @@ export default function App() {
     const state = params.get("state");
 
     if (code && state) {
-      fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
-        },
-        body: JSON.stringify({ code, user_id: state })
-      })
-        .then(async (res) => {
-          const data = await res.json();
-          if (!res.ok) {
-            console.error("Calendar connection failed:", data);
-            alert("Calendar connection failed. Please try again.");
-            return;
-          }
-          console.log("Calendar connected:", data);
-          window.history.replaceState({}, "", "/");
-          window.location.href = "/";
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const jwt = session?.access_token ?? "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO";
+        fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${jwt}`,
+            "apikey": "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
+          },
+          body: JSON.stringify({ code, user_id: state })
         })
-        .catch((err) => {
-          console.error("Calendar connection error:", err);
-          alert("Calendar connection failed. Please try again.");
-        });
+          .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) {
+              console.error("Calendar connection failed:", data);
+              alert("Calendar connection failed. Please try again.");
+              return;
+            }
+            console.log("Calendar connected:", data);
+            window.history.replaceState({}, "", "/");
+            window.location.href = "/";
+          })
+          .catch((err) => {
+            console.error("Calendar connection error:", err);
+            alert("Calendar connection failed. Please try again.");
+          });
+      });
     }
 
     supabase.auth.getSession().then(({data:{session}})=>{
