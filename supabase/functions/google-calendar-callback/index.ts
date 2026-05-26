@@ -29,7 +29,7 @@ serve(async (req) => {
     const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
     const GOOGLE_REDIRECT_URI  = Deno.env.get("GOOGLE_REDIRECT_URI")!;
     const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
-    const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const SUPABASE_SERVICE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
 
     // ── Step 1: Exchange code for tokens ──────────────────────────────
     let tokenData: any;

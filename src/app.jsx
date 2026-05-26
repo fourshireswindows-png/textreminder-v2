@@ -6,7 +6,10 @@ const supabase = createClient(
   "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
 );
 
-const GOOGLE_CLIENT_ID =  "508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com";
+const CALENDAR_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+const CALENDAR_REDIRECT = "https://www.textreminder.co.uk/auth/calendar/callback";
+
 // ── Theme ──────────────────────────────────────────
 const T = {
   pink:"#ec4899", purple:"#a855f7", green:"#22c55e",
@@ -1161,38 +1164,35 @@ export default function App() {
 
   useEffect(()=>{
     // Check for Google Calendar OAuth callback
-    // Google should normally return ?code=...&state=... in window.location.search.
-    // Some hosting/auth flows can place values after #, so check both search and hash.
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ""));
-
-    const code = searchParams.get("code") || hashParams.get("code");
-    const state = searchParams.get("state") || hashParams.get("state");
+    const params = new URLSearchParams(window.location.search);
+    const code  = params.get("code");
+    const state = params.get("state");
 
     if (code && state) {
-      // Save calendar connection to profile
-       fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ code, user_id: state })
-})
-  .then(async (res) => {
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error("Calendar connection failed:", data);
-      alert("Calendar connection failed. Please try again.");
-      return;
+      fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
+        },
+        body: JSON.stringify({ code, user_id: state })
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            console.error("Calendar connection failed:", data);
+            alert("Calendar connection failed. Please try again.");
+            return;
+          }
+          console.log("Calendar connected:", data);
+          window.history.replaceState({}, "", "/");
+          window.location.href = "/";
+        })
+        .catch((err) => {
+          console.error("Calendar connection error:", err);
+          alert("Calendar connection failed. Please try again.");
+        });
     }
-
-    console.log("Calendar connected:", data);
-    window.history.replaceState({}, "", "/");
-    window.location.href = "/";
-  })
-  .catch((err) => {
-    console.error("Calendar connection error:", err);
-    alert("Calendar connection failed. Please try again.");
-  });   }
 
     supabase.auth.getSession().then(({data:{session}})=>{
       setUser(session?.user??null);
