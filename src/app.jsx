@@ -1163,9 +1163,13 @@ export default function App() {
 
   useEffect(()=>{
     // Check for Google Calendar OAuth callback
-    const params = new URLSearchParams(window.location.search);
-    const code  = params.get("code");
-    const state = params.get("state");
+    // Google should normally return ?code=...&state=... in window.location.search.
+    // Some hosting/auth flows can place values after #, so check both search and hash.
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#\/?/, ""));
+
+    const code = searchParams.get("code") || hashParams.get("code");
+    const state = searchParams.get("state") || hashParams.get("state");
 
     if (code && state) {
       // Save calendar connection to profile
