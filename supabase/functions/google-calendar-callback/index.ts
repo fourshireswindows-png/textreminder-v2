@@ -39,17 +39,19 @@ serve(async (req) => {
 
     // ── Step 1: Exchange code for tokens ──────────────────────────────
     let tokenData: any;
+    const tokenParams = new URLSearchParams({
+      code,
+      client_id:     GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri:  GOOGLE_REDIRECT_URI,
+      grant_type:    "authorization_code",
+    });
+    console.log("Token params redirect_uri:", tokenParams.get("redirect_uri"));
     try {
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          code,
-          client_id:     GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri:  GOOGLE_REDIRECT_URI,
-          grant_type:    "authorization_code",
-        }),
+        body: tokenParams,
       });
       tokenData = await tokenRes.json();
       if (!tokenRes.ok || !tokenData.access_token) {
