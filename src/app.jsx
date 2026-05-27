@@ -593,7 +593,7 @@ function UpgradePage({ user }) {
         <p style={{ fontSize:13, color:T.muted }}>Choose the plan that suits your business. All plans include a 14-day free trial.</p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16, marginBottom:24 }}>
         {plans.map((p,i)=>(
           <div key={i} style={{
             background:p.popular?"linear-gradient(135deg,#0f172a,#1e0a3c)":"#fff",
@@ -652,14 +652,60 @@ function UpgradePage({ user }) {
 
 // ── DASHBOARD LAYOUT ─────────────────────────────────
 function DashLayout({ page, setPage, user, onSignOut, children }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(()=>{
+    const h = ()=>setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize",h);
+    return ()=>window.removeEventListener("resize",h);
+  },[]);
+
   const nav = [
     { id:"dashboard", icon:"▦",  label:"Dashboard"   },
     { id:"upcoming",  icon:"📅", label:"Upcoming"     },
     { id:"contacts",  icon:"👥", label:"Contacts"     },
-    { id:"log",       icon:"📋", label:"Message Log"  },
+    { id:"log",       icon:"📋", label:"Log"          },
     { id:"settings",  icon:"⚙️", label:"Settings"     },
     { id:"upgrade",   icon:"⚡", label:"Upgrade"      },
   ];
+
+  if (isMobile) return (
+    <div style={{ display:"flex", flexDirection:"column", minHeight:"100vh", background:T.light,
+      fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
+      {/* Mobile top bar */}
+      <div style={{ background:"#0f172a", padding:"12px 16px", display:"flex", alignItems:"center",
+        justifyContent:"space-between", position:"sticky", top:0, zIndex:50 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <Logo size={26}/>
+          <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>
+            text<span style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)",
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>reminder</span>
+          </div>
+        </div>
+        <button onClick={onSignOut} style={{ background:"rgba(255,255,255,0.1)", border:"none",
+          color:"rgba(255,255,255,0.6)", fontSize:11, cursor:"pointer", padding:"5px 10px",
+          borderRadius:6, fontFamily:"inherit" }}>Sign out</button>
+      </div>
+      {/* Page content */}
+      <div style={{ flex:1, padding:"16px", overflowY:"auto", paddingBottom:80 }}>{children}</div>
+      {/* Mobile bottom tab bar */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#0f172a",
+        borderTop:"1px solid rgba(255,255,255,0.08)", display:"flex", zIndex:50,
+        paddingBottom:"env(safe-area-inset-bottom, 0px)" }}>
+        {nav.map(n=>(
+          <button key={n.id} onClick={()=>setPage(n.id)} style={{
+            flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+            padding:"8px 4px", border:"none", background:"transparent", cursor:"pointer",
+            color:page===n.id?"#a855f7":"rgba(255,255,255,0.35)", fontFamily:"inherit",
+            borderTop:page===n.id?"2px solid #a855f7":"2px solid transparent",
+          }}>
+            <span style={{ fontSize:16, marginBottom:2 }}>{n.icon}</span>
+            <span style={{ fontSize:9, fontWeight:page===n.id?700:400 }}>{n.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:T.light, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
       <div style={{ width:220, background:"#0f172a", display:"flex", flexDirection:"column",
@@ -736,7 +782,7 @@ function Dashboard({ user, setDashPage }) {
   return (
     <div>
       <div style={{ marginBottom:24 }}>
-        <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Dashboard</h1>
+        <h1 style={{ fontSize:"clamp(18px,5vw,22px)", fontWeight:800, color:T.text, marginBottom:4 }}>Dashboard</h1>
         <div style={{ fontSize:13, color:T.muted }}>{new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
       </div>
       {profile?.plan==="trial" && trialDays > 0 && (
@@ -749,7 +795,7 @@ function Dashboard({ user, setDashPage }) {
           </button>
         </div>
       )}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:28 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12, marginBottom:24 }}>
         {stats.map((s,i)=>(
           <Card key={i} style={{ padding:"20px 22px" }}>
             <div style={{ fontSize:22, marginBottom:10 }}>{s.icon}</div>
@@ -852,7 +898,8 @@ function Contacts({ user }) {
       )}
       <Card>
         <div style={{ display:"grid", gridTemplateColumns:"2fr 1.5fr 1.5fr 80px",
-          padding:"10px 20px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", gap:12 }}>
+          padding:"10px 20px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", gap:12,
+          display:"none" }}>
           {["Name","Phone","Email",""].map(h=><div key={h} style={{ fontSize:10, fontWeight:700,
             color:"#94a3b8", letterSpacing:"1px", textTransform:"uppercase" }}>{h}</div>)}
         </div>
@@ -863,15 +910,19 @@ function Contacts({ user }) {
           </div>
         )}
         {contacts.map((c,i)=>(
-          <div key={c.id} style={{ display:"grid", gridTemplateColumns:"2fr 1.5fr 1.5fr 80px",
-            padding:"13px 20px", borderBottom:"1px solid #f8fafc",
-            background:i%2===0?"#fff":"#fafafa", gap:12, alignItems:"center" }}>
-            <div style={{ fontWeight:600, color:T.text, fontSize:13 }}>{c.name}</div>
-            <div style={{ fontSize:12, color:"#64748b" }}>{c.phone||"—"}</div>
-            <div style={{ fontSize:12, color:"#64748b" }}>{c.email||"—"}</div>
+          <div key={c.id} style={{ padding:"13px 16px", borderBottom:"1px solid #f8fafc",
+            background:i%2===0?"#fff":"#fafafa", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:36, height:36, borderRadius:"50%", background:"linear-gradient(135deg,#f3e8ff,#e9d5ff)",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0, fontWeight:700, color:T.purple }}>
+              {c.name.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:600, color:T.text, fontSize:13 }}>{c.name}</div>
+              <div style={{ fontSize:11, color:"#64748b", marginTop:1 }}>{c.phone||""}{c.phone&&c.email?" · ":""}{c.email||""}</div>
+            </div>
             <button onClick={()=>remove(c.id)} style={{ background:"none", border:"1px solid #fee2e2",
               borderRadius:6, padding:"4px 10px", fontSize:11, color:"#dc2626",
-              cursor:"pointer", fontFamily:"inherit", fontWeight:600 }}>Remove</button>
+              cursor:"pointer", fontFamily:"inherit", fontWeight:600, flexShrink:0 }}>Remove</button>
           </div>
         ))}
       </Card>
@@ -1199,7 +1250,7 @@ function Settings({ user, onCalendarConnected }) {
       </div>
 
       <SectionWrap title="Business Details" sub="Used in your reminder messages">
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14 }}>
           <div>
             <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Business Name</div>
             <Input value={form.business_name} onChange={e=>set("business_name",e.target.value)} placeholder="e.g. Four Shires Window Cleaning"/>
@@ -1237,7 +1288,7 @@ function Settings({ user, onCalendarConnected }) {
       </SectionWrap>
 
       <SectionWrap title="Calendar Connection" sub="Connect your calendar to automatically import appointments">
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12 }}>
           <div style={{ border:`1px solid ${profile?.calendar_provider==="google"?T.green:T.border}`,
             borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
             <div style={{ fontSize:24, marginBottom:6 }}>📅</div>
