@@ -109,7 +109,7 @@ function AiChat() {
   return (
     <>
       {open && (
-        <div style={{ position:"fixed", bottom:84, right:20, zIndex:1000, width:300, maxHeight:420,
+        <div style={{ position:"fixed", bottom:84, right:20, zIndex:1000, width:"min(300px,calc(100vw - 40px))", maxHeight:420,
           background:"#fff", borderRadius:16, border:`1px solid ${T.border}`,
           boxShadow:"0 12px 40px rgba(0,0,0,0.15)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
           <div style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", padding:"13px 16px",
@@ -187,11 +187,11 @@ function HomePage({ onSignup, onLogin }) {
   ];
 
   return (
-    <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:T.text, background:T.white }}>
+    <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:T.text, background:T.white, overflowX:"hidden" }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(255,255,255,0.95)",
-        backdropFilter:"blur(12px)", borderBottom:`1px solid ${T.border}`, padding:"0 24px" }}>
+        backdropFilter:"blur(12px)", borderBottom:`1px solid ${T.border}`, padding:"0 16px" }}>
         <div style={{ maxWidth:1000, margin:"0 auto", display:"flex", alignItems:"center",
-          justifyContent:"space-between", height:64 }}>
+          justifyContent:"space-between", height:60, gap:8 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <Logo size={34}/>
             <div>
@@ -202,16 +202,16 @@ function HomePage({ onSignup, onLogin }) {
               <div style={{ fontSize:9, color:T.muted, letterSpacing:"1px", textTransform:"uppercase" }}>textreminder.co.uk</div>
             </div>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
             <button onClick={onLogin} style={{ background:"none", border:"none", color:T.purple,
               fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Sign in</button>
-            <Btn onClick={onSignup} style={{ padding:"9px 20px", fontSize:13 }}>Start Free Trial</Btn>
+            <Btn onClick={onSignup} style={{ padding:"8px 14px", fontSize:12, whiteSpace:"nowrap" }}>Start Free Trial</Btn>
           </div>
         </div>
       </nav>
 
       <section style={{ background:"linear-gradient(160deg,#fdf4ff 0%,#faf5ff 50%,#f0fdf4 100%)",
-        padding:"80px 24px 64px", position:"relative", overflow:"hidden" }}>
+        padding:"clamp(40px,8vw,80px) 20px clamp(40px,6vw,64px)", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-100, right:-100, width:500, height:500, borderRadius:"50%",
           background:"radial-gradient(circle,rgba(168,85,247,0.1),transparent 70%)", pointerEvents:"none" }}/>
         <div style={{ maxWidth:800, margin:"0 auto", textAlign:"center", position:"relative" }}>
@@ -307,7 +307,7 @@ function HomePage({ onSignup, onLogin }) {
               Built for tradespeople who want to stop chasing confirmations.
             </p>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:18 }}>
             {features.map((f,i)=>(
               <div key={i} style={{ background:"#fff", border:`1px solid ${T.border}`, borderRadius:14,
                 padding:"24px 22px", transition:"all 0.2s" }}>
@@ -324,7 +324,7 @@ function HomePage({ onSignup, onLogin }) {
         <div style={{ maxWidth:860, margin:"0 auto" }}>
           <h2 style={{ fontSize:"clamp(24px,4vw,36px)", fontWeight:800, textAlign:"center",
             color:T.text, marginBottom:48 }}>Up and running in minutes</h2>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:16 }}>
             {[
               {n:"1",icon:"📅",title:"Connect Calendar",desc:"Google, Apple or Outlook in 60 seconds."},
               {n:"2",icon:"👥",title:"Add Contacts",desc:"Build your customer list with names and numbers."},
@@ -357,7 +357,7 @@ function HomePage({ onSignup, onLogin }) {
               Pay for what you use. No setup fees. No hidden costs. 14-day free trial on every plan.
             </p>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
             {[
               { name:"Starter", price:"£9.99", msgs:40, popular:false,
                 features:["40 reminders/month","SMS, Email & WhatsApp","All calendar types","Message log","AI support"] },
@@ -593,7 +593,7 @@ function UpgradePage({ user }) {
         <p style={{ fontSize:13, color:T.muted }}>Choose the plan that suits your business. All plans include a 14-day free trial.</p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:24 }}>
         {plans.map((p,i)=>(
           <div key={i} style={{
             background:p.popular?"linear-gradient(135deg,#0f172a,#1e0a3c)":"#fff",
@@ -876,7 +876,7 @@ function Contacts({ user }) {
         <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.5)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}
           onClick={()=>setShowAdd(false)}>
-          <div style={{ background:"#fff", borderRadius:16, padding:28, width:400,
+          <div style={{ background:"#fff", borderRadius:16, padding:28, width:"min(400px,calc(100vw - 48px))",
             boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }} onClick={e=>e.stopPropagation()}>
             <h2 style={{ fontSize:17, fontWeight:700, color:T.text, marginBottom:20 }}>Add Contact</h2>
             {[{k:"name",l:"Full Name *",p:"Sarah Mitchell"},{k:"phone",l:"Mobile",p:"07712 345 678"},{k:"email",l:"Email",p:"sarah@example.com"}].map(f=>(
