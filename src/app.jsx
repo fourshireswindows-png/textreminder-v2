@@ -652,11 +652,12 @@ function UpgradePage({ user }) {
 
 // ── DASHBOARD LAYOUT ─────────────────────────────────
 function DashLayout({ page, setPage, user, onSignOut, children }) {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(()=>window.matchMedia("(max-width:767px)").matches);
   useEffect(()=>{
-    const h = ()=>setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize",h);
-    return ()=>window.removeEventListener("resize",h);
+    const mq = window.matchMedia("(max-width:767px)");
+    const h = (e)=>setIsMobile(e.matches);
+    mq.addEventListener("change",h);
+    return ()=>mq.removeEventListener("change",h);
   },[]);
 
   const nav = [
@@ -991,12 +992,13 @@ function Upcoming({ user }) {
   const [dayOffset, setDayOffset]   = useState(0);
   const [editingPhone, setEditingPhone] = useState(null);
   const [phoneVal, setPhoneVal]     = useState("");
-  const [isMobile, setIsMobile]     = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile]     = useState(()=>window.matchMedia("(max-width:767px)").matches);
 
   useEffect(()=>{
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const mq = window.matchMedia("(max-width:767px)");
+    const h = (e)=>setIsMobile(e.matches);
+    mq.addEventListener("change",h);
+    return ()=>mq.removeEventListener("change",h);
   },[]);
 
   useEffect(()=>{
