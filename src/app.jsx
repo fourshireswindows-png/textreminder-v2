@@ -933,26 +933,32 @@ function MessageLog({ user }) {
 
 // ── UPCOMING ──────────────────────────────────────────
 function Upcoming({ user }) {
-  const [events, setEvents]   = useState([]);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents]         = useState([]);
+  const [profile, setProfile]       = useState(null);
+  const [loading, setLoading]       = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [dayOffset, setDayOffset]   = useState(0);
   const [editingPhone, setEditingPhone] = useState(null);
-  const [phoneVal, setPhoneVal] = useState("");
+  const [phoneVal, setPhoneVal]     = useState("");
+  const [isMobile, setIsMobile]     = useState(window.innerWidth < 768);
+
+  useEffect(()=>{
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  },[]);
 
   useEffect(()=>{
     Promise.all([
-      supabase.from("calendar_events").select("*").eq("user_id",user.id)
-        .order("start_time").limit(200),
+      supabase.from("calendar_events").select("*").eq("user_id",user.id).order("start_time").limit(200),
       supabase.from("profiles").select("*").eq("id",user.id).single(),
     ]).then(([{data:evs},{data:prof}])=>{ setEvents(evs||[]); setProfile(prof); setLoading(false); });
   },[]);
 
-  // Get the 7 days of the current week
   function getWeekDays(offset) {
     const today = new Date();
     const monday = new Date(today);
-    monday.setDate(today.getDate() - today.getDay() + 1 + offset * 7);
+    monday.setDate(today.getDate() - (today.getDay()===0?6:today.getDay()-1) + offset*7);
     return Array.from({length:7}, (_,i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
@@ -960,8 +966,15 @@ function Upcoming({ user }) {
     });
   }
 
+  function getSingleDay(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+
   const weekDays = getWeekDays(weekOffset);
-  const hours = Array.from({length:16}, (_,i) => i + 6); // 06:00 to 21:00
+  const singleDay = getSingleDay(dayOffset);
+  const hours = Array.from({length:16}, (_,i) => i + 6);
 
   function getEventsForSlot(day, hour) {
     return events.filter(e => {
@@ -979,9 +992,39 @@ function Upcoming({ user }) {
 
   const todayStr = new Date().toDateString();
 
+  const ApptBlock = ({ ev }) => (
+    <div style={{ background:"linear-gradient(135deg,#f3e8ff,#fdf4ff)",
+      border:`1px solid ${T.border}`, borderRadius:6, padding:"4px 7px", marginBottom:3,
+      borderLeft:`3px solid ${T.purple}` }}>
+      <div style={{ fontSize:11, fontWeight:700, color:T.text, lineHeight:1.3 }}>
+        {new Date(ev.start_time).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})} {ev.title}
+      </div>
+      {editingPhone === ev.id ? (
+        <div style={{ display:"flex", gap:3, marginTop:4 }}>
+          <input value={phoneVal} onChange={e=>setPhoneVal(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter") savePhone(ev.id); if(e.key==="Escape") setEditingPhone(null); }}
+            placeholder="07700 900123" autoFocus
+            style={{ flex:1, fontSize:10, padding:"3px 6px", border:`1px solid ${T.purple}`,
+              borderRadius:4, outline:"none", fontFamily:"inherit" }}/>
+          <button onClick={()=>savePhone(ev.id)} style={{ background:T.purple, color:"#fff",
+            border:"none", borderRadius:4, padding:"3px 7px", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>✓</button>
+          <button onClick={()=>setEditingPhone(null)} style={{ background:"#f1f5f9", color:"#64748b",
+            border:"none", borderRadius:4, padding:"3px 7px", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>✕</button>
+        </div>
+      ) : (
+        <div onClick={()=>{ setEditingPhone(ev.id); setPhoneVal(ev.phone||""); }}
+          style={{ fontSize:10, color:ev.phone?T.green:"#94a3b8", marginTop:3, cursor:"pointer",
+            display:"flex", alignItems:"center", gap:3 }}>
+          📱 {ev.phone || "Add phone"}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:isMobile?"flex-start":"center",
+        flexDirection:isMobile?"column":"row", gap:isMobile?12:0, marginBottom:20 }}>
         <div>
           <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Upcoming Appointments</h1>
           <div style={{ fontSize:13, color:T.muted }}>
@@ -990,28 +1033,57 @@ function Upcoming({ user }) {
               : "No calendar connected — go to Settings to connect one"}
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <button onClick={()=>setWeekOffset(p=>p-1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
-            borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600,
-            color:T.text, fontFamily:"inherit" }}>← Prev</button>
-          <button onClick={()=>setWeekOffset(0)} style={{ background:weekOffset===0?"#f3e8ff":"#fff",
-            border:`1px solid ${weekOffset===0?T.purple:T.border}`, borderRadius:8, padding:"7px 14px",
-            cursor:"pointer", fontSize:13, fontWeight:600, color:weekOffset===0?T.purple:T.text, fontFamily:"inherit" }}>
-            This Week
-          </button>
-          <button onClick={()=>setWeekOffset(p=>p+1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
-            borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600,
-            color:T.text, fontFamily:"inherit" }}>Next →</button>
-        </div>
+        {isMobile ? (
+          <div style={{ display:"flex", alignItems:"center", gap:8, width:"100%" }}>
+            <button onClick={()=>setDayOffset(p=>p-1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
+              borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>←</button>
+            <div style={{ flex:1, textAlign:"center" }}>
+              <div style={{ fontSize:14, fontWeight:800, color:singleDay.toDateString()===todayStr?T.purple:T.text }}>
+                {singleDay.toDateString()===todayStr ? "Today" : singleDay.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short"})}
+              </div>
+            </div>
+            <button onClick={()=>setDayOffset(0)} style={{ background:dayOffset===0?"#f3e8ff":"#fff",
+              border:`1px solid ${dayOffset===0?T.purple:T.border}`, borderRadius:8, padding:"8px 10px",
+              cursor:"pointer", fontSize:11, fontWeight:600, color:dayOffset===0?T.purple:T.text, fontFamily:"inherit" }}>Today</button>
+            <button onClick={()=>setDayOffset(p=>p+1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
+              borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>→</button>
+          </div>
+        ) : (
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={()=>setWeekOffset(p=>p-1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
+              borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>← Prev</button>
+            <button onClick={()=>setWeekOffset(0)} style={{ background:weekOffset===0?"#f3e8ff":"#fff",
+              border:`1px solid ${weekOffset===0?T.purple:T.border}`, borderRadius:8, padding:"7px 14px",
+              cursor:"pointer", fontSize:13, fontWeight:600, color:weekOffset===0?T.purple:T.text, fontFamily:"inherit" }}>This Week</button>
+            <button onClick={()=>setWeekOffset(p=>p+1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
+              borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>Next →</button>
+          </div>
+        )}
       </div>
 
       {loading ? (
         <div style={{ textAlign:"center", padding:60, color:T.muted }}>Loading...</div>
+      ) : isMobile ? (
+        <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, overflow:"hidden" }}>
+          {hours.map(hour => {
+            const slotEvents = getEventsForSlot(singleDay, hour);
+            return (
+              <div key={hour} style={{ display:"flex", borderBottom:"1px solid #f8fafc", minHeight:44 }}>
+                <div style={{ width:56, padding:"10px 8px 0", fontSize:11, color:"#94a3b8", fontWeight:600,
+                  borderRight:"1px solid #f1f5f9", flexShrink:0 }}>
+                  {hour.toString().padStart(2,"0")}:00
+                </div>
+                <div style={{ flex:1, padding: slotEvents.length?"4px 8px":"0" }}>
+                  {slotEvents.map(ev => <ApptBlock key={ev.id} ev={ev}/>)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
-        <div style={{ background:"#fff", border:`1px solid #e2e8f0`, borderRadius:14, overflow:"auto" }}>
-          {/* Header row - day names */}
+        <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, overflow:"auto" }}>
           <div style={{ display:"grid", gridTemplateColumns:"60px repeat(7,1fr)", borderBottom:"2px solid #e2e8f0", position:"sticky", top:0, background:"#fff", zIndex:10 }}>
-            <div style={{ padding:"10px 8px", fontSize:10, color:T.muted }}></div>
+            <div style={{ padding:"10px 8px" }}/>
             {weekDays.map((day,i) => {
               const isToday = day.toDateString() === todayStr;
               return (
@@ -1020,7 +1092,7 @@ function Upcoming({ user }) {
                   <div style={{ fontSize:10, fontWeight:700, color:isToday?T.purple:T.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>
                     {day.toLocaleDateString("en-GB",{weekday:"short"})}
                   </div>
-                  <div style={{ fontSize:16, fontWeight:800, color:isToday?T.purple:T.text, marginTop:2 }}>
+                  <div style={{ fontSize:18, fontWeight:800, color:isToday?T.purple:T.text, marginTop:2 }}>
                     {day.getDate()}
                   </div>
                   <div style={{ fontSize:10, color:T.muted }}>
@@ -1030,11 +1102,9 @@ function Upcoming({ user }) {
               );
             })}
           </div>
-
-          {/* Hour rows */}
           {hours.map(hour => (
             <div key={hour} style={{ display:"grid", gridTemplateColumns:"60px repeat(7,1fr)", borderBottom:"1px solid #f8fafc", minHeight:56 }}>
-              <div style={{ padding:"6px 8px", fontSize:11, color:"#94a3b8", fontWeight:600, borderRight:"1px solid #f1f5f9", paddingTop:8 }}>
+              <div style={{ padding:"8px 8px 0", fontSize:11, color:"#94a3b8", fontWeight:600, borderRight:"1px solid #f1f5f9" }}>
                 {hour.toString().padStart(2,"0")}:00
               </div>
               {weekDays.map((day,di) => {
@@ -1043,38 +1113,7 @@ function Upcoming({ user }) {
                 return (
                   <div key={di} style={{ borderLeft:"1px solid #f1f5f9", padding:"3px 4px",
                     background:isToday?"#fefcff":"#fff", minHeight:56 }}>
-                    {slotEvents.map(ev => (
-                      <div key={ev.id} style={{ background:"linear-gradient(135deg,#f3e8ff,#fdf4ff)",
-                        border:`1px solid ${T.border}`, borderRadius:6, padding:"4px 7px", marginBottom:3,
-                        borderLeft:`3px solid ${T.purple}` }}>
-                        <div style={{ fontSize:11, fontWeight:700, color:T.text, lineHeight:1.3 }}>
-                          {new Date(ev.start_time).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})} {ev.title}
-                        </div>
-                        {editingPhone === ev.id ? (
-                          <div style={{ display:"flex", gap:4, marginTop:4 }}>
-                            <input
-                              value={phoneVal}
-                              onChange={e=>setPhoneVal(e.target.value)}
-                              onKeyDown={e=>{ if(e.key==="Enter") savePhone(ev.id); if(e.key==="Escape") setEditingPhone(null); }}
-                              placeholder="07700 900123"
-                              autoFocus
-                              style={{ flex:1, fontSize:10, padding:"3px 6px", border:`1px solid ${T.purple}`,
-                                borderRadius:4, outline:"none", fontFamily:"inherit" }}
-                            />
-                            <button onClick={()=>savePhone(ev.id)} style={{ background:T.purple, color:"#fff",
-                              border:"none", borderRadius:4, padding:"3px 7px", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>✓</button>
-                            <button onClick={()=>setEditingPhone(null)} style={{ background:"#f1f5f9", color:"#64748b",
-                              border:"none", borderRadius:4, padding:"3px 7px", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>✕</button>
-                          </div>
-                        ) : (
-                          <div onClick={()=>{ setEditingPhone(ev.id); setPhoneVal(ev.phone||""); }}
-                            style={{ fontSize:10, color:ev.phone?T.green:"#94a3b8", marginTop:3, cursor:"pointer",
-                              display:"flex", alignItems:"center", gap:3 }}>
-                            📱 {ev.phone || "Add phone"}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    {slotEvents.map(ev => <ApptBlock key={ev.id} ev={ev}/>)}
                   </div>
                 );
               })}
