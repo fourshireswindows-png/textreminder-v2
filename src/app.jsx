@@ -109,7 +109,7 @@ function AiChat() {
   return (
     <>
       {open && (
-        <div style={{ position:"fixed", bottom:84, right:20, zIndex:1000, width:"min(300px,calc(100vw - 40px))", maxHeight:420,
+        <div style={{ position:"fixed", bottom:84, right:20, zIndex:1000, width:300, maxHeight:420,
           background:"#fff", borderRadius:16, border:`1px solid ${T.border}`,
           boxShadow:"0 12px 40px rgba(0,0,0,0.15)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
           <div style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", padding:"13px 16px",
@@ -187,11 +187,11 @@ function HomePage({ onSignup, onLogin }) {
   ];
 
   return (
-    <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:T.text, background:T.white, overflowX:"hidden" }}>
+    <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:T.text, background:T.white }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(255,255,255,0.95)",
-        backdropFilter:"blur(12px)", borderBottom:`1px solid ${T.border}`, padding:"0 16px" }}>
+        backdropFilter:"blur(12px)", borderBottom:`1px solid ${T.border}`, padding:"0 24px" }}>
         <div style={{ maxWidth:1000, margin:"0 auto", display:"flex", alignItems:"center",
-          justifyContent:"space-between", height:60, gap:8 }}>
+          justifyContent:"space-between", height:64 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <Logo size={34}/>
             <div>
@@ -202,16 +202,16 @@ function HomePage({ onSignup, onLogin }) {
               <div style={{ fontSize:9, color:T.muted, letterSpacing:"1px", textTransform:"uppercase" }}>textreminder.co.uk</div>
             </div>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
             <button onClick={onLogin} style={{ background:"none", border:"none", color:T.purple,
               fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Sign in</button>
-            <Btn onClick={onSignup} style={{ padding:"8px 14px", fontSize:12, whiteSpace:"nowrap" }}>Start Free Trial</Btn>
+            <Btn onClick={onSignup} style={{ padding:"9px 20px", fontSize:13 }}>Start Free Trial</Btn>
           </div>
         </div>
       </nav>
 
       <section style={{ background:"linear-gradient(160deg,#fdf4ff 0%,#faf5ff 50%,#f0fdf4 100%)",
-        padding:"clamp(40px,8vw,80px) 20px clamp(40px,6vw,64px)", position:"relative", overflow:"hidden" }}>
+        padding:"80px 24px 64px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-100, right:-100, width:500, height:500, borderRadius:"50%",
           background:"radial-gradient(circle,rgba(168,85,247,0.1),transparent 70%)", pointerEvents:"none" }}/>
         <div style={{ maxWidth:800, margin:"0 auto", textAlign:"center", position:"relative" }}>
@@ -593,7 +593,7 @@ function UpgradePage({ user }) {
         <p style={{ fontSize:13, color:T.muted }}>Choose the plan that suits your business. All plans include a 14-day free trial.</p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16, marginBottom:24 }}>
         {plans.map((p,i)=>(
           <div key={i} style={{
             background:p.popular?"linear-gradient(135deg,#0f172a,#1e0a3c)":"#fff",
@@ -652,12 +652,12 @@ function UpgradePage({ user }) {
 
 // ── DASHBOARD LAYOUT ─────────────────────────────────
 function DashLayout({ page, setPage, user, onSignOut, children }) {
-  const [isMobile, setIsMobile] = useState(()=>window.matchMedia("(max-width:767px)").matches);
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(()=>{
-    const mq = window.matchMedia("(max-width:767px)");
-    const h = (e)=>setIsMobile(e.matches);
-    mq.addEventListener("change",h);
-    return ()=>mq.removeEventListener("change",h);
+    const check = ()=>setIsMobile(window.innerWidth <= 767);
+    check();
+    window.addEventListener("resize", check);
+    return ()=>window.removeEventListener("resize", check);
   },[]);
 
   const nav = [
@@ -992,13 +992,13 @@ function Upcoming({ user }) {
   const [dayOffset, setDayOffset]   = useState(0);
   const [editingPhone, setEditingPhone] = useState(null);
   const [phoneVal, setPhoneVal]     = useState("");
-  const [isMobile, setIsMobile]     = useState(()=>window.matchMedia("(max-width:767px)").matches);
+  const [isMobile, setIsMobile]     = useState(false);
 
   useEffect(()=>{
-    const mq = window.matchMedia("(max-width:767px)");
-    const h = (e)=>setIsMobile(e.matches);
-    mq.addEventListener("change",h);
-    return ()=>mq.removeEventListener("change",h);
+    const check = ()=>setIsMobile(window.innerWidth <= 767);
+    check();
+    window.addEventListener("resize", check);
+    return ()=>window.removeEventListener("resize", check);
   },[]);
 
   useEffect(()=>{
