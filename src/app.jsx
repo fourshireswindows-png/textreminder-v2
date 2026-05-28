@@ -740,16 +740,18 @@ function Upcoming({ user }) {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      // Load 90 days of events so navigation always has data
+      // Get user fresh from auth (matches the working pre-layout version)
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) { setLoading(false); return }
+      // Load all upcoming events — no date cap so nothing is filtered out
       const from = new Date(); from.setHours(0,0,0,0)
-      const to   = new Date(from); to.setDate(from.getDate() + 90)
       const { data } = await supabase.from('calendar_events').select('*')
-        .eq('user_id', user.id).gte('start_time', from.toISOString()).lte('start_time', to.toISOString()).order('start_time', { ascending: true })
+        .eq('user_id', authUser.id).gte('start_time', from.toISOString()).order('start_time', { ascending: true }).limit(500)
       setEvents(data || [])
       setLoading(false)
     }
     load()
-  }, [user.id])
+  }, [])
 
   async function savePhone(eventId) {
     await supabase.from('calendar_events').update({ phone: phoneVal }).eq('id', eventId)
