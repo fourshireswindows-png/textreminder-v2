@@ -726,16 +726,23 @@ function Upcoming({ user }) {
   const [loading,      setLoading]      = useState(true)
   const [editingPhone, setEditingPhone] = useState(null)
   const [phoneVal,     setPhoneVal]     = useState('')
+  const [weekOffset,   setWeekOffset]   = useState(0)
   const today  = new Date()
   const [selDay, setSelDay] = useState(today.toDateString())
 
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(today); d.setDate(today.getDate() + i); return d })
+  // Build 7-day window starting from today + weekOffset*7
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() + weekOffset * 7 + i)
+    return d
+  })
 
   useEffect(() => {
     async function load() {
       setLoading(true)
+      // Load 90 days of events so navigation always has data
       const from = new Date(); from.setHours(0,0,0,0)
-      const to   = new Date(from); to.setDate(from.getDate() + 8)
+      const to   = new Date(from); to.setDate(from.getDate() + 90)
       const { data } = await supabase.from('calendar_events').select('*')
         .eq('user_id', user.id).gte('start_time', from.toISOString()).lte('start_time', to.toISOString()).order('start_time', { ascending: true })
       setEvents(data || [])
@@ -762,25 +769,32 @@ function Upcoming({ user }) {
         <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>Calendar appointments over the next 7 days</p>
       </div>
 
-      {/* Day picker */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 }}>
-        {days.map(day => {
-          const k = day.toDateString(); const count = (byDay[k] || []).length; const active = k === selDay
-          return (
-            <div key={k} onClick={() => setSelDay(k)}
-              style={{ flexShrink: 0, textAlign: 'center', minWidth: 64, padding: '12px 8px', borderRadius: 12, cursor: 'pointer',
-                background: active ? C.navy : '#fff', border: `${active ? 2 : 1}px solid ${active ? C.pink : C.border}`,
-                boxShadow: active ? '0 4px 14px rgba(15,23,42,0.18)' : '' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, color: active ? 'rgba(255,255,255,0.5)' : C.muted }}>
-                {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+      {/* Week navigation + day picker */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+        <button onClick={() => { setWeekOffset(w => Math.max(0, w - 1)); setSelDay(today.toDateString()) }}
+          disabled={weekOffset === 0}
+          style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: '#fff', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', opacity: weekOffset === 0 ? 0.4 : 1, fontWeight: 700, fontSize: 16, color: C.navy }}>‹</button>
+        <div style={{ display: 'flex', gap: 6, flex: 1, overflowX: 'auto', paddingBottom: 2 }}>
+          {days.map(day => {
+            const k = day.toDateString(); const count = (byDay[k] || []).length; const active = k === selDay
+            return (
+              <div key={k} onClick={() => setSelDay(k)}
+                style={{ flexShrink: 0, textAlign: 'center', minWidth: 60, padding: '10px 6px', borderRadius: 12, cursor: 'pointer',
+                  background: active ? C.navy : '#fff', border: `${active ? 2 : 1}px solid ${active ? C.pink : C.border}`,
+                  boxShadow: active ? '0 4px 14px rgba(15,23,42,0.18)' : '' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4, color: active ? 'rgba(255,255,255,0.5)' : C.muted }}>
+                  {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: active ? '#fff' : day.toDateString() === today.toDateString() ? C.pink : C.text }}>{day.getDate()}</div>
+                {count > 0
+                  ? <div style={{ marginTop: 6, background: active ? C.pink : '#fce7f3', color: active ? '#fff' : C.pink, borderRadius: 20, fontSize: 10, fontWeight: 700, padding: '2px 6px', display: 'inline-block' }}>{count}</div>
+                  : <div style={{ height: 20 }} />}
               </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: active ? '#fff' : day.toDateString() === today.toDateString() ? C.pink : C.text }}>{day.getDate()}</div>
-              {count > 0
-                ? <div style={{ marginTop: 8, background: active ? C.pink : '#fce7f3', color: active ? '#fff' : C.pink, borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '2px 8px', display: 'inline-block' }}>{count}</div>
-                : <div style={{ height: 22 }} />}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
+        <button onClick={() => { setWeekOffset(w => w + 1); setSelDay(days[0].toDateString()) }}
+          style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 16, color: C.navy }}>›</button>
       </div>
 
       {/* Day detail */}
