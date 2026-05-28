@@ -1177,7 +1177,7 @@ function CalendarCallback({ session }) {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ code, user_id: userId }),
         })
-        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || `Server error ${res.status}`) }
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || err.error || err.details || JSON.stringify(err) || `Server error ${res.status}`) }
         setStatus('success'); setMsg('Google Calendar connected! Redirecting...')
         setTimeout(() => { window.location.href = '/' }, 2200)
       } catch (err) {
@@ -1252,34 +1252,6 @@ export default function App() {
   useEffect(() => {
     if (window.location.pathname.includes('/auth/calendar/callback')) { setIsCalCB(true) }
     supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (s) { setSession(s); setUser(s.user); setView('app') }
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (s) { setSession(s); setUser(s.user); setView('app') }
-      else   { setSession(null); setUser(null); setView('home') }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    setUser(null); setSession(null); setView('home')
-  }
-
-  return (
-    <>
-      <GlobalStyles />
-      {isCalCB && <CalendarCallback session={session} />}
-      {!isCalCB && (
-        <>
-          {view === 'home' && <HomePage onLogin={() => { setAuthMode('login'); setView('auth') }} onSignup={() => { setAuthMode('signup'); setView('auth') }} />}
-          {view === 'auth' && <AuthPage mode={authMode} setMode={setAuthMode} onAuthSuccess={u => { setUser(u); setView('app') }} />}
-          {view === 'app' && user && <AppShell user={user} onLogout={handleLogout} />}
-        </>
-      )}
-    </>
-  )
-}
       if (s) { setSession(s); setUser(s.user); setView('app') }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
