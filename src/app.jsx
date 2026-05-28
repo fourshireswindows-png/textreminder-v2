@@ -722,8 +722,10 @@ function Dashboard({ user, setPage, showToast }) {
 // PAGE: UPCOMING
 // ═════════════════════════════════════════════════════════════════════════════
 function Upcoming({ user }) {
-  const [events,  setEvents]  = useState([])
-  const [loading, setLoading] = useState(true)
+  const [events,       setEvents]       = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [editingPhone, setEditingPhone] = useState(null)
+  const [phoneVal,     setPhoneVal]     = useState('')
   const today  = new Date()
   const [selDay, setSelDay] = useState(today.toDateString())
 
@@ -741,6 +743,13 @@ function Upcoming({ user }) {
     }
     load()
   }, [user.id])
+
+  async function savePhone(eventId) {
+    await supabase.from('calendar_events').update({ phone: phoneVal }).eq('id', eventId)
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, phone: phoneVal } : e))
+    setEditingPhone(null)
+    setPhoneVal('')
+  }
 
   const byDay = {}
   events.forEach(e => { const k = new Date(e.start_time).toDateString(); if (!byDay[k]) byDay[k] = []; byDay[k].push(e) })
@@ -789,19 +798,41 @@ function Upcoming({ user }) {
               const hr  = String(t.getHours()).padStart(2,'0')
               const min = String(t.getMinutes()).padStart(2,'0')
               return (
-                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: `1px solid ${C.border}` }}>
+                <div key={ev.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: `1px solid ${C.border}` }}>
                   <div style={{ width: 44, height: 44, background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, flexDirection: 'column' }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, lineHeight: 1 }}>{hr}</span>
                     <span style={{ fontSize: 10, color: C.muted, lineHeight: 1 }}>{min}</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title || 'Untitled'}</div>
-                    {ev.phone && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{ev.phone}</div>}
-                    {ev.location && <div style={{ fontSize: 12, color: C.mutedLight, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</div>}
+                    {ev.location && <div style={{ fontSize: 12, color: C.muted, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</div>}
+                    {/* Phone section — click to add or edit */}
+                    {editingPhone === ev.id ? (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
+                        <input
+                          value={phoneVal}
+                          onChange={e => setPhoneVal(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') savePhone(ev.id); if (e.key === 'Escape') setEditingPhone(null) }}
+                          placeholder="+44 7700 900123"
+                          autoFocus
+                          style={{ flex: 1, fontSize: 12, padding: '5px 9px', border: `1.5px solid ${C.pink}`, borderRadius: 6, outline: 'none', fontFamily: 'inherit', maxWidth: 200 }}
+                        />
+                        <button onClick={() => savePhone(ev.id)}
+                          style={{ background: C.pink, color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' }}>✓</button>
+                        <button onClick={() => setEditingPhone(null)}
+                          style={{ background: '#f1f5f9', color: C.muted, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                      </div>
+                    ) : (
+                      <div onClick={() => { setEditingPhone(ev.id); setPhoneVal(ev.phone || '') }}
+                        style={{ marginTop: 5, fontSize: 12, color: ev.phone ? C.success : '#94a3b8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <IC.Phone />
+                        {ev.phone || 'Add phone number'}
+                      </div>
+                    )}
                   </div>
                   {ev.reminder_sent
-                    ? <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#15803d', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap' }}>Reminder sent</span>
-                    : <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap' }}>Pending</span>
+                    ? <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#15803d', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}>Reminder sent</span>
+                    : <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}>Pending</span>
                   }
                 </div>
               )

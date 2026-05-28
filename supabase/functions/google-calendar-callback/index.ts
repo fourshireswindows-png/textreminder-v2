@@ -166,9 +166,11 @@ serve(async (req) => {
       .filter((e: any) => e.start?.dateTime || e.start?.date)
       .map((e: any) => ({
         user_id,
-        title:      e.summary ?? "Appointment",
-        start_time: e.start.dateTime ?? e.start.date,
-        end_time:   e.end?.dateTime  ?? e.end?.date ?? e.start.dateTime ?? e.start.date,
+        external_id: e.id,
+        title:       e.summary ?? "Appointment",
+        start_time:  e.start.dateTime ?? e.start.date,
+        end_time:    e.end?.dateTime  ?? e.end?.date ?? e.start.dateTime ?? e.start.date,
+        location:    e.location ?? null,
       }));
 
     if (rows.length > 0) {

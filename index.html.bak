@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon-CuGjbnLN.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TextReminder</title>
+    <script>
+      (function() {
+        var p = new URLSearchParams(window.location.search).get('p');
