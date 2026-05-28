@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import Logo from './Logo.jsx'
 
-const SYSTEM_PROMPT = `You are the friendly AI assistant for TextReminder (textreminder.co.uk) — the UK's appointment reminder service built for tradespeople. You're helpful, knowledgeable, and speak plainly like you're talking to a busy tradesperson who doesn't have time for waffle.
+// System prompt handled server-side
+const _UNUSED = `placeholder — the UK's appointment reminder service built for tradespeople. You're helpful, knowledgeable, and speak plainly like you're talking to a busy tradesperson who doesn't have time for waffle.
 
 You know the product inside out:
 - TextReminder sends automatic SMS, email and WhatsApp reminders to customers 24 hours before appointments
@@ -43,18 +44,13 @@ export default function AiChat() {
     setInput('')
     setLoading(true)
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/ai-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 500,
-          system: SYSTEM_PROMPT,
-          messages: next.map(m => ({ role:m.role, content:m.content }))
-        })
+        headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO' },
+        body: JSON.stringify({ messages: next.map(m => ({ role:m.role, content:m.content })) })
       })
       const data = await res.json()
-      const reply = data.content?.[0]?.text || "Sorry, something went wrong. Email hello@textreminder.co.uk and we'll get back to you."
+      const reply = data.reply || "Sorry, something went wrong. Email hello@textreminder.co.uk and we'll get back to you."
       setMsgs(p => [...p, { role:'assistant', content:reply }])
     } catch(e) {
       setMsgs(p => [...p, { role:'assistant', content:"Something went wrong. Email hello@textreminder.co.uk and we'll be back to you within 4 hours." }])

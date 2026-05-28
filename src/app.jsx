@@ -41,6 +41,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import AiChat from './components/AiChat.jsx'
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const supabase = createClient(
@@ -1411,6 +1412,7 @@ export default function App() {
           {view === 'app' && user && <AppShell user={user} onLogout={handleLogout} />}
         </>
       )}
+      <AiChat />
     </>
   )
 }
