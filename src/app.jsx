@@ -561,7 +561,7 @@ function AuthPage({ mode, setMode, onAuthSuccess }) {
 
   async function handleGoogle() {
     setLoading(true); setError('')
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } } })
     if (error) { setError(error.message); setLoading(false) }
   }
 
