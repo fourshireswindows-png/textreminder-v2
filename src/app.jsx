@@ -722,8 +722,8 @@ function Dashboard({ user, setPage, showToast }) {
 // PAGE: UPCOMING
 // ═════════════════════════════════════════════════════════════════════════════
 function Upcoming({ user }) {
-  const [reminders, setReminders] = useState([])
-  const [loading, setLoading]     = useState(true)
+  const [events,  setEvents]  = useState([])
+  const [loading, setLoading] = useState(true)
   const today  = new Date()
   const [selDay, setSelDay] = useState(today.toDateString())
 
@@ -734,23 +734,23 @@ function Upcoming({ user }) {
       setLoading(true)
       const from = new Date(); from.setHours(0,0,0,0)
       const to   = new Date(from); to.setDate(from.getDate() + 8)
-      const { data } = await supabase.from('reminders').select('*')
-        .eq('user_id', user.id).gte('scheduled_for', from.toISOString()).lte('scheduled_for', to.toISOString()).order('scheduled_for', { ascending: true })
-      setReminders(data || [])
+      const { data } = await supabase.from('calendar_events').select('*')
+        .eq('user_id', user.id).gte('start_time', from.toISOString()).lte('start_time', to.toISOString()).order('start_time', { ascending: true })
+      setEvents(data || [])
       setLoading(false)
     }
     load()
   }, [user.id])
 
   const byDay = {}
-  reminders.forEach(r => { const k = new Date(r.scheduled_for).toDateString(); if (!byDay[k]) byDay[k] = []; byDay[k].push(r) })
-  const selReminders = byDay[selDay] || []
+  events.forEach(e => { const k = new Date(e.start_time).toDateString(); if (!byDay[k]) byDay[k] = []; byDay[k].push(e) })
+  const selEvents = byDay[selDay] || []
 
   return (
     <div className="fade-in">
       <div style={{ marginBottom: 26 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Upcoming</h1>
-        <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>Reminders scheduled over the next 7 days</p>
+        <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>Calendar appointments over the next 7 days</p>
       </div>
 
       {/* Day picker */}
@@ -778,25 +778,34 @@ function Upcoming({ user }) {
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>{new Date(selDay).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
-          <span style={{ fontSize: 13, color: C.muted, background: '#f1f5f9', padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{selReminders.length} reminder{selReminders.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 13, color: C.muted, background: '#f1f5f9', padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>{selEvents.length} appointment{selEvents.length !== 1 ? 's' : ''}</span>
         </div>
         {loading ? <div style={{ color: C.muted, fontSize: 14 }}>Loading...</div>
-         : selReminders.length === 0 ? <EmptyState icon={IC.Calendar} title="Nothing scheduled" sub="No reminders on this day." />
+         : selEvents.length === 0 ? <EmptyState icon={IC.Calendar} title="Nothing scheduled" sub="No appointments on this day." />
          : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {selReminders.map(r => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: `1px solid ${C.border}` }}>
-                <div style={{ width: 44, height: 44, background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, flexDirection: 'column' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, lineHeight: 1 }}>{fmtTime(r.scheduled_for).split(':')[0]}</span>
-                  <span style={{ fontSize: 10, color: C.muted, lineHeight: 1 }}>{fmtTime(r.scheduled_for).split(':')[1]}</span>
+            {selEvents.map(ev => {
+              const t = new Date(ev.start_time)
+              const hr  = String(t.getHours()).padStart(2,'0')
+              const min = String(t.getMinutes()).padStart(2,'0')
+              return (
+                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: `1px solid ${C.border}` }}>
+                  <div style={{ width: 44, height: 44, background: '#fff', borderRadius: 10, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, flexDirection: 'column' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, lineHeight: 1 }}>{hr}</span>
+                    <span style={{ fontSize: 10, color: C.muted, lineHeight: 1 }}>{min}</span>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title || 'Untitled'}</div>
+                    {ev.phone && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{ev.phone}</div>}
+                    {ev.location && <div style={{ fontSize: 12, color: C.mutedLight, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.location}</div>}
+                  </div>
+                  {ev.reminder_sent
+                    ? <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#15803d', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap' }}>Reminder sent</span>
+                    : <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap' }}>Pending</span>
+                  }
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{r.contact_name}</div>
-                  <div style={{ fontSize: 12, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.message}</div>
-                </div>
-                <StatusBadge status={r.status} />
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
