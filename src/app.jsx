@@ -725,6 +725,8 @@ function Upcoming({ user, setPage }) {
   const [events,       setEvents]       = useState([])
   const [calConnected, setCalConnected] = useState(false)
   const [loading,      setLoading]      = useState(true)
+  const [syncing,      setSyncing]      = useState(false)
+  const [lastSynced,   setLastSynced]   = useState(null)
   const [weekOffset,   setWeekOffset]   = useState(0)
   const [dayOffset,    setDayOffset]    = useState(0)
   const [editingPhone, setEditingPhone] = useState(null)
@@ -737,20 +739,43 @@ function Upcoming({ user, setPage }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  async function loadEvents(authUser) {
+    const [{ data: evs }, { data: settings }] = await Promise.all([
+      supabase.from('calendar_events').select('*').eq('user_id', authUser.id).order('start_time').limit(200),
+      supabase.from('settings').select('google_calendar_connected').eq('user_id', authUser.id).single(),
+    ])
+    setEvents(evs || [])
+    setCalConnected(settings?.google_calendar_connected || false)
+  }
+
   useEffect(() => {
     async function load() {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) { setLoading(false); return }
-      const [{ data: evs }, { data: settings }] = await Promise.all([
-        supabase.from('calendar_events').select('*').eq('user_id', authUser.id).order('start_time').limit(200),
-        supabase.from('settings').select('google_calendar_connected').eq('user_id', authUser.id).single(),
-      ])
-      setEvents(evs || [])
-      setCalConnected(settings?.google_calendar_connected || false)
+      await loadEvents(authUser)
       setLoading(false)
     }
     load()
   }, [])
+
+  async function handleSync() {
+    setSyncing(true)
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return
+      const res = await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/sync-google-calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO' },
+        body: JSON.stringify({ user_id: authUser.id }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        await loadEvents(authUser)
+        setLastSynced(new Date())
+      }
+    } catch (e) { console.error('Sync failed', e) }
+    finally { setSyncing(false) }
+  }
 
   async function savePhone(eventId) {
     await supabase.from('calendar_events').update({ phone: phoneVal }).eq('id', eventId)
@@ -820,7 +845,7 @@ function Upcoming({ user, setPage }) {
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px', marginBottom: 4 }}>Upcoming Appointments</h1>
           <div style={{ fontSize: 13, color: C.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
             {calConnected
-              ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: green, display: 'inline-block' }} /> Synced from Google Calendar</>
+              ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: green, display: 'inline-block' }} /> Synced from Google Calendar{lastSynced && <span style={{ color: C.muted, marginLeft: 6 }}>· {lastSynced.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}</>
               : <><span style={{ color: '#f59e0b' }}>⚠</span> No calendar — <span onClick={() => setPage('settings')} style={{ color: purple, fontWeight: 600, cursor: 'pointer' }}>connect in Settings</span></>}
           </div>
         </div>
@@ -835,12 +860,14 @@ function Upcoming({ user, setPage }) {
             </div>
             <button onClick={() => setDayOffset(0)} style={{ background: dayOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${dayOffset === 0 ? purple : border}`, borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: dayOffset === 0 ? purple : text, fontFamily: 'inherit' }}>Today</button>
             <button onClick={() => setDayOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>→</button>
+            {calConnected && <button onClick={handleSync} disabled={syncing} style={{ background: syncing ? '#f3e8ff' : '#fff', border: `1px solid ${syncing ? purple : border}`, borderRadius: 8, padding: '8px 10px', cursor: syncing ? 'default' : 'pointer', fontSize: 11, fontWeight: 600, color: syncing ? purple : text, fontFamily: 'inherit' }}>{syncing ? '⟳' : '⟳'}</button>}
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => setWeekOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>← Prev</button>
             <button onClick={() => setWeekOffset(0)} style={{ background: weekOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${weekOffset === 0 ? purple : border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: weekOffset === 0 ? purple : text, fontFamily: 'inherit' }}>This Week</button>
             <button onClick={() => setWeekOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Next →</button>
+            {calConnected && <button onClick={handleSync} disabled={syncing} style={{ background: syncing ? '#f3e8ff' : '#fff', border: `1px solid ${syncing ? purple : border}`, borderRadius: 8, padding: '7px 14px', cursor: syncing ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, color: syncing ? purple : text, fontFamily: 'inherit' }}>{syncing ? '⟳ Syncing…' : '⟳ Sync'}</button>}
           </div>
         )}
       </div>
