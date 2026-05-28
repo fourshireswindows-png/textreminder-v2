@@ -264,14 +264,32 @@ function EmptyState({ icon: Ic, title, sub, action, onAction }) {
 }
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
-function LogoMark({ dark = false }) {
+function LogoMark({ dark = false, size = 34 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-      <div style={{ width: 32, height: 32, background: `linear-gradient(135deg, ${C.pink} 0%, ${C.purple} 100%)`, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-        <IC.Bell />
-      </div>
-      <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.4px', color: dark ? C.navy : '#fff' }}>
-        TextReminder
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Speech bubble icon with checkmark */}
+      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+        <defs>
+          <linearGradient id="bubbleGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#ec4899" />
+            <stop offset="100%" stopColor="#a855f7" />
+          </linearGradient>
+        </defs>
+        {/* Speech bubble */}
+        <path d="M6 8C6 5.79 7.79 4 10 4H38C40.21 4 42 5.79 42 8V30C42 32.21 40.21 34 38 34H26L18 42V34H10C7.79 34 6 32.21 6 30V8Z"
+          fill="url(#bubbleGrad)" />
+        {/* Message lines */}
+        <rect x="14" y="14" width="20" height="3" rx="1.5" fill="white" opacity="0.9" />
+        <rect x="14" y="21" width="14" height="3" rx="1.5" fill="white" opacity="0.9" />
+        {/* Green checkmark badge */}
+        <circle cx="37" cy="11" r="8" fill="#22c55e" />
+        <path d="M33 11L36 14L41 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {/* Brand text */}
+      <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.3px', lineHeight: 1 }}>
+        <span style={{ color: dark ? C.navy : '#fff' }}>text</span>
+        <span style={{ color: C.pink }}>reminder</span>
+        {dark && <span style={{ color: C.navy, fontWeight: 700 }}>.co.uk</span>}
       </span>
     </div>
   )
@@ -1234,6 +1252,34 @@ export default function App() {
   useEffect(() => {
     if (window.location.pathname.includes('/auth/calendar/callback')) { setIsCalCB(true) }
     supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (s) { setSession(s); setUser(s.user); setView('app') }
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (s) { setSession(s); setUser(s.user); setView('app') }
+      else   { setSession(null); setUser(null); setView('home') }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    setUser(null); setSession(null); setView('home')
+  }
+
+  return (
+    <>
+      <GlobalStyles />
+      {isCalCB && <CalendarCallback session={session} />}
+      {!isCalCB && (
+        <>
+          {view === 'home' && <HomePage onLogin={() => { setAuthMode('login'); setView('auth') }} onSignup={() => { setAuthMode('signup'); setView('auth') }} />}
+          {view === 'auth' && <AuthPage mode={authMode} setMode={setAuthMode} onAuthSuccess={u => { setUser(u); setView('app') }} />}
+          {view === 'app' && user && <AppShell user={user} onLogout={handleLogout} />}
+        </>
+      )}
+    </>
+  )
+}
       if (s) { setSession(s); setUser(s.user); setView('app') }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
