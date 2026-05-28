@@ -74,36 +74,29 @@ serve(async (req) => {
     // ── Step 2: Save tokens to Supabase profiles ──────────────────────
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Read existing refresh token so we can preserve it if Google doesn't return a new one
-    const { data: existingProfile, error: readError } = await supabase
+    // Read existing refresh token (use maybeSingle so missing row doesn't crash)
+    const { data: existingProfile } = await supabase
       .from("profiles")
       .select("google_refresh_token")
       .eq("id", user_id)
-      .single();
-
-    if (readError) {
-      console.error("Profile read error:", readError);
-      return new Response(
-        JSON.stringify({ error: "Failed to read existing profile", detail: readError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      .maybeSingle();
 
     const refresh_token_to_save = new_refresh_token
       ? new_refresh_token
       : existingProfile?.google_refresh_token ?? null;
 
+    // Upsert so it works whether or not the profile row already exists
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        id:                   user_id,
         google_access_token:  access_token,
         google_refresh_token: refresh_token_to_save,
         calendar_provider:    "google",
-      })
-      .eq("id", user_id);
+      }, { onConflict: "id" });
 
     if (profileError) {
-      console.error("Profile update error:", profileError);
+      console.error("Profile upsert error:", profileError);
       return new Response(
         JSON.stringify({ error: "Failed to save tokens", detail: profileError }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
