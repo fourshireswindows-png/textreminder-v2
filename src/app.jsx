@@ -737,14 +737,17 @@ function Upcoming({ user, setPage }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const [debug, setDebug] = useState(null)
+
   useEffect(() => {
     async function load() {
-      // Exact same query as the old working version — no date filter
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      const [{ data: evs }, { data: settings }] = await Promise.all([
+      const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser()
+      if (!authUser) { setDebug({ error: 'No auth user', authErr }); setLoading(false); return }
+      const [{ data: evs, error: evErr }, { data: settings }] = await Promise.all([
         supabase.from('calendar_events').select('*').eq('user_id', authUser.id).order('start_time').limit(200),
         supabase.from('settings').select('google_calendar_connected').eq('user_id', authUser.id).single(),
       ])
+      setDebug({ uid: authUser.id, count: evs?.length ?? 0, error: evErr?.message || null })
       setEvents(evs || [])
       setCalConnected(settings?.google_calendar_connected || false)
       setLoading(false)
@@ -814,6 +817,12 @@ function Upcoming({ user, setPage }) {
 
   return (
     <div className="fade-in">
+      {/* Temporary debug panel */}
+      {debug && (
+        <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12, fontFamily: 'monospace' }}>
+          <strong>DEBUG:</strong> uid={debug.uid || 'none'} | events={debug.count ?? '?'} | error={debug.error || 'none'}
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 20 }}>
         <div>
