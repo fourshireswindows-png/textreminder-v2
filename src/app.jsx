@@ -1178,6 +1178,12 @@ function CalendarCallback({ session }) {
           body: JSON.stringify({ code, user_id: userId }),
         })
         if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || err.error || err.details || JSON.stringify(err) || `Server error ${res.status}`) }
+        // Mark calendar as connected in settings table
+        const data = await res.json().catch(() => ({}))
+        await supabase.from('settings').upsert(
+          { user_id: userId, google_calendar_connected: true, google_calendar_email: data.email || '', updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        )
         setStatus('success'); setMsg('Google Calendar connected! Redirecting...')
         setTimeout(() => { window.location.href = '/' }, 2200)
       } catch (err) {
