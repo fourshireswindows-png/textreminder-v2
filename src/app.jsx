@@ -1,1420 +1,1953 @@
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+/*
+ * TextReminder — src/App.jsx
+ * Single-file React app. All pages, components, and logic inline.
+ *
+ * ─── SUPABASE SQL SETUP ───────────────────────────────────────────────────────
+ * Run this in the Supabase SQL editor before first use:
+ *
+ * CREATE TABLE IF NOT EXISTS contacts (
+ *   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+ *   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+ *   name TEXT NOT NULL,
+ *   phone TEXT NOT NULL,
+ *   email TEXT,
+ *   notes TEXT,
+ *   created_at TIMESTAMPTZ DEFAULT NOW()
+ * );
+ * ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Users own contacts" ON contacts FOR ALL USING (auth.uid() = user_id);
+ *
+ * CREATE TABLE IF NOT EXISTS reminders (
+ *   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+ *   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+ *   contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+ *   contact_name TEXT NOT NULL,
+ *   contact_phone TEXT NOT NULL,
+ *   message TEXT NOT NULL,
+ *   scheduled_for TIMESTAMPTZ NOT NULL,
+ *   status TEXT DEFAULT 'pending' CHECK (status IN ('pending','sent','failed','cancelled')),
+ *   created_at TIMESTAMPTZ DEFAULT NOW()
+ * );
+ * ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Users own reminders" ON reminders FOR ALL USING (auth.uid() = user_id);
+ *
+ * CREATE TABLE IF NOT EXISTS settings (
+ *   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+ *   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+ *   business_name TEXT DEFAULT '',
+ *   phone_number TEXT DEFAULT '',
+ *   message_template TEXT DEFAULT 'Hi {name}, this is a reminder from {business}. Your appointment is on {date} at {time}. Reply STOP to opt out.',
+ *   reminder_hours INTEGER DEFAULT 24,
+ *   google_calendar_connected BOOLEAN DEFAULT FALSE,
+ *   google_calendar_email TEXT DEFAULT '',
+ *   plan TEXT DEFAULT 'free',
+ *   created_at TIMESTAMPTZ DEFAULT NOW(),
+ *   updated_at TIMESTAMPTZ DEFAULT NOW()
+ * );
+ * ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ * CREATE POLICY "Users own settings" ON settings FOR ALL USING (auth.uid() = user_id);
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+// ─── Supabase client ──────────────────────────────────────────────────────────
 const supabase = createClient(
-  "https://fxzfaxlhhypiigcmlasx.supabase.co",
-  "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
-);
+  'https://fxzfaxlhhypiigcmlasx.supabase.co',
+  'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO'
+)
 
-const GOOGLE_CLIENT_ID = "508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com";
-const CALENDAR_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
-const CALENDAR_REDIRECT = "https://www.textreminder.co.uk/auth/calendar/callback";
+// ─── Constants ────────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = '508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com'
+const GOOGLE_REDIRECT  = 'https://www.textreminder.co.uk/auth/calendar/callback'
+const GOOGLE_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly'
+const EDGE_FN          = 'https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback'
 
-// ── Theme ──────────────────────────────────────────
-const T = {
-  pink:"#7c3aed", purple:"#7c3aed", green:"#16a34a",
-  dark:"#1e1b4b", text:"#111827", muted:"#6b7280",
-  light:"#f5f5f5", white:"#ffffff",
-  border:"#e5e7eb", surfaceAlt:"#f0eeff",
-  brand:"#7c3aed", brandDark:"#5b21b6", brandLight:"#ede9fe",
-};
+const C = {
+  pink:      '#ec4899',
+  pinkDark:  '#db2777',
+  purple:    '#a855f7',
+  navy:      '#0f172a',
+  navyMid:   '#1e293b',
+  white:     '#ffffff',
+  bg:        '#f8fafc',
+  border:    '#e2e8f0',
+  text:      '#0f172a',
+  muted:     '#64748b',
+  mutedLight:'#94a3b8',
+  success:   '#10b981',
+  error:     '#ef4444',
+  warning:   '#f59e0b',
+}
 
-const TRADES = ["Window Cleaners","Plumbers","Electricians","Hairdressers","Gardeners","Plasterers","Roofers","Cleaners","Decorators","Physios"];
+// ─── Plan data ────────────────────────────────────────────────────────────────
+const PLANS = [
+  {
+    id: 'free', name: 'Free', price: 0, reminders: 20, popular: false,
+    features: ['20 SMS reminders/month', 'Google Calendar sync', 'Up to 20 contacts', 'Basic templates', 'Message log'],
+  },
+  {
+    id: 'starter', name: 'Starter', price: 9, reminders: 100, popular: false,
+    features: ['100 SMS reminders/month', 'Google Calendar sync', 'Unlimited contacts', 'Custom templates', 'Message log', 'Email support'],
+  },
+  {
+    id: 'professional', name: 'Professional', price: 19, reminders: 500, popular: true,
+    features: ['500 SMS reminders/month', 'Google Calendar sync', 'Unlimited contacts', 'Custom templates', 'Priority delivery', 'Delivery reports', 'Priority support'],
+  },
+  {
+    id: 'business', name: 'Business', price: 39, reminders: 2000, popular: false,
+    features: ['2,000 SMS reminders/month', 'Everything in Pro', 'Multiple calendars', 'API access', 'Dedicated account manager', 'Custom sender ID'],
+  },
+]
 
-// ── Logo SVG ────────────────────────────────────────
-function Logo({ size=36 }) {
+// ─── Global styles injected once ─────────────────────────────────────────────
+function GlobalStyles() {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <defs>
-        <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ec4899"/>
-          <stop offset="100%" stopColor="#a855f7"/>
-        </linearGradient>
-      </defs>
-      <path d="M15 18 C15 12 19 8 25 8 L75 8 C81 8 85 12 85 18 L85 55 C85 61 81 65 75 65 L55 65 L45 78 L45 65 L25 65 C19 65 15 61 15 55 Z"
-        stroke="url(#lg)" strokeWidth="5" fill="none" strokeLinejoin="round" strokeLinecap="round"/>
-      <line x1="30" y1="30" x2="65" y2="30" stroke="#1a1a2e" strokeWidth="5" strokeLinecap="round"/>
-      <line x1="30" y1="42" x2="70" y2="42" stroke="#1a1a2e" strokeWidth="5" strokeLinecap="round"/>
-      <line x1="30" y1="54" x2="58" y2="54" stroke="#1a1a2e" strokeWidth="5" strokeLinecap="round"/>
-      <circle cx="78" cy="18" r="16" fill="#22c55e"/>
-      <path d="M70 18 L75 23 L86 12" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      a { text-decoration: none; color: inherit; }
+      button { font-family: inherit; cursor: pointer; border: none; background: none; }
+      input, textarea, select { font-family: inherit; }
+
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: #f1f5f9; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+      /* ── Buttons ── */
+      .btn-primary {
+        background: #ec4899; color: #fff; border: none; border-radius: 8px;
+        padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+        transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+        display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+      }
+      .btn-primary:hover { background: #db2777; box-shadow: 0 4px 12px rgba(236,72,153,0.35); }
+      .btn-primary:active { transform: scale(0.97); }
+      .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .btn-secondary {
+        background: transparent; color: #0f172a;
+        border: 1.5px solid #e2e8f0; border-radius: 8px;
+        padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+      }
+      .btn-secondary:hover { border-color: #a855f7; background: #faf5ff; }
+      .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .btn-ghost {
+        background: transparent; color: #64748b; border: none; border-radius: 8px;
+        padding: 8px 12px; font-size: 14px; font-weight: 500; cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .btn-ghost:hover { background: #f1f5f9; color: #0f172a; }
+
+      /* ── Inputs ── */
+      .inp {
+        width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px;
+        padding: 10px 14px; font-size: 14px; font-family: inherit;
+        background: #fff; color: #0f172a; outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .inp:focus { border-color: #ec4899; box-shadow: 0 0 0 3px rgba(236,72,153,0.08); }
+      .inp::placeholder { color: #94a3b8; }
+      textarea.inp { resize: vertical; }
+      select.inp { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+      /* ── Cards ── */
+      .card {
+        background: #fff; border: 1px solid #e2e8f0;
+        border-radius: 12px; padding: 24px;
+      }
+      .card-hover { transition: box-shadow 0.2s, transform 0.2s; }
+      .card-hover:hover { box-shadow: 0 8px 32px rgba(168,85,247,0.1); transform: translateY(-2px); }
+
+      /* ── Label ── */
+      .lbl { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
+
+      /* ── Animations ── */
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .fade-in { animation: fadeIn 0.22s ease; }
+      .slide-up { animation: slideUp 0.25s ease; }
+
+      /* ── Responsive ── */
+      @media (max-width: 640px) {
+        .hide-mobile { display: none !important; }
+        .card { padding: 16px; }
+      }
+      @media (min-width: 641px) {
+        .hide-desktop { display: none !important; }
+      }
+
+      /* ── Nav active line ── */
+      .nav-item-active::after {
+        content: ''; position: absolute; bottom: 0; left: 8px; right: 8px;
+        height: 2px; background: #ec4899; border-radius: 2px 2px 0 0;
+      }
+
+      /* ── Table ── */
+      .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      .data-table th { padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; border-bottom: 2px solid #e2e8f0; background: #f8fafc; white-space: nowrap; }
+      .data-table td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+      .data-table tbody tr:hover { background: #f8fafc; }
+      .data-table tbody tr:last-child td { border-bottom: none; }
+
+      /* ── Pill filters ── */
+      .pill { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #e2e8f0; background: #fff; color: #64748b; transition: all 0.15s; }
+      .pill:hover { border-color: #a855f7; color: #a855f7; }
+      .pill-active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    `}</style>
+  )
+}
+
+// ─── SVG Icon library ─────────────────────────────────────────────────────────
+const IC = {
+  Grid: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
     </svg>
-  );
+  ),
+  Calendar: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+    </svg>
+  ),
+  Users: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  Msg: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
+  Settings: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  Star: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+    </svg>
+  ),
+  Bell: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  ),
+  Plus: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  ),
+  Trash: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3,6 5,6 21,6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  ),
+  Check: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20,6 9,17 4,12"/>
+    </svg>
+  ),
+  X: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  ),
+  ChevRight: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9,18 15,12 9,6"/>
+    </svg>
+  ),
+  LogOut: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16,17 21,12 16,7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  ),
+  Phone: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.34h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+  ),
+  Mail: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+      <polyline points="22,6 12,13 2,6"/>
+    </svg>
+  ),
+  Clock: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+    </svg>
+  ),
+  Trend: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/>
+      <polyline points="17,6 23,6 23,12"/>
+    </svg>
+  ),
+  Alert: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  ),
+  Link: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+  ),
+  Unlink: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      <line x1="2" y1="2" x2="22" y2="22"/>
+    </svg>
+  ),
+  Google: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  ),
 }
 
-// ── Shared components ────────────────────────────────
-function Btn({ onClick, children, style={}, disabled=false, outline=false }) {
-  const base = {
-    border:"none", borderRadius:8, padding:"12px 24px",
-    fontSize:14, fontWeight:700, cursor:disabled?"not-allowed":"pointer",
-    fontFamily:"inherit", transition:"all 0.15s", opacity:disabled?0.5:1,
-  };
-  const variant = outline
-    ? { background:"transparent", color:"#7c3aed", border:"2px solid #7c3aed" }
-    : { background:"#7c3aed", color:"#fff", boxShadow:"0 2px 8px rgba(124,58,237,0.25)" };
-  return <button onClick={onClick} disabled={disabled} style={{...base,...variant,...style}}>{children}</button>;
-}
+// ─── Shared small components ──────────────────────────────────────────────────
 
-function Input({ value, onChange, placeholder, type="text", style={} }) {
-  return (
-    <input
-      type={type} value={value} onChange={onChange} placeholder={placeholder}
-      style={{ width:"100%", border:`1px solid ${T.border}`, borderRadius:8, padding:"11px 14px",
-        fontSize:14, color:T.text, outline:"none", fontFamily:"inherit",
-        background:"#fff", boxSizing:"border-box", ...style }}
-    />
-  );
-}
-
-function Card({ children, style={} }) {
-  return (
-    <div style={{ background:"#fff", border:`1px solid #e2e8f0`,
-      borderRadius:14, overflow:"hidden", ...style }}>
-      {children}
-    </div>
-  );
-}
-
-// ── AI Chat ─────────────────────────────────────────
-function AiChat() {
-  const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState([{ role:"assistant", content:"Hi! I'm the TextReminder assistant. Ask me anything about setup, pricing, or how it works 👋" }]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs, open]);
-
-  async function send() {
-    const text = input.trim();
-    if (!text || loading) return;
-    const next = [...msgs, { role:"user", content:text }];
-    setMsgs(next); setInput(""); setLoading(true);
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          model:"claude-sonnet-4-20250514", max_tokens:400,
-          system:"You are the friendly AI assistant for TextReminder (textreminder.co.uk) — automatic appointment reminders for UK tradespeople. £20/month or £180/year. 14-day free trial. Works with Google, Apple and Outlook Calendar. Sends SMS, email and WhatsApp. Setup takes 5 minutes. Keep answers short and helpful. For complex issues direct to hello@textreminder.co.uk.",
-          messages: next.map(m=>({ role:m.role, content:m.content }))
-        })
-      });
-      const data = await res.json();
-      setMsgs(p=>[...p,{ role:"assistant", content:data.content?.[0]?.text||"Email hello@textreminder.co.uk and we'll help you out." }]);
-    } catch(e) {
-      setMsgs(p=>[...p,{ role:"assistant", content:"Something went wrong — email hello@textreminder.co.uk" }]);
-    }
-    setLoading(false);
+function StatusBadge({ status }) {
+  const map = {
+    pending:   { bg: '#fef9c3', color: '#854d0e' },
+    sent:      { bg: '#dcfce7', color: '#166534' },
+    failed:    { bg: '#fee2e2', color: '#991b1b' },
+    cancelled: { bg: '#f1f5f9', color: '#475569' },
   }
-
+  const s = map[status] || map.pending
   return (
-    <>
-      {open && (
-        <div style={{ position:"fixed", bottom:84, right:20, zIndex:1000, width:300, maxHeight:420,
-          background:"#fff", borderRadius:16, border:`1px solid ${T.border}`,
-          boxShadow:"0 12px 40px rgba(0,0,0,0.15)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
-          <div style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", padding:"13px 16px",
-            display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <Logo size={26}/>
-              <div>
-                <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>TextReminder Help</div>
-                <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)" }}>Always online</div>
-              </div>
-            </div>
-            <button onClick={()=>setOpen(false)} style={{ background:"rgba(255,255,255,0.2)", border:"none",
-              borderRadius:"50%", width:26, height:26, cursor:"pointer", color:"#fff", fontSize:14,
-              display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
-          </div>
-          <div style={{ flex:1, overflowY:"auto", padding:12, display:"flex", flexDirection:"column", gap:8 }}>
-            {msgs.map((m,i)=>(
-              <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start" }}>
-                <div style={{ maxWidth:"82%", background:m.role==="user"?"linear-gradient(135deg,#ec4899,#a855f7)":"#f8fafc",
-                  color:m.role==="user"?"#fff":T.text, borderRadius:m.role==="user"?"14px 14px 4px 14px":"14px 14px 14px 4px",
-                  padding:"9px 12px", fontSize:13, lineHeight:1.55,
-                  border:m.role==="assistant"?`1px solid ${T.border}`:"none" }}>{m.content}</div>
-              </div>
-            ))}
-            {loading && <div style={{ display:"flex", gap:4, padding:"10px 12px", background:"#f8fafc",
-              borderRadius:"14px 14px 14px 4px", width:"fit-content", border:`1px solid ${T.border}` }}>
-              {[0,1,2].map(i=><div key={i} style={{ width:6, height:6, borderRadius:"50%",
-                background:T.purple, animation:`pulse 1s ease-in-out ${i*0.2}s infinite` }}/>)}
-            </div>}
-            <div ref={bottomRef}/>
-          </div>
-          <div style={{ padding:"10px 12px", borderTop:`1px solid ${T.border}`, display:"flex", gap:8 }}>
-            <input value={input} onChange={e=>setInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Ask anything..."
-              style={{ flex:1, border:`1px solid ${T.border}`, borderRadius:8, padding:"8px 11px",
-                fontSize:13, outline:"none", fontFamily:"inherit" }}/>
-            <button onClick={send} disabled={!input.trim()||loading}
-              style={{ background:input.trim()&&!loading?"linear-gradient(135deg,#ec4899,#a855f7)":"#e2e8f0",
-                color:input.trim()&&!loading?"#fff":"#94a3b8", border:"none", borderRadius:8,
-                padding:"8px 14px", cursor:"pointer", fontWeight:700, fontSize:13, transition:"all 0.2s" }}>→</button>
-          </div>
-        </div>
-      )}
-      <button onClick={()=>setOpen(p=>!p)} style={{ position:"fixed", bottom:20, right:20, zIndex:1000,
-        width:52, height:52, borderRadius:"50%", background:"linear-gradient(135deg,#ec4899,#a855f7)",
-        border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-        boxShadow:"0 4px 20px rgba(168,85,247,0.4)", fontSize:22, transition:"all 0.2s" }}>
-        {open?"×":"💬"}
-      </button>
-      <style>{`@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}`}</style>
-    </>
-  );
+    <span style={{ background: s.bg, color: s.color, fontSize: 12, fontWeight: 600,
+      padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap',
+      textTransform: 'capitalize' }}>
+      {status}
+    </span>
+  )
 }
 
-// ── HOME PAGE ────────────────────────────────────────
-function HomePage({ onSignup, onLogin }) {
-  const [tradeIdx, setTradeIdx] = useState(0);
-  const [fade, setFade] = useState(true);
-
-  useEffect(()=>{
-    const t = setInterval(()=>{
-      setFade(false);
-      setTimeout(()=>{ setTradeIdx(i=>(i+1)%TRADES.length); setFade(true); }, 300);
-    }, 2200);
-    return ()=>clearInterval(t);
-  },[]);
-
-  const features = [
-    { icon:"📅", title:"Google, Apple & Outlook", desc:"Connect any calendar in minutes. Appointments sync automatically." },
-    { icon:"📱", title:"SMS, Email & WhatsApp", desc:"Send via whichever channel your customers prefer. All three included." },
-    { icon:"🤖", title:"Fully Automatic", desc:"Set it up once. Reminders fire 24 hours before every appointment." },
-    { icon:"✏️", title:"Your Brand, Your Message", desc:"Customise the template with your business name and number." },
-    { icon:"📋", title:"Full Message Log", desc:"See every reminder sent, delivered and confirmed." },
-    { icon:"💷", title:"Half the Price", desc:"Most services charge £25–£50/month. TextReminder is £20." },
-  ];
-
+function Toast({ message, type = 'success', onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500)
+    return () => clearTimeout(t)
+  }, [onClose])
+  const bg = type === 'success' ? C.success : type === 'error' ? C.error : C.warning
   return (
-    <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:T.text, background:T.white }}>
-      <nav style={{ position:"sticky", top:0, zIndex:100, background:"#fff",
-        borderBottom:"2px solid #7c3aed", boxShadow:"0 1px 8px rgba(0,0,0,0.06)" }}>
-        <div style={{ maxWidth:1100, margin:"0 auto", display:"flex", alignItems:"center",
-          justifyContent:"space-between", height:56, padding:"0 20px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <Logo size={30}/>
-            <div style={{ fontSize:16, fontWeight:800, color:T.dark, letterSpacing:"-0.3px" }}>
-              text<span style={{ color:"#7c3aed" }}>reminder</span>
-            </div>
-          </div>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={onLogin} style={{ background:"none", border:"none", color:"#7c3aed",
-              fontWeight:600, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>Sign in</button>
-            <Btn onClick={onSignup} style={{ padding:"9px 20px", fontSize:13, background:"#7c3aed",
-              boxShadow:"none" }}>Start Free Trial</Btn>
-          </div>
-        </div>
-      </nav>
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+      background: bg, color: '#fff', padding: '12px 18px', borderRadius: 10,
+      fontWeight: 500, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.18)', animation: 'slideUp 0.2s ease',
+      maxWidth: 360 }}>
+      {type === 'success' ? <IC.Check /> : <IC.Alert />}
+      <span style={{ flex: 1 }}>{message}</span>
+      <button onClick={onClose} style={{ color: 'rgba(255,255,255,0.8)', flexShrink: 0,
+        background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
+        <IC.X />
+      </button>
+    </div>
+  )
+}
 
-      <section style={{ background:"#f5f5f7", padding:"64px 20px 56px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:"#7c3aed" }}/>
-        <div style={{ maxWidth:800, margin:"0 auto", textAlign:"center", position:"relative" }}>
-          <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"#ede9fe",
-            borderRadius:6, padding:"6px 14px",
-            fontSize:12, fontWeight:700, color:"#7c3aed", marginBottom:24,
-            letterSpacing:"0.3px" }}>
-            <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a", display:"inline-block" }}/>
-            Simple · Automatic · Affordable
+function Modal({ title, onClose, children, maxWidth = 480 }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)',
+      zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, backdropFilter: 'blur(2px)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: '#fff', borderRadius: 14, padding: 28, width: '100%',
+        maxWidth, maxHeight: '90vh', overflowY: 'auto', animation: 'slideUp 0.22s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700 }}>{title}</h3>
+          <button className="btn-ghost" onClick={onClose} style={{ padding: 6, color: C.muted }}>
+            <IC.X />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Spinner() {
+  return (
+    <div style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)',
+      borderTop: '2px solid #fff', borderRadius: '50%',
+      animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+  )
+}
+
+function EmptyState({ icon: Ic, title, sub, action, onAction }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '52px 24px' }}>
+      <div style={{ width: 52, height: 52, background: '#f1f5f9', borderRadius: 14,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 16px', color: C.muted }}>
+        <Ic />
+      </div>
+      <p style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>{title}</p>
+      {sub && <p style={{ color: C.muted, fontSize: 13, marginBottom: action ? 16 : 0 }}>{sub}</p>}
+      {action && (
+        <button className="btn-primary" onClick={onAction} style={{ fontSize: 13, padding: '8px 18px' }}>
+          {action}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Date/time helpers ────────────────────────────────────────────────────────
+const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+const fmtTime = d => new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+const fmtDT   = d => `${fmtDate(d)}, ${fmtTime(d)}`
+
+// ─── PUBLIC NAV ───────────────────────────────────────────────────────────────
+function PublicNav({ onLogin, onSignup }) {
+  return (
+    <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: C.navy,
+      borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 62 }}>
+        <LogoMark />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn-ghost" onClick={onLogin}
+            style={{ color: 'rgba(255,255,255,0.75)' }}>Log in</button>
+          <button className="btn-primary" onClick={onSignup} style={{ padding: '9px 20px' }}>
+            Get started free
+          </button>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+function LogoMark({ dark = false }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+      <div style={{ width: 32, height: 32,
+        background: `linear-gradient(135deg, ${C.pink} 0%, ${C.purple} 100%)`,
+        borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#fff', flexShrink: 0 }}>
+        <IC.Bell />
+      </div>
+      <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.4px',
+        color: dark ? C.navy : '#fff' }}>
+        TextReminder
+      </span>
+    </div>
+  )
+}
+
+// ─── APP NAV ──────────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { key: 'dashboard',    label: 'Dashboard', Ic: IC.Grid },
+  { key: 'upcoming',     label: 'Upcoming',  Ic: IC.Calendar },
+  { key: 'contacts',     label: 'Contacts',  Ic: IC.Users },
+  { key: 'message-log',  label: 'Messages',  Ic: IC.Msg },
+  { key: 'settings',     label: 'Settings',  Ic: IC.Settings },
+  { key: 'upgrade',      label: 'Upgrade',   Ic: IC.Star, accent: true },
+]
+
+function AppNav({ page, setPage, user, onLogout }) {
+  return (
+    <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: C.navy,
+      borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 20px',
+        display: 'flex', alignItems: 'center', height: 58 }}>
+
+        {/* Logo */}
+        <div style={{ marginRight: 12, flexShrink: 0 }}>
+          <LogoMark />
+        </div>
+
+        {/* Nav links */}
+        <div style={{ display: 'flex', alignItems: 'stretch', flex: 1, height: '100%', gap: 2 }}>
+          {NAV_ITEMS.map(({ key, label, Ic, accent }) => {
+            const active = page === key
+            return (
+              <button key={key} onClick={() => setPage(key)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0 10px', position: 'relative',
+                  color: active
+                    ? (accent ? C.pink : '#fff')
+                    : accent ? C.pink : 'rgba(255,255,255,0.55)',
+                  fontWeight: active ? 600 : 500, fontSize: 13.5,
+                  background: active ? 'rgba(255,255,255,0.08)' : 'none',
+                  border: 'none', cursor: 'pointer', borderRadius: 6,
+                  transition: 'color 0.15s, background 0.15s',
+                  whiteSpace: 'nowrap' }}>
+                <Ic />
+                <span className="hide-mobile">{label}</span>
+                {active && (
+                  <span style={{ position: 'absolute', bottom: 0, left: 8, right: 8,
+                    height: 2, background: accent ? C.pink : C.pink,
+                    borderRadius: '2px 2px 0 0' }} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* User area */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <div className="hide-mobile" style={{ width: 30, height: 30, borderRadius: 15,
+            background: `linear-gradient(135deg, ${C.pink}44, ${C.purple}44)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 700, color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}>
+            {(user?.email?.[0] || 'U').toUpperCase()}
           </div>
-          <h1 style={{ fontSize:"clamp(26px,4vw,44px)", fontWeight:800, lineHeight:1.2,
-            color:T.dark, marginBottom:14, margin:"0 0 14px",
-            fontFamily:"'DM Sans','Segoe UI',sans-serif", letterSpacing:"-0.5px" }}>
-            Never lose a job to<br/>
-            <span style={{ color:"#7c3aed" }}>a forgotten appointment</span>
-          </h1>
-          <div style={{ fontSize:17, color:T.muted, marginBottom:10, marginTop:16 }}>
-            Built for{" "}
-            <span style={{ fontWeight:700, color:"#7c3aed", transition:"opacity 0.3s", opacity:fade?1:0 }}>
-              {TRADES[tradeIdx]}
+          <span className="hide-mobile" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)',
+            maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user?.email?.split('@')[0]}
+          </span>
+          <button className="btn-ghost" onClick={onLogout} title="Log out"
+            style={{ color: 'rgba(255,255,255,0.55)', padding: 8, borderRadius: 6 }}>
+            <IC.LogOut />
+          </button>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: HOME
+// ═════════════════════════════════════════════════════════════════════════════
+function HomePage({ onLogin, onSignup }) {
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={onLogin} onSignup={onSignup} />
+
+      {/* ── Hero ── */}
+      <section style={{ background: C.navy, padding: '90px 20px 110px' }}>
+        <div style={{ maxWidth: 780, margin: '0 auto', textAlign: 'center' }} className="fade-in">
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 24,
+            background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)',
+            borderRadius: 24, padding: '6px 16px' }}>
+            <IC.Bell />
+            <span style={{ color: C.pink, fontSize: 13, fontWeight: 600 }}>
+              SMS reminder automation for UK businesses
             </span>
           </div>
-          <p style={{ fontSize:15, color:T.muted, lineHeight:1.75, maxWidth:500, margin:"0 auto 32px" }}>
-            Connect your calendar. TextReminder sends automatic SMS, email and WhatsApp
-            reminders 24 hours before every appointment.
+          <h1 style={{ fontSize: 'clamp(34px, 5.5vw, 58px)', fontWeight: 800, color: '#fff',
+            lineHeight: 1.13, letterSpacing: '-1.5px', marginBottom: 22 }}>
+            Stop no-shows.{' '}
+            <span style={{ color: C.pink }}>Automate your reminders.</span>
+          </h1>
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.62)', lineHeight: 1.75,
+            maxWidth: 560, margin: '0 auto 40px' }}>
+            TextReminder syncs with your Google Calendar and sends SMS reminders to clients
+            automatically. No manual work. No missed appointments. No wasted time.
           </p>
-          <div style={{ display:"flex", gap:14, justifyContent:"center", flexWrap:"wrap", marginBottom:14 }}>
-            <Btn onClick={onSignup} style={{ fontSize:16, padding:"15px 32px" }}>Start Free Trial</Btn>
-            <Btn onClick={()=>{}} outline style={{ fontSize:16, padding:"14px 30px" }}>See How It Works</Btn>
-          </div>
-          <div style={{ fontSize:12, color:T.muted }}>No credit card required · 14-day free trial · 5 minutes to set up</div>
-        </div>
-        <div style={{ maxWidth:440, margin:"48px auto 0" }}>
-          <div style={{ background:"#fff", borderRadius:20, padding:22,
-            boxShadow:"0 20px 60px rgba(168,85,247,0.14)", border:`1px solid ${T.border}`,
-            animation:"float 4s ease-in-out infinite" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16,
-              paddingBottom:14, borderBottom:`1px solid #f9f0ff` }}>
-              <div style={{ width:38, height:38, borderRadius:"50%",
-                background:"linear-gradient(135deg,#ec4899,#a855f7)",
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <Logo size={22}/>
-              </div>
-              <div>
-                <div style={{ fontSize:13, fontWeight:700, color:T.text }}>TextReminder</div>
-                <div style={{ fontSize:10, color:T.muted }}>Automated · Just now</div>
-              </div>
-              <div style={{ marginLeft:"auto", fontSize:11, color:T.green, fontWeight:700 }}>✓ Delivered</div>
-            </div>
-            <div style={{ background:"linear-gradient(135deg,#fdf4ff,#faf5ff)", borderRadius:12,
-              padding:"13px 15px", marginBottom:14, borderLeft:`3px solid ${T.purple}` }}>
-              <div style={{ fontSize:11, color:"#9ca3af", marginBottom:5, fontWeight:600 }}>
-                SMS to: Sarah Mitchell · 07712 345 678
-              </div>
-              <div style={{ fontSize:14, color:T.text, lineHeight:1.7 }}>
-                Hi Sarah, just a reminder your window clean is <strong>tomorrow at 9am</strong>.
-                Any questions call 07700 900123. Reply STOP to opt out.
-              </div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-              {[["247","Sent this month"],["98%","Open rate"],["£0","No-shows"]].map(([v,l],i)=>(
-                <div key={i} style={{ textAlign:"center", background:"#f8fafc", borderRadius:10, padding:"10px 6px" }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:i===2?T.green:T.purple }}>{v}</div>
-                  <div style={{ fontSize:10, color:T.muted, marginTop:2, lineHeight:1.3 }}>{l}</div>
-                </div>
-              ))}
-            </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button className="btn-primary" onClick={onSignup}
+              style={{ padding: '14px 30px', fontSize: 16 }}>
+              Start free — no card needed
+            </button>
+            <button onClick={onLogin}
+              style={{ padding: '14px 30px', fontSize: 16, fontWeight: 500,
+                border: '1.5px solid rgba(255,255,255,0.18)', borderRadius: 8, color: 'rgba(255,255,255,0.8)',
+                background: 'rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.15s' }}>
+              Log in
+            </button>
           </div>
         </div>
       </section>
 
-      <div style={{ background:"#1e1b4b", borderTop:`1px solid #2d2a5e`, borderBottom:`1px solid #2d2a5e`, padding:"14px 24px" }}>
-        <div style={{ maxWidth:900, margin:"0 auto", display:"flex", alignItems:"center",
-          justifyContent:"center", gap:28, flexWrap:"wrap" }}>
-          {["Stop paying £25/month","Google, Apple & Outlook","SMS, Email & WhatsApp","5-minute setup"].map((t,i)=>(
-            <div key={i} style={{ display:"flex", alignItems:"center", gap:7, fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.85)" }}>
-              <span style={{ color:"#4ade80", fontSize:15 }}>✓</span>{t}
+      {/* ── Stats strip ── */}
+      <section style={{ background: '#faf5ff', borderBottom: `1px solid #e9d5ff`, padding: '32px 20px' }}>
+        <div style={{ maxWidth: 880, margin: '0 auto', display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 24, textAlign: 'center' }}>
+          {[['98%', 'SMS open rate'], ['42%', 'Fewer no-shows'], ['2 min', 'Setup time'], ['0', 'Manual work']].map(([n, l]) => (
+            <div key={l}>
+              <div style={{ fontSize: 34, fontWeight: 800, color: C.purple, letterSpacing: '-1px' }}>{n}</div>
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 4, fontWeight: 500 }}>{l}</div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <section style={{ padding:"72px 24px", background:"#fff" }}>
-        <div style={{ maxWidth:1000, margin:"0 auto" }}>
-          <div style={{ textAlign:"center", marginBottom:48 }}>
-            <h2 style={{ fontSize:"clamp(22px,4vw,34px)", fontWeight:800, color:T.dark, marginBottom:10 }}>
-              Everything you need. Nothing you don't.
+      {/* ── Features ── */}
+      <section style={{ padding: '88px 20px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>
+              Everything you need to reduce no-shows
             </h2>
-            <p style={{ fontSize:15, color:T.muted, maxWidth:480, margin:"0 auto" }}>
-              Built for tradespeople who want to stop chasing confirmations.
+            <p style={{ color: C.muted, fontSize: 16, marginTop: 12 }}>
+              Built for trades, salons, clinics, and any appointment-based business.
             </p>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:18 }}>
-            {features.map((f,i)=>(
-              <div key={i} style={{ background:"#fff", border:`1px solid ${T.border}`, borderRadius:14,
-                padding:"24px 22px", transition:"all 0.2s" }}>
-                <div style={{ fontSize:26, marginBottom:12 }}>{f.icon}</div>
-                <div style={{ fontSize:15, fontWeight:700, color:T.text, marginBottom:8 }}>{f.title}</div>
-                <div style={{ fontSize:13, color:T.muted, lineHeight:1.75 }}>{f.desc}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 22 }}>
+            {[
+              { Ic: IC.Calendar, title: 'Google Calendar sync',
+                desc: 'Connect once. TextReminder reads your calendar and schedules reminders automatically — no extra data entry.' },
+              { Ic: IC.Msg, title: 'Personalised SMS templates',
+                desc: 'Include your business name, client name, date, and time in every message. Fully customisable.' },
+              { Ic: IC.Users, title: 'Contact management',
+                desc: 'Store your client list securely. Add and remove contacts at any time. Search and filter in seconds.' },
+              { Ic: IC.Trend, title: 'Delivery tracking',
+                desc: 'See the real-time status of every reminder — sent, pending, or failed. Full message log included.' },
+              { Ic: IC.Clock, title: 'Flexible reminder timing',
+                desc: 'Choose how far ahead reminders go out: 1 hour, 24 hours, 48 hours, or more — whatever suits your clients.' },
+              { Ic: IC.Bell, title: 'Set it and forget it',
+                desc: 'Once configured, everything runs automatically. No daily logins, no manual sending, no chasing.' },
+            ].map(({ Ic, title, desc }) => (
+              <div key={title} className="card card-hover"
+                style={{ cursor: 'default' }}>
+                <div style={{ width: 46, height: 46, background: '#faf5ff', borderRadius: 11,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: C.purple, marginBottom: 16 }}>
+                  <Ic />
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 9 }}>{title}</h3>
+                <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65 }}>{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section style={{ padding:"72px 24px", background:"#fff" }}>
-        <div style={{ maxWidth:860, margin:"0 auto" }}>
-          <h2 style={{ fontSize:"clamp(24px,4vw,36px)", fontWeight:800, textAlign:"center",
-            color:T.text, marginBottom:48 }}>Up and running in minutes</h2>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:16 }}>
-            {[
-              {n:"1",icon:"📅",title:"Connect Calendar",desc:"Google, Apple or Outlook in 60 seconds."},
-              {n:"2",icon:"👥",title:"Add Contacts",desc:"Build your customer list with names and numbers."},
-              {n:"3",icon:"✏️",title:"Set Template",desc:"Customise your reminder message once."},
-              {n:"4",icon:"✅",title:"Relax",desc:"Reminders fire automatically, every time."},
-            ].map((s,i)=>(
-              <div key={i} style={{ textAlign:"center", padding:"20px 12px" }}>
-                <div style={{ width:50, height:50, borderRadius:"50%",
-                  background:"linear-gradient(135deg,#fdf4ff,#f3e8ff)", border:`2px solid ${T.border}`,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  margin:"0 auto 14px", fontSize:20 }}>{s.icon}</div>
-                <div style={{ display:"inline-block", background:"linear-gradient(135deg,#ec4899,#a855f7)",
-                  color:"#fff", fontSize:10, fontWeight:800, width:20, height:20, borderRadius:"50%",
-                  lineHeight:"20px", textAlign:"center", marginBottom:10 }}>{s.n}</div>
-                <div style={{ fontSize:14, fontWeight:700, color:T.text, marginBottom:6 }}>{s.title}</div>
-                <div style={{ fontSize:12, color:T.muted, lineHeight:1.7 }}>{s.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section style={{ padding:"72px 24px", background:T.light }}>
-        <div style={{ maxWidth:960, margin:"0 auto" }}>
-          <div style={{ textAlign:"center", marginBottom:48 }}>
-            <h2 style={{ fontSize:"clamp(24px,4vw,36px)", fontWeight:800, color:T.text, marginBottom:10 }}>
-              Simple, transparent pricing
+      {/* ── Pricing ── */}
+      <section id="pricing" style={{ background: '#f8fafc', padding: '88px 20px',
+        borderTop: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>
+              Simple, honest pricing
             </h2>
-            <p style={{ fontSize:15, color:T.muted, lineHeight:1.7 }}>
-              Pay for what you use. No setup fees. No hidden costs. 14-day free trial on every plan.
-            </p>
+            <p style={{ color: C.muted, marginTop: 10, fontSize: 16 }}>No contracts. Cancel any time. No hidden fees.</p>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:16 }}>
-            {[
-              { name:"Starter", price:"£9.99", msgs:40, popular:false,
-                features:["40 reminders/month","SMS, Email & WhatsApp","All calendar types","Message log","AI support"] },
-              { name:"Pro", price:"£19.99", msgs:100, popular:true,
-                features:["100 reminders/month","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","AI support"] },
-              { name:"Business", price:"£34.99", msgs:250, popular:false,
-                features:["250 reminders/month","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","Priority support"] },
-              { name:"Enterprise", price:"£59.99", msgs:999, popular:false,
-                features:["Unlimited reminders","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","Priority support"] },
-            ].map((plan,i)=>(
-              <div key={i} style={{ background:plan.popular?"linear-gradient(135deg,#0f172a,#1e0a3c)":"#fff",
-                border:plan.popular?"2px solid "+T.purple:"1px solid "+T.border,
-                borderRadius:16, padding:"24px 20px", position:"relative" }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+            {PLANS.map(plan => (
+              <div key={plan.id} className="card"
+                style={{ border: plan.popular ? `2px solid ${C.pink}` : `1px solid ${C.border}`,
+                  position: 'relative', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(168,85,247,0.12)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
                 {plan.popular && (
-                  <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)",
-                    background:"linear-gradient(135deg,#ec4899,"+T.purple+")", color:"#fff",
-                    fontSize:10, fontWeight:700, padding:"4px 12px", borderRadius:20,
-                    letterSpacing:"1px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-                    Most Popular
+                  <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
+                    background: C.pink, color: '#fff', fontSize: 11, fontWeight: 700,
+                    padding: '3px 14px', borderRadius: 20, letterSpacing: '0.5px' }}>
+                    MOST POPULAR
                   </div>
                 )}
-                <div style={{ fontSize:13, fontWeight:700, color:plan.popular?"rgba(255,255,255,0.6)":T.muted,
-                  textTransform:"uppercase", letterSpacing:"1px", marginBottom:8 }}>{plan.name}</div>
-                <div style={{ fontSize:36, fontWeight:800, color:plan.popular?"#fff":T.text,
-                  lineHeight:1, marginBottom:4 }}>{plan.price}
-                  <span style={{ fontSize:14, fontWeight:400, color:plan.popular?"rgba(255,255,255,0.4)":T.muted }}>/mo</span>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.6px', color: C.muted, marginBottom: 8 }}>{plan.name}</div>
+                <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, letterSpacing: '-1px', marginBottom: 4 }}>
+                  {plan.price === 0 ? 'Free' : `£${plan.price}`}
+                  {plan.price > 0 && <span style={{ fontSize: 15, fontWeight: 400, color: C.muted }}>/mo</span>}
                 </div>
-                <div style={{ fontSize:12, color:plan.popular?"rgba(255,255,255,0.4)":T.muted,
-                  marginBottom:20 }}>{plan.msgs===999?"Unlimited":plan.msgs} reminders/month</div>
-                {plan.features.map((f,j)=>(
-                  <div key={j} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, fontSize:12,
-                    color:plan.popular?"rgba(255,255,255,0.8)":"#374151" }}>
-                    <span style={{ color:T.green, flexShrink:0 }}>&#x2713;</span>{f}
-                  </div>
-                ))}
-                <button onClick={onSignup} style={{ width:"100%", marginTop:20,
-                  background:plan.popular?"linear-gradient(135deg,#ec4899,"+T.purple+")":"#f3e8ff",
-                  color:plan.popular?"#fff":T.purple, border:"none", borderRadius:10,
-                  padding:"11px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                  Start Free Trial
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 22, fontWeight: 500 }}>
+                  {plan.reminders} reminders/month
+                </div>
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18,
+                  display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 22 }}>
+                  {plan.features.map(f => (
+                    <div key={f} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13 }}>
+                      <span style={{ color: C.success, flexShrink: 0, marginTop: 1 }}><IC.Check /></span>
+                      {f}
+                    </div>
+                  ))}
+                </div>
+                <button className={plan.popular ? 'btn-primary' : 'btn-secondary'}
+                  onClick={onSignup} style={{ width: '100%', justifyContent: 'center', padding: '11px' }}>
+                  {plan.price === 0 ? 'Get started free' : 'Start free trial'}
                 </button>
               </div>
             ))}
           </div>
-          <div style={{ textAlign:"center", marginTop:24, fontSize:13, color:T.muted }}>
-            All plans include a 14-day free trial · No credit card required · Cancel anytime
-          </div>
-          <div style={{ background:"#fef9c3", borderRadius:12, padding:"14px 18px",
-            display:"flex", alignItems:"center", gap:12, marginTop:20 }}>
-            <span style={{ fontSize:20 }}>&#x1F4A1;</span>
-            <div style={{ fontSize:13, color:"#713f12" }}>
-              <strong>Pro and Business plans:</strong> unused reminders roll over for one month so you never waste your allowance.
-            </div>
-          </div>
         </div>
       </section>
 
-      <section style={{ padding:"72px 24px", background:"#1e1b4b" }}>
-        <div style={{ maxWidth:560, margin:"0 auto", textAlign:"center" }}>
-          <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}><Logo size={56}/></div>
-          <h2 style={{ fontSize:"clamp(24px,4vw,38px)", fontWeight:800, color:"#fff", marginBottom:12, lineHeight:1.15 }}>Stop losing jobs to no-shows</h2>
-          <p style={{ fontSize:15, color:"rgba(255,255,255,0.5)", marginBottom:30, lineHeight:1.75 }}>
-            5 minutes to set up. Pays for itself the first time a customer actually turns up.
+      {/* ── Footer ── */}
+      <footer style={{ background: C.navy, padding: '44px 20px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex',
+          alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <LogoMark />
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>
+            &copy; {new Date().getFullYear()} TextReminder. All rights reserved.
           </p>
-          <Btn onClick={onSignup} style={{ fontSize:16, padding:"15px 36px" }}>Start Free Trial →</Btn>
-          <div style={{ fontSize:12, color:"rgba(255,255,255,0.25)", marginTop:14 }}>
-            textreminder.co.uk · Built for UK tradespeople · Part of Rollright Publishing Ltd
-          </div>
-        </div>
-      </section>
-
-      <footer style={{ background:"#111827", padding:"24px" }}>
-        <div style={{ maxWidth:1000, margin:"0 auto", display:"flex", alignItems:"center",
-          justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <Logo size={28}/>
-            <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.5)" }}>textreminder.co.uk</div>
-          </div>
-          <div style={{ fontSize:12, color:"rgba(255,255,255,0.2)" }}>
-            © 2026 Rollright Publishing Ltd · Remind. Confirm. Keep Appointments.
+          <div style={{ display: 'flex', gap: 20 }}>
+            {['Privacy', 'Terms', 'Contact'].map(l => (
+              <span key={l} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, cursor: 'pointer',
+                transition: 'color 0.15s' }}
+                onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.75)'}
+                onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.4)'}>
+                {l}
+              </span>
+            ))}
           </div>
         </div>
       </footer>
-      <style>{`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}`}</style>
     </div>
-  );
+  )
 }
 
-// ── AUTH ─────────────────────────────────────────────
-function AuthPage({ mode, onSuccess, onSwitch }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [business, setBusiness] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: AUTH
+// ═════════════════════════════════════════════════════════════════════════════
+function AuthPage({ mode, setMode, onAuthSuccess }) {
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
 
-  async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: "https://www.textreminder.co.uk" }
-    });
-  }
-
-  async function handle(e) {
-    e.preventDefault();
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    setError(""); setLoading(true);
-    if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { setError(error.message); setLoading(false); }
-      else onSuccess();
-    } else {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) { setError(error.message); setLoading(false); return; }
-      if (data?.user && business) {
-        await supabase.from("profiles").update({ business_name:business }).eq("id", data.user.id);
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setLoading(true); setError('')
+    try {
+      let result
+      if (mode === 'login') {
+        result = await supabase.auth.signInWithPassword({ email, password })
+      } else {
+        result = await supabase.auth.signUp({ email, password })
       }
-      setConfirmed(true); setLoading(false);
+      if (result.error) { setError(result.error.message); return }
+      if (mode === 'signup' && !result.data.session) {
+        setError('Check your email to confirm your account, then log in.')
+        return
+      }
+      onAuthSuccess(result.data.session?.user)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (confirmed) return (
-    <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#fdf4ff,#faf5ff,#f0fdf4)",
-      display:"flex", alignItems:"center", justifyContent:"center", padding:24,
-      fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
-      <div style={{ textAlign:"center", maxWidth:380 }}>
-        <div style={{ fontSize:52, marginBottom:16 }}>✅</div>
-        <h2 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:8 }}>Check your email</h2>
-        <p style={{ color:T.muted, fontSize:14, lineHeight:1.7 }}>
-          We've sent a confirmation link to <strong>{email}</strong>. Click it to activate your free trial.
-        </p>
-      </div>
-    </div>
-  );
+  async function handleGoogle() {
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    })
+    if (error) { setError(error.message); setLoading(false) }
+  }
 
   return (
-    <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#fdf4ff,#faf5ff,#f0fdf4)",
-      display:"flex", alignItems:"center", justifyContent:"center", padding:24,
-      fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
-      <div style={{ width:"100%", maxWidth:400 }}>
-        <div style={{ textAlign:"center", marginBottom:28 }}>
-          <div style={{ display:"flex", justifyContent:"center", marginBottom:12 }}><Logo size={48}/></div>
-          <h1 style={{ fontSize:24, fontWeight:800, color:T.text, marginBottom:6 }}>
-            {mode==="login"?"Welcome back":"Start your free trial"}
-          </h1>
-          <p style={{ color:T.muted, fontSize:14 }}>
-            {mode==="login"?"Sign in to your account":"14 days free · No credit card required"}
-          </p>
-        </div>
-        <div style={{ background:"#fff", borderRadius:16, padding:28,
-          boxShadow:"0 4px 24px rgba(168,85,247,0.1)", border:`1px solid ${T.border}` }}>
-          <button onClick={handleGoogle} style={{ width:"100%", display:"flex", alignItems:"center",
-            justifyContent:"center", gap:10, padding:"11px 16px", borderRadius:10,
-            border:"1px solid #e2e8f0", background:"#fff", fontSize:14, fontWeight:600,
-            color:"#374151", cursor:"pointer", fontFamily:"inherit", marginBottom:16, transition:"all 0.2s" }}>
-            <svg width="18" height="18" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.1 0 5.8 1.1 8 2.9l6-6C34.5 3.2 29.6 1 24 1 14.6 1 6.7 6.7 3.2 14.8l7 5.4C12 14.2 17.5 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-17.4z"/>
-              <path fill="#FBBC05" d="M10.2 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.2.7-4.6l-7-5.4A23.9 23.9 0 0 0 0 24c0 3.9.9 7.6 2.6 10.8l7.6-6.2z"/>
-              <path fill="#34A853" d="M24 47c5.6 0 10.3-1.8 13.8-5l-7.4-5.7c-1.9 1.3-4.3 2.1-6.9 2.1-6.4 0-11.9-4.7-13.7-11.1l-7.6 6.2C6.7 41.3 14.6 47 24 47z"/>
-            </svg>
+    <div style={{ minHeight: '100vh', background: C.navy,
+      display: 'flex', flexDirection: 'column' }}>
+      <PublicNav onLogin={() => setMode('login')} onSignup={() => setMode('signup')} />
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', padding: 20 }}>
+        <div className="card slide-up" style={{ width: '100%', maxWidth: 430 }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 30 }}>
+            <div style={{ width: 52, height: 52, margin: '0 auto 18px',
+              background: `linear-gradient(135deg, ${C.pink}, ${C.purple})`,
+              borderRadius: 14, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#fff' }}>
+              <IC.Bell />
+            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.4px' }}>
+              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            </h2>
+            <p style={{ color: C.muted, fontSize: 14, marginTop: 7 }}>
+              {mode === 'login'
+                ? 'Log in to your TextReminder account'
+                : 'Send your first reminder in under 5 minutes'}
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ background: '#fef2f2', border: `1px solid #fecaca`,
+              borderRadius: 8, padding: '10px 14px', marginBottom: 18,
+              fontSize: 13, color: C.error, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ flexShrink: 0, marginTop: 1 }}><IC.Alert /></span>
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 16 }}>
+              <label className="lbl">Email address</label>
+              <input className="inp" type="email" placeholder="you@yourcompany.com"
+                value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div style={{ marginBottom: 22 }}>
+              <label className="lbl">Password</label>
+              <input className="inp" type="password"
+                placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
+                value={password} onChange={e => setPassword(e.target.value)}
+                required minLength={8} />
+            </div>
+            <button className="btn-primary" type="submit" disabled={loading}
+              style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15 }}>
+              {loading ? <Spinner /> : mode === 'login' ? 'Log in' : 'Create account'}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+            <div style={{ flex: 1, height: 1, background: C.border }} />
+            <span style={{ fontSize: 13, color: C.muted }}>or</span>
+            <div style={{ flex: 1, height: 1, background: C.border }} />
+          </div>
+
+          <button className="btn-secondary" onClick={handleGoogle} disabled={loading}
+            style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+            <IC.Google />
             Continue with Google
           </button>
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
-            <div style={{ flex:1, height:1, background:T.border }}/>
-            <div style={{ fontSize:11, color:T.muted, fontWeight:600 }}>OR</div>
-            <div style={{ flex:1, height:1, background:T.border }}/>
-          </div>
-          <form onSubmit={handle}>
-            {mode==="signup" && (
-              <div style={{ marginBottom:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#475569", letterSpacing:"0.5px",
-                  textTransform:"uppercase", marginBottom:6 }}>Business Name</div>
-                <Input value={business} onChange={e=>setBusiness(e.target.value)} placeholder="e.g. Four Shires Window Cleaning"/>
-              </div>
-            )}
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#475569", letterSpacing:"0.5px",
-                textTransform:"uppercase", marginBottom:6 }}>Email</div>
-              <Input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
-            </div>
-            <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#475569", letterSpacing:"0.5px",
-                textTransform:"uppercase", marginBottom:6 }}>Password</div>
-              <Input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="6+ characters"/>
-            </div>
-            {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8,
-              padding:"10px 12px", fontSize:13, color:"#dc2626", marginBottom:16 }}>{error}</div>}
-            <Btn disabled={loading} style={{ width:"100%", padding:14, fontSize:15 }}>
-              {loading?"Please wait...":(mode==="login"?"Sign In →":"Start Free Trial →")}
-            </Btn>
-          </form>
-          <div style={{ textAlign:"center", marginTop:18, fontSize:13, color:T.muted }}>
-            {mode==="login"
-              ? <span>No account? <button onClick={()=>onSwitch("signup")} style={{ background:"none",
-                  border:"none", color:T.purple, fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Start free trial</button></span>
-              : <span>Already have an account? <button onClick={()=>onSwitch("login")} style={{ background:"none",
-                  border:"none", color:T.purple, fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Sign in</button></span>
-            }
-          </div>
+
+          <p style={{ textAlign: 'center', fontSize: 14, color: C.muted, marginTop: 22 }}>
+            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
+              style={{ color: C.pink, fontWeight: 600, cursor: 'pointer' }}>
+              {mode === 'login' ? 'Sign up free' : 'Log in'}
+            </span>
+          </p>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-// ── UPGRADE PAGE ──────────────────────────────────────
-function UpgradePage({ user }) {
-  const plans = [
-    {
-      name:"Starter", price:"£9.99", msgs:40, popular:false,
-      features:["40 reminders/month","SMS, Email & WhatsApp","All calendar types","Message log","AI support"],
-    },
-    {
-      name:"Pro", price:"£19.99", msgs:100, popular:true,
-      features:["100 reminders/month","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","AI support"],
-    },
-    {
-      name:"Business", price:"£34.99", msgs:250, popular:false,
-      features:["250 reminders/month","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","Priority support"],
-    },
-    {
-      name:"Enterprise", price:"£59.99", msgs:999, popular:false,
-      features:["Unlimited reminders","SMS, Email & WhatsApp","All calendar types","Unused msgs roll over","Message log","Priority support"],
-    },
-  ];
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: DASHBOARD
+// ═════════════════════════════════════════════════════════════════════════════
+function Dashboard({ user, setPage, showToast }) {
+  const [stats,   setStats]   = useState({ sent: 0, pending: 0, contacts: 0, rate: 100 })
+  const [recent,  setRecent]  = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const [r1, r2, r3, r4] = await Promise.all([
+        supabase.from('reminders').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'sent'),
+        supabase.from('reminders').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'pending'),
+        supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('reminders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(6),
+      ])
+      const sent   = r1.count || 0
+      const failed = (r4.data || []).filter(x => x.status === 'failed').length
+      const total  = sent + failed
+      setStats({ sent, pending: r2.count || 0, contacts: r3.count || 0, rate: total > 0 ? Math.round((sent / total) * 100) : 100 })
+      setRecent(r4.data || [])
+      setLoading(false)
+    }
+    load()
+  }, [user.id])
+
+  const CARDS = [
+    { label: 'Reminders sent',  value: stats.sent,            Ic: IC.Msg,    color: C.pink },
+    { label: 'Scheduled',       value: stats.pending,         Ic: IC.Clock,  color: C.warning },
+    { label: 'Contacts',        value: stats.contacts,        Ic: IC.Users,  color: C.purple },
+    { label: 'Delivery rate',   value: `${stats.rate}%`,      Ic: IC.Trend,  color: C.success },
+  ]
 
   return (
-    <div>
-      <div style={{ marginBottom:32 }}>
-        <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Upgrade Your Plan</h1>
-        <p style={{ fontSize:13, color:T.muted }}>Choose the plan that suits your business. All plans include a 14-day free trial.</p>
+    <div className="fade-in">
+      <div style={{ marginBottom: 30 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Dashboard</h1>
+        <p style={{ color: C.muted, fontSize: 14, marginTop: 5 }}>
+          Good to see you, {user.email?.split('@')[0]}
+        </p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16, marginBottom:24 }}>
-        {plans.map((p,i)=>(
-          <div key={i} style={{
-            background:p.popular?"linear-gradient(135deg,#0f172a,#1e0a3c)":"#fff",
-            border:p.popular?`2px solid ${T.purple}`:`1px solid ${T.border}`,
-            borderRadius:16, padding:"24px 20px", position:"relative",
-          }}>
-            {p.popular && (
-              <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)",
-                background:"linear-gradient(135deg,#ec4899,#a855f7)", color:"#fff",
-                fontSize:10, fontWeight:700, padding:"4px 12px", borderRadius:20,
-                letterSpacing:"1px", textTransform:"uppercase", whiteSpace:"nowrap" }}>
-                Most Popular
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))',
+        gap: 16, marginBottom: 28 }}>
+        {CARDS.map(({ label, value, Ic, color }) => (
+          <div key={label} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 50, height: 50, background: `${color}14`, borderRadius: 13,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color, flexShrink: 0 }}>
+              <Ic />
+            </div>
+            <div>
+              <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, letterSpacing: '-1px' }}>
+                {loading ? '—' : value}
               </div>
-            )}
-            <div style={{ fontSize:13, fontWeight:700, color:p.popular?"rgba(255,255,255,0.6)":T.muted,
-              textTransform:"uppercase", letterSpacing:"1px", marginBottom:8 }}>{p.name}</div>
-            <div style={{ fontSize:36, fontWeight:800, color:p.popular?"#fff":T.text, lineHeight:1, marginBottom:4 }}>
-              {p.price}<span style={{ fontSize:14, fontWeight:400, color:p.popular?"rgba(255,255,255,0.4)":T.muted }}>/mo</span>
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 5 }}>{label}</div>
             </div>
-            <div style={{ fontSize:12, color:p.popular?"rgba(255,255,255,0.4)":T.muted, marginBottom:20 }}>
-              {p.msgs===999?"Unlimited":p.msgs} reminders/month
+          </div>
+        ))}
+      </div>
+
+      {/* Recent reminders */}
+      <div className="card" style={{ marginBottom: 20, padding: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '18px 22px', borderBottom: `1px solid ${C.border}` }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700 }}>Recent reminders</h2>
+          <button className="btn-ghost" onClick={() => setPage('message-log')}
+            style={{ fontSize: 13, color: C.muted }}>
+            View all <IC.ChevRight />
+          </button>
+        </div>
+        {loading ? (
+          <div style={{ padding: '28px 22px', color: C.muted, fontSize: 14 }}>Loading...</div>
+        ) : recent.length === 0 ? (
+          <EmptyState Ic={IC.Msg} title="No reminders yet"
+            sub="Add contacts and connect your calendar to get started."
+            action="Add your first contact" onAction={() => setPage('contacts')} />
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Contact</th>
+                  <th>Message</th>
+                  <th className="hide-mobile">Scheduled</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map(r => (
+                  <tr key={r.id}>
+                    <td style={{ fontWeight: 600 }}>{r.contact_name}</td>
+                    <td style={{ color: C.muted, maxWidth: 220 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.message}
+                      </div>
+                    </td>
+                    <td className="hide-mobile" style={{ color: C.muted, whiteSpace: 'nowrap' }}>
+                      {fmtDT(r.scheduled_for)}
+                    </td>
+                    <td><StatusBadge status={r.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Quick-action tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14 }}>
+        {[
+          { Ic: IC.Users,    title: 'Manage contacts',    sub: 'Add or remove clients',      page: 'contacts',  color: C.purple },
+          { Ic: IC.Calendar, title: 'Connect calendar',   sub: 'Sync Google Calendar',        page: 'settings',  color: C.pink },
+          { Ic: IC.Msg,      title: 'Edit template',      sub: 'Customise your SMS message',  page: 'settings',  color: '#06b6d4' },
+        ].map(({ Ic, title, sub, page: pg, color }) => (
+          <div key={title} onClick={() => setPage(pg)}
+            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px',
+              background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12,
+              cursor: 'pointer', transition: 'box-shadow 0.15s, border-color 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = color }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = C.border }}>
+            <div style={{ width: 40, height: 40, background: `${color}14`, borderRadius: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
+              <Ic />
             </div>
-            {p.features.map((f,j)=>(
-              <div key={j} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8,
-                fontSize:12, color:p.popular?"rgba(255,255,255,0.8)":"#374151" }}>
-                <span style={{ color:T.green, flexShrink:0 }}>✓</span>{f}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{title}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>{sub}</div>
+            </div>
+            <IC.ChevRight />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: UPCOMING
+// ═════════════════════════════════════════════════════════════════════════════
+function Upcoming({ user }) {
+  const [reminders, setReminders] = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const today       = new Date()
+  const [selDay, setSelDay] = useState(today.toDateString())
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today); d.setDate(today.getDate() + i); return d
+  })
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const from = new Date(); from.setHours(0, 0, 0, 0)
+      const to   = new Date(from); to.setDate(from.getDate() + 8)
+      const { data } = await supabase.from('reminders').select('*')
+        .eq('user_id', user.id)
+        .gte('scheduled_for', from.toISOString())
+        .lte('scheduled_for', to.toISOString())
+        .order('scheduled_for', { ascending: true })
+      setReminders(data || [])
+      setLoading(false)
+    }
+    load()
+  }, [user.id])
+
+  const byDay = {}
+  reminders.forEach(r => {
+    const k = new Date(r.scheduled_for).toDateString()
+    if (!byDay[k]) byDay[k] = []
+    byDay[k].push(r)
+  })
+
+  const selReminders = byDay[selDay] || []
+  const isToday = d => d.toDateString() === today.toDateString()
+
+  return (
+    <div className="fade-in">
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Upcoming</h1>
+        <p style={{ color: C.muted, fontSize: 14, marginTop: 5 }}>Reminders scheduled over the next 7 days</p>
+      </div>
+
+      {/* ── Desktop 7-day grid ── */}
+      <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: 12, marginBottom: 24 }}>
+        {days.map(day => {
+          const k      = day.toDateString()
+          const count  = (byDay[k] || []).length
+          const active = k === selDay
+          const todayD = isToday(day)
+          return (
+            <div key={k} onClick={() => setSelDay(k)}
+              style={{ background: active ? C.navy : '#fff',
+                border: `${active ? 2 : 1}px solid ${active ? C.pink : C.border}`,
+                borderRadius: 12, padding: '16px 10px', textAlign: 'center',
+                cursor: 'pointer', transition: 'all 0.15s',
+                boxShadow: active ? '0 4px 16px rgba(15,23,42,0.18)' : '' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.5px', marginBottom: 8,
+                color: active ? 'rgba(255,255,255,0.5)' : C.muted }}>
+                {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800,
+                color: active ? '#fff' : todayD ? C.pink : C.text }}>
+                {day.getDate()}
+              </div>
+              {count > 0 ? (
+                <div style={{ marginTop: 10, background: active ? C.pink : '#fce7f3',
+                  color: active ? '#fff' : C.pink, borderRadius: 20, fontSize: 11,
+                  fontWeight: 700, padding: '2px 10px', display: 'inline-block' }}>
+                  {count}
+                </div>
+              ) : (
+                <div style={{ marginTop: 10, height: 20 }} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Mobile day scroller ── */}
+      <div className="hide-desktop" style={{ overflowX: 'auto', display: 'flex', gap: 8,
+        paddingBottom: 8, marginBottom: 16 }}>
+        {days.map(day => {
+          const k      = day.toDateString()
+          const count  = (byDay[k] || []).length
+          const active = k === selDay
+          return (
+            <div key={k} onClick={() => setSelDay(k)}
+              style={{ flexShrink: 0, textAlign: 'center', minWidth: 58,
+                background: active ? C.navy : '#fff',
+                border: `${active ? 2 : 1}px solid ${active ? C.pink : C.border}`,
+                borderRadius: 10, padding: '10px 6px', cursor: 'pointer' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                color: active ? 'rgba(255,255,255,0.5)' : C.muted }}>
+                {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: active ? '#fff' : C.text, marginTop: 2 }}>
+                {day.getDate()}
+              </div>
+              {count > 0 && (
+                <div style={{ width: 6, height: 6, borderRadius: 3, background: C.pink,
+                  margin: '5px auto 0' }} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Day detail panel ── */}
+      <div className="card">
+        <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text }}>
+            {new Date(selDay).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </h3>
+          <span style={{ fontSize: 13, color: C.muted, background: '#f1f5f9',
+            padding: '3px 10px', borderRadius: 20, fontWeight: 500 }}>
+            {selReminders.length} reminder{selReminders.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {loading ? (
+          <div style={{ color: C.muted, fontSize: 14 }}>Loading...</div>
+        ) : selReminders.length === 0 ? (
+          <EmptyState Ic={IC.Calendar} title="Nothing scheduled" sub="No reminders on this day." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {selReminders.map(r => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 14,
+                padding: '14px 16px', background: '#f8fafc', borderRadius: 10,
+                border: `1px solid ${C.border}` }}>
+                <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 10,
+                  border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', flexShrink: 0, flexDirection: 'column' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.navy, lineHeight: 1 }}>
+                    {fmtTime(r.scheduled_for).split(':')[0]}
+                  </span>
+                  <span style={{ fontSize: 10, color: C.muted, lineHeight: 1 }}>
+                    {fmtTime(r.scheduled_for).split(':')[1]}
+                  </span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{r.contact_name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.message}
+                  </div>
+                </div>
+                <StatusBadge status={r.status} />
               </div>
             ))}
-            <button style={{
-              width:"100%", marginTop:20,
-              background:p.popular?"linear-gradient(135deg,#ec4899,#a855f7)":"#f3e8ff",
-              color:p.popular?"#fff":T.purple,
-              border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:700,
-              cursor:"pointer", fontFamily:"inherit",
-            }}>
-              Select {p.name}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: CONTACTS
+// ═════════════════════════════════════════════════════════════════════════════
+function Contacts({ user, showToast }) {
+  const [contacts, setContacts] = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [showAdd,  setShowAdd]  = useState(false)
+  const [delId,    setDelId]    = useState(null)
+  const [saving,   setSaving]   = useState(false)
+  const [search,   setSearch]   = useState('')
+  const [form,     setForm]     = useState({ name: '', phone: '', email: '', notes: '' })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase.from('contacts').select('*')
+      .eq('user_id', user.id).order('name', { ascending: true })
+    setContacts(data || [])
+    setLoading(false)
+  }, [user.id])
+
+  useEffect(() => { load() }, [load])
+
+  async function handleAdd(e) {
+    e.preventDefault()
+    setSaving(true)
+    const { error } = await supabase.from('contacts').insert([
+      { user_id: user.id, ...form }
+    ])
+    setSaving(false)
+    if (error) { showToast(error.message, 'error'); return }
+    showToast('Contact added successfully')
+    setShowAdd(false)
+    setForm({ name: '', phone: '', email: '', notes: '' })
+    load()
+  }
+
+  async function handleDelete() {
+    const { error } = await supabase.from('contacts').delete().eq('id', delId)
+    if (error) { showToast(error.message, 'error'); return }
+    showToast('Contact removed')
+    setDelId(null)
+    load()
+  }
+
+  const filtered = contacts.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.phone.includes(search) ||
+    (c.email || '').toLowerCase().includes(search.toLowerCase())
+  )
+
+  const delContact = contacts.find(c => c.id === delId)
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 14, marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Contacts</h1>
+          <p style={{ color: C.muted, fontSize: 14, marginTop: 5 }}>
+            {contacts.length} client{contacts.length !== 1 ? 's' : ''} in your list
+          </p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowAdd(true)}>
+          <IC.Plus /> Add contact
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <input className="inp" placeholder="Search by name, phone, or email..."
+          value={search} onChange={e => setSearch(e.target.value)}
+          style={{ maxWidth: 380 }} />
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: '28px 22px', color: C.muted, fontSize: 14 }}>Loading contacts...</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState Ic={IC.Users}
+            title={contacts.length === 0 ? 'No contacts yet' : 'No results found'}
+            sub={contacts.length === 0 ? 'Add your first client to start sending reminders.' : 'Try a different search.'}
+            action={contacts.length === 0 ? 'Add first contact' : undefined}
+            onAction={() => setShowAdd(true)} />
+        ) : (
+          filtered.map((c, i) => (
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14,
+              padding: '14px 20px', borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : 'none',
+              transition: 'background 0.12s' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
+              {/* Avatar */}
+              <div style={{ width: 42, height: 42, borderRadius: 21,
+                background: `linear-gradient(135deg, ${C.pink}22, ${C.purple}33)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, fontWeight: 700, color: C.purple, flexShrink: 0,
+                border: `1px solid ${C.purple}22` }}>
+                {c.name[0].toUpperCase()}
+              </div>
+              {/* Details */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
+                <div style={{ display: 'flex', gap: 14, fontSize: 12, color: C.muted,
+                  marginTop: 3, flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <IC.Phone /> {c.phone}
+                  </span>
+                  {c.email && (
+                    <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <IC.Mail /> {c.email}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* Date */}
+              <span className="hide-mobile" style={{ fontSize: 12, color: C.mutedLight, whiteSpace: 'nowrap' }}>
+                Added {fmtDate(c.created_at)}
+              </span>
+              {/* Delete */}
+              <button className="btn-ghost" onClick={() => setDelId(c.id)}
+                style={{ color: C.error, padding: 7, flexShrink: 0 }}
+                title="Remove contact">
+                <IC.Trash />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add Modal */}
+      {showAdd && (
+        <Modal title="Add new contact" onClose={() => setShowAdd(false)}>
+          <form onSubmit={handleAdd}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label className="lbl">Full name *</label>
+                <input className="inp" placeholder="Jane Smith" required
+                  value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="lbl">Mobile number *</label>
+                <input className="inp" placeholder="+44 7700 900123" required
+                  value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+              </div>
+              <div>
+                <label className="lbl">Email address <span style={{ fontWeight: 400, color: C.muted }}>(optional)</span></label>
+                <input className="inp" type="email" placeholder="jane@example.com"
+                  value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <div>
+                <label className="lbl">Notes <span style={{ fontWeight: 400, color: C.muted }}>(optional)</span></label>
+                <input className="inp" placeholder="e.g. Prefers morning appointments"
+                  value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? <Spinner /> : 'Add contact'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete confirm */}
+      {delId && (
+        <Modal title="Remove contact" onClose={() => setDelId(null)} maxWidth={400}>
+          <p style={{ fontSize: 14, color: C.muted, marginBottom: 8 }}>
+            Are you sure you want to remove <strong>{delContact?.name}</strong>? This cannot be undone.
+          </p>
+          <p style={{ fontSize: 13, color: C.muted, marginBottom: 22 }}>
+            Any pending reminders for this contact will be cancelled.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button className="btn-secondary" onClick={() => setDelId(null)}>Cancel</button>
+            <button className="btn-primary" onClick={handleDelete}
+              style={{ background: C.error }}>
+              Remove contact
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: MESSAGE LOG
+// ═════════════════════════════════════════════════════════════════════════════
+function MessageLog({ user }) {
+  const [reminders, setReminders] = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [filter,    setFilter]    = useState('all')
+  const [search,    setSearch]    = useState('')
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      const { data } = await supabase.from('reminders').select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      setReminders(data || [])
+      setLoading(false)
+    }
+    load()
+  }, [user.id])
+
+  const FILTERS = ['all', 'sent', 'pending', 'failed', 'cancelled']
+
+  const filtered = reminders.filter(r => {
+    const ms = filter === 'all' || r.status === filter
+    const mq = !search
+      || r.contact_name.toLowerCase().includes(search.toLowerCase())
+      || r.message.toLowerCase().includes(search.toLowerCase())
+      || r.contact_phone.includes(search)
+    return ms && mq
+  })
+
+  return (
+    <div className="fade-in">
+      <div style={{ marginBottom: 26 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Message Log</h1>
+        <p style={{ color: C.muted, fontSize: 14, marginTop: 5 }}>
+          Complete history of all reminders sent and scheduled
+        </p>
+      </div>
+
+      {/* Filters row */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input className="inp" placeholder="Search contacts, messages, numbers..."
+          value={search} onChange={e => setSearch(e.target.value)}
+          style={{ maxWidth: 300, flex: '1 1 200px' }} />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {FILTERS.map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`pill${filter === f ? ' pill-active' : ''}`}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: '28px 22px', color: C.muted, fontSize: 14 }}>Loading messages...</div>
+        ) : filtered.length === 0 ? (
+          <EmptyState Ic={IC.Msg} title="No messages found" sub="Try adjusting your filters or search." />
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ minWidth: 620 }}>
+              <thead>
+                <tr>
+                  <th>Contact</th>
+                  <th className="hide-mobile">Phone</th>
+                  <th>Message</th>
+                  <th>Scheduled</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(r => (
+                  <tr key={r.id}>
+                    <td style={{ fontWeight: 600 }}>{r.contact_name}</td>
+                    <td className="hide-mobile" style={{ color: C.muted }}>{r.contact_phone}</td>
+                    <td style={{ maxWidth: 200 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap', color: C.muted, maxWidth: 200 }}>
+                        {r.message}
+                      </div>
+                    </td>
+                    <td style={{ color: C.muted, whiteSpace: 'nowrap', fontSize: 13 }}>
+                      {fmtDT(r.scheduled_for)}
+                    </td>
+                    <td><StatusBadge status={r.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: 12, color: C.mutedLight, marginTop: 10 }}>
+        Showing {filtered.length} of {reminders.length} total messages
+      </p>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: SETTINGS
+// ═════════════════════════════════════════════════════════════════════════════
+function SettingsPage({ user, showToast, setPage }) {
+  const DEFAULT_SETTINGS = {
+    business_name: '', phone_number: '',
+    message_template: 'Hi {name}, reminder from {business}: your appointment is on {date} at {time}. Reply STOP to opt out.',
+    reminder_hours: 24, google_calendar_connected: false, google_calendar_email: '', plan: 'free'
+  }
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase.from('settings').select('*')
+        .eq('user_id', user.id).single()
+      if (data) setSettings({ ...DEFAULT_SETTINGS, ...data })
+      setLoading(false)
+    }
+    load()
+  }, [user.id])
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setSaving(true)
+    const { error } = await supabase.from('settings').upsert(
+      { user_id: user.id, ...settings, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    )
+    setSaving(false)
+    if (error) { showToast(error.message, 'error'); return }
+    showToast('Settings saved successfully')
+  }
+
+  function connectCalendar() {
+    const params = new URLSearchParams({
+      client_id:     GOOGLE_CLIENT_ID,
+      redirect_uri:  GOOGLE_REDIRECT,
+      response_type: 'code',
+      scope:         GOOGLE_SCOPE,
+      access_type:   'offline',
+      prompt:        'consent',
+      state:         user.id,
+    })
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+  }
+
+  async function disconnectCalendar() {
+    const updated = { ...settings, google_calendar_connected: false, google_calendar_email: '' }
+    setSettings(updated)
+    await supabase.from('settings').upsert(
+      { user_id: user.id, ...updated, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    )
+    showToast('Google Calendar disconnected')
+  }
+
+  function insertVar(v) {
+    setSettings(s => ({ ...s, message_template: s.message_template + v }))
+  }
+
+  const TIMING = [
+    { value: 1, label: '1 hour before' },
+    { value: 2, label: '2 hours before' },
+    { value: 4, label: '4 hours before' },
+    { value: 12, label: '12 hours before' },
+    { value: 24, label: '24 hours before' },
+    { value: 48, label: '48 hours before' },
+    { value: 72, label: '72 hours before' },
+  ]
+  const VARS = ['{name}', '{business}', '{date}', '{time}', '{phone}']
+
+  if (loading) return <div style={{ padding: 24, color: C.muted }}>Loading settings...</div>
+
+  return (
+    <div className="fade-in">
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Settings</h1>
+        <p style={{ color: C.muted, fontSize: 14, marginTop: 5 }}>
+          Manage your account, messages, and integrations
+        </p>
+      </div>
+
+      <form onSubmit={handleSave}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 660 }}>
+
+          {/* ── Business details ── */}
+          <div className="card">
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Business details</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label className="lbl">Business name</label>
+                <input className="inp" placeholder="Your business name"
+                  value={settings.business_name}
+                  onChange={e => setSettings(s => ({ ...s, business_name: e.target.value }))} />
+                <p style={{ fontSize: 12, color: C.muted, marginTop: 5 }}>
+                  Used in SMS messages as <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: 4 }}>{'{business}'}</code>
+                </p>
+              </div>
+              <div>
+                <label className="lbl">Your phone number</label>
+                <input className="inp" placeholder="+44 7700 900000"
+                  value={settings.phone_number}
+                  onChange={e => setSettings(s => ({ ...s, phone_number: e.target.value }))} />
+                <p style={{ fontSize: 12, color: C.muted, marginTop: 5 }}>
+                  For reference only — reminders are sent via our platform number.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Message template ── */}
+          <div className="card">
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>SMS message template</h2>
+            <p style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>
+              Write your reminder message. Click a variable to insert it.
+            </p>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 12 }}>
+              {VARS.map(v => (
+                <button key={v} type="button" onClick={() => insertVar(v)}
+                  style={{ background: '#faf5ff', border: `1px solid #e9d5ff`, color: C.purple,
+                    borderRadius: 6, padding: '4px 12px', fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', transition: 'background 0.1s' }}
+                  onMouseEnter={e => e.target.style.background = '#f3e8ff'}
+                  onMouseLeave={e => e.target.style.background = '#faf5ff'}>
+                  {v}
+                </button>
+              ))}
+            </div>
+            <textarea className="inp" rows={4}
+              value={settings.message_template}
+              onChange={e => setSettings(s => ({ ...s, message_template: e.target.value }))} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+              <p style={{ fontSize: 12, color: C.muted }}>
+                {settings.message_template.length} characters
+                {settings.message_template.length > 160 && (
+                  <span style={{ color: C.warning, marginLeft: 8 }}>
+                    (will send as {Math.ceil(settings.message_template.length / 153)} messages)
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* ── Reminder timing ── */}
+          <div className="card">
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Reminder timing</h2>
+            <p style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>
+              How far in advance reminders are sent before the appointment.
+            </p>
+            <select className="inp" style={{ maxWidth: 260 }}
+              value={settings.reminder_hours}
+              onChange={e => setSettings(s => ({ ...s, reminder_hours: Number(e.target.value) }))}>
+              {TIMING.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* ── Google Calendar ── */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'flex-start',
+              justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Google Calendar</h2>
+                <p style={{ fontSize: 13, color: C.muted }}>
+                  {settings.google_calendar_connected
+                    ? `Connected${settings.google_calendar_email ? ` as ${settings.google_calendar_email}` : ''}`
+                    : 'Connect your calendar to automatically schedule reminders from your events.'}
+                </p>
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                {settings.google_calendar_connected ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center',
+                      color: C.success, fontSize: 13, fontWeight: 600 }}>
+                      <IC.Check /> Connected
+                    </div>
+                    <button type="button" className="btn-ghost" onClick={disconnectCalendar}
+                      style={{ color: C.error, fontSize: 13, padding: '5px 8px' }}>
+                      <IC.Unlink /> Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" className="btn-secondary" onClick={connectCalendar}>
+                    <IC.Link /> Connect Google Calendar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Plan info ── */}
+          <div className="card" style={{ background: 'linear-gradient(135deg, #fdf4ff 0%, #fce7f3 100%)',
+            border: `1px solid #e9d5ff` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 5 }}>
+                  Current plan:{' '}
+                  <span style={{ color: C.purple, textTransform: 'capitalize' }}>{settings.plan}</span>
+                </h2>
+                <p style={{ fontSize: 13, color: C.muted }}>
+                  {PLANS.find(p => p.id === settings.plan)?.reminders || 20} reminders/month included.
+                </p>
+              </div>
+              <button type="button" className="btn-primary" onClick={() => setPage('upgrade')}>
+                <IC.Star /> Upgrade plan
+              </button>
+            </div>
+          </div>
+
+          {/* Save */}
+          <div style={{ paddingBottom: 8 }}>
+            <button type="submit" className="btn-primary" disabled={saving}
+              style={{ padding: '12px 28px', fontSize: 15 }}>
+              {saving ? <><Spinner /> Saving...</> : 'Save settings'}
+            </button>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: UPGRADE
+// ═════════════════════════════════════════════════════════════════════════════
+function UpgradePage({ user, showToast }) {
+  return (
+    <div className="fade-in">
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' }}>Upgrade your plan</h1>
+        <p style={{ color: C.muted, fontSize: 14, marginTop: 5 }}>
+          Scale your reminders as your business grows. No contracts, cancel any time.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: 22, maxWidth: 1000, marginBottom: 32 }}>
+        {PLANS.map(plan => (
+          <div key={plan.id} className="card"
+            style={{ border: plan.popular ? `2px solid ${C.pink}` : `1px solid ${C.border}`,
+              position: 'relative', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-7px)'; e.currentTarget.style.boxShadow = '0 18px 52px rgba(168,85,247,0.14)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+
+            {plan.popular && (
+              <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
+                background: `linear-gradient(90deg, ${C.pink}, ${C.purple})`,
+                color: '#fff', fontSize: 11, fontWeight: 700,
+                padding: '3px 16px', borderRadius: 20, letterSpacing: '0.5px',
+                whiteSpace: 'nowrap' }}>
+                MOST POPULAR
+              </div>
+            )}
+
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.6px', color: C.muted, marginBottom: 10 }}>{plan.name}</div>
+
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 42, fontWeight: 800, lineHeight: 1, letterSpacing: '-1.5px' }}>
+                {plan.price === 0 ? 'Free' : `£${plan.price}`}
+              </span>
+              {plan.price > 0 && (
+                <span style={{ fontSize: 14, color: C.muted, fontWeight: 400, marginLeft: 2 }}>/month</span>
+              )}
+            </div>
+
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 22, fontWeight: 500 }}>
+              {plan.reminders.toLocaleString()} SMS reminders/month
+            </div>
+
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18, marginBottom: 22,
+              display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {plan.features.map(f => (
+                <div key={f} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13 }}>
+                  <span style={{ color: C.success, flexShrink: 0, marginTop: 1 }}><IC.Check /></span>
+                  {f}
+                </div>
+              ))}
+            </div>
+
+            <button
+              className={plan.popular ? 'btn-primary' : 'btn-secondary'}
+              onClick={() => showToast('Billing coming soon — we\'ll notify you!', 'warning')}
+              style={{ width: '100%', justifyContent: 'center', padding: '12px',
+                background: plan.popular
+                  ? `linear-gradient(90deg, ${C.pink}, ${C.purple})`
+                  : undefined }}>
+              {plan.price === 0 ? 'Current free plan' : `Choose ${plan.name}`}
             </button>
           </div>
         ))}
       </div>
 
-      <div style={{ background:"#fef9c3", borderRadius:12, padding:"14px 18px",
-        display:"flex", alignItems:"center", gap:12 }}>
-        <span style={{ fontSize:20 }}>💡</span>
-        <div style={{ fontSize:13, color:"#713f12" }}>
-          <strong>Pro and Business plans:</strong> unused reminders roll over for one month so you never waste your allowance.
-        </div>
-      </div>
-
-      <div style={{ textAlign:"center", marginTop:20, fontSize:12, color:T.muted }}>
-        Payments coming soon · Questions? Email <a href="mailto:hello@textreminder.co.uk" style={{ color:T.purple }}>hello@textreminder.co.uk</a>
-      </div>
-    </div>
-  );
-}
-
-// ── DASHBOARD LAYOUT ─────────────────────────────────
-function DashLayout({ page, setPage, user, onSignOut, children }) {
-  const nav = [
-    { id:"dashboard", icon:"▦",  label:"Dashboard"   },
-    { id:"upcoming",  icon:"📅", label:"Upcoming"     },
-    { id:"contacts",  icon:"👥", label:"Contacts"     },
-    { id:"log",       icon:"📋", label:"Log"          },
-    { id:"settings",  icon:"⚙️", label:"Settings"     },
-    { id:"upgrade",   icon:"⚡", label:"Upgrade"      },
-  ];
-
-  return (
-    <div style={{ minHeight:"100vh", background:"#f5f5f7", fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
-      <style>{`
-        .tr-nav-label { display: inline; }
-        .tr-nav-email { display: inline; }
-        @media (max-width: 640px) {
-          .tr-nav-label { display: none; }
-          .tr-nav-email { display: none; }
-          .tr-nav-btn { padding: 10px 12px !important; }
-          .tr-main-pad { padding: 16px !important; }
-        }
-      `}</style>
-
-      {/* Top nav bar */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:"#fff",
-        borderBottom:"2px solid #7c3aed", boxShadow:"0 1px 8px rgba(0,0,0,0.06)" }}>
-        <div style={{ maxWidth:1200, margin:"0 auto", padding:"0 16px",
-          display:"flex", alignItems:"center", height:56, gap:4 }}>
-
-          {/* Logo */}
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:12, flexShrink:0 }}>
-            <Logo size={28}/>
-            <div style={{ fontSize:15, fontWeight:800, color:T.dark, letterSpacing:"-0.3px" }}>
-              text<span style={{ color:"#7c3aed" }}>reminder</span>
-            </div>
+      {/* Enterprise callout */}
+      <div className="card" style={{ maxWidth: 680, background: C.navy, border: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <div style={{ width: 52, height: 52, background: `linear-gradient(135deg, ${C.pink}, ${C.purple})`,
+            borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', flexShrink: 0 }}>
+            <IC.Msg />
           </div>
-
-          {/* Nav items */}
-          <div style={{ display:"flex", alignItems:"center", flex:1, gap:2 }}>
-            {nav.map(n=>(
-              <button key={n.id} className="tr-nav-btn" onClick={()=>setPage(n.id)} style={{
-                display:"flex", alignItems:"center", gap:6,
-                padding:"10px 14px",
-                background:page===n.id?"#7c3aed":"transparent",
-                color:page===n.id?"#fff":T.muted,
-                border:"none", borderRadius:8,
-                fontSize:13, fontWeight:page===n.id?700:500,
-                cursor:"pointer", fontFamily:"inherit",
-                transition:"all 0.15s", whiteSpace:"nowrap",
-              }}>
-                <span style={{ fontSize:15 }}>{n.icon}</span>
-                <span className="tr-nav-label">{n.label}</span>
-              </button>
-            ))}
+          <div style={{ flex: 1 }}>
+            <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 700, marginBottom: 5 }}>
+              Need a custom volume deal?
+            </h3>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
+              High-volume businesses and agencies — contact us for a bespoke quote with dedicated support.
+            </p>
           </div>
-
-          {/* Right side — email + sign out */}
-          <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
-            <span className="tr-nav-email" style={{ fontSize:12, color:T.muted,
-              maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-              {user?.email}
-            </span>
-            <button onClick={onSignOut} style={{
-              background:"#f0eeff", border:"none", color:"#7c3aed",
-              fontSize:12, fontWeight:700, cursor:"pointer",
-              padding:"7px 14px", borderRadius:8, fontFamily:"inherit",
-              whiteSpace:"nowrap",
-            }}>Sign out</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Page content */}
-      <div className="tr-main-pad" style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ── DASHBOARD ─────────────────────────────────────────
-function Dashboard({ user, setDashPage }) {
-  const [reminders, setReminders] = useState([]);
-  const [contacts, setContacts]   = useState([]);
-  const [profile, setProfile]     = useState(null);
-  const [loading, setLoading]     = useState(true);
-
-  useEffect(()=>{
-    async function load() {
-      const [{ data:rems },{ data:conts },{ data:prof }] = await Promise.all([
-        supabase.from("reminders").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(10),
-        supabase.from("contacts").select("*").eq("user_id",user.id).eq("active",true),
-        supabase.from("profiles").select("*").eq("id",user.id).single(),
-      ]);
-      setReminders(rems||[]); setContacts(conts||[]); setProfile(prof);
-      setLoading(false);
-    }
-    load();
-  },[]);
-
-  const sent = reminders.filter(r=>r.status==="sent"||r.status==="delivered").length;
-  const trialDays = profile?.trial_ends_at ? Math.max(0,Math.ceil((new Date(profile.trial_ends_at)-new Date())/(1000*60*60*24))) : 0;
-
-  const stats = [
-    { icon:"📤", label:"Reminders sent",  value:sent,            sub:"All time" },
-    { icon:"👥", label:"Contacts",         value:contacts.length, sub:"Active customers" },
-    { icon:"📅", label:"This month",       value:reminders.filter(r=>new Date(r.created_at).getMonth()===new Date().getMonth()).length, sub:"Reminders sent" },
-    { icon:"⏰", label:"Trial days left",  value:trialDays,       sub:"Then £20/month" },
-  ];
-
-  if (loading) return <div style={{ textAlign:"center", padding:60, color:T.muted }}>Loading...</div>;
-
-  return (
-    <div>
-      <div style={{ marginBottom:24 }}>
-        <h1 style={{ fontSize:"clamp(18px,5vw,22px)", fontWeight:800, color:T.text, marginBottom:4 }}>Dashboard</h1>
-        <div style={{ fontSize:13, color:T.muted }}>{new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
-      </div>
-      {profile?.plan==="trial" && trialDays > 0 && (
-        <div style={{ background:"linear-gradient(135deg,#fdf4ff,#faf5ff)", border:`1px solid ${T.border}`,
-          borderRadius:12, padding:"12px 18px", marginBottom:24, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <div style={{ fontSize:13, color:"#7c3aed" }}><strong>{trialDays} days</strong> left on your free trial</div>
-          <button onClick={()=>setDashPage("upgrade")} style={{ background:"linear-gradient(135deg,#ec4899,#a855f7)", color:"#fff",
-            borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, border:"none", cursor:"pointer" }}>
-            Upgrade
+          <button className="btn-primary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+            onClick={() => window.open('mailto:hello@textreminder.co.uk')}>
+            Contact us
           </button>
         </div>
-      )}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12, marginBottom:24 }}>
-        {stats.map((s,i)=>(
-          <Card key={i} style={{ padding:"20px 22px" }}>
-            <div style={{ fontSize:22, marginBottom:10 }}>{s.icon}</div>
-            <div style={{ fontSize:28, fontWeight:800, color:T.text, lineHeight:1, marginBottom:4 }}>{s.value}</div>
-            <div style={{ fontSize:13, fontWeight:600, color:"#475569", marginBottom:2 }}>{s.label}</div>
-            <div style={{ fontSize:11, color:T.muted }}>{s.sub}</div>
-          </Card>
-        ))}
       </div>
-      <Card>
-        <div style={{ padding:"16px 20px", borderBottom:"1px solid #f1f5f9" }}>
-          <div style={{ fontSize:14, fontWeight:700, color:T.text }}>Recent Reminders</div>
-        </div>
-        {reminders.length===0 ? (
-          <div style={{ padding:"40px 20px", textAlign:"center", color:T.muted, fontSize:13 }}>
-            No reminders sent yet — connect your calendar in Settings to get started
-          </div>
-        ) : reminders.map((r,i)=>(
-          <div key={r.id} style={{ padding:"12px 20px", borderBottom:"1px solid #f8fafc",
-            display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:32, height:32, borderRadius:"50%", background:"#f3e8ff",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>
-              {r.channel==="sms"?"📱":r.channel==="email"?"✉️":"💬"}
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:T.text }}>{r.contact_name}</div>
-              <div style={{ fontSize:11, color:T.muted }}>{new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
-            </div>
-            <span style={{ fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:20,
-              background:r.status==="sent"||r.status==="delivered"?"#dcfce7":"#fef2f2",
-              color:r.status==="sent"||r.status==="delivered"?"#166534":"#dc2626" }}>
-              {r.status}
-            </span>
-          </div>
-        ))}
-      </Card>
     </div>
-  );
+  )
 }
 
-// ── CONTACTS ──────────────────────────────────────────
-function Contacts({ user }) {
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [showAdd, setShowAdd]   = useState(false);
-  const [form, setForm]         = useState({ name:"", phone:"", email:"" });
-  const [saving, setSaving]     = useState(false);
+// ═════════════════════════════════════════════════════════════════════════════
+// GOOGLE CALENDAR CALLBACK HANDLER
+// ═════════════════════════════════════════════════════════════════════════════
+function CalendarCallback({ session }) {
+  const [status, setStatus] = useState('processing')
+  const [msg,    setMsg]    = useState('Connecting your Google Calendar...')
 
-  useEffect(()=>{
-    supabase.from("contacts").select("*").eq("user_id",user.id).eq("active",true).order("name")
-      .then(({data})=>{ setContacts(data||[]); setLoading(false); });
-  },[]);
+  useEffect(() => {
+    async function handle() {
+      const params = new URLSearchParams(window.location.search)
+      const code   = params.get('code')
+      const userId = params.get('state')
 
-  async function add() {
-    if (!form.name) return;
-    setSaving(true);
-    const { data } = await supabase.from("contacts").insert({ user_id:user.id, ...form }).select().single();
-    setContacts(p=>[...p,data]); setShowAdd(false); setForm({name:"",phone:"",email:""}); setSaving(false);
-  }
+      if (!code || !userId) {
+        setStatus('error'); setMsg('Invalid callback — missing required parameters.'); return
+      }
+      if (!session) {
+        setStatus('error'); setMsg('Not authenticated. Please log in and try again.'); return
+      }
 
-  async function remove(id) {
-    if (!confirm("Remove this contact?")) return;
-    await supabase.from("contacts").update({active:false}).eq("id",id);
-    setContacts(p=>p.filter(c=>c.id!==id));
-  }
-
-  return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Contacts</h1>
-          <div style={{ fontSize:13, color:T.muted }}>{contacts.length} customers</div>
-        </div>
-        <Btn onClick={()=>setShowAdd(true)} style={{ padding:"9px 18px", fontSize:13 }}>+ Add Contact</Btn>
-      </div>
-      {showAdd && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.5)",
-          display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}
-          onClick={()=>setShowAdd(false)}>
-          <div style={{ background:"#fff", borderRadius:12, padding:28, width:"min(400px,calc(100vw - 48px))",
-            boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }} onClick={e=>e.stopPropagation()}>
-            <h2 style={{ fontSize:17, fontWeight:700, color:T.text, marginBottom:20 }}>Add Contact</h2>
-            {[{k:"name",l:"Full Name *",p:"Sarah Mitchell"},{k:"phone",l:"Mobile",p:"07712 345 678"},{k:"email",l:"Email",p:"sarah@example.com"}].map(f=>(
-              <div key={f.k} style={{ marginBottom:14 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase",
-                  letterSpacing:"0.5px", marginBottom:5 }}>{f.l}</div>
-                <Input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.p}/>
-              </div>
-            ))}
-            <div style={{ display:"flex", gap:10, marginTop:8 }}>
-              <button onClick={()=>setShowAdd(false)} style={{ flex:1, background:"#f1f5f9",
-                color:"#475569", border:"none", borderRadius:8, padding:12, fontSize:13,
-                fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
-              <Btn onClick={add} disabled={!form.name||saving} style={{ flex:2, padding:12, fontSize:13 }}>
-                {saving?"Adding...":"Add Contact"}
-              </Btn>
-            </div>
-          </div>
-        </div>
-      )}
-      <Card>
-        <div style={{ display:"grid", gridTemplateColumns:"2fr 1.5fr 1.5fr 80px",
-          padding:"10px 20px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0", gap:12,
-          display:"none" }}>
-          {["Name","Phone","Email",""].map(h=><div key={h} style={{ fontSize:10, fontWeight:700,
-            color:"#94a3b8", letterSpacing:"1px", textTransform:"uppercase" }}>{h}</div>)}
-        </div>
-        {loading && <div style={{ padding:"40px", textAlign:"center", color:T.muted }}>Loading...</div>}
-        {!loading && contacts.length===0 && (
-          <div style={{ padding:"48px 20px", textAlign:"center", color:T.muted, fontSize:13 }}>
-            No contacts yet — add your first customer above
-          </div>
-        )}
-        {contacts.map((c,i)=>(
-          <div key={c.id} style={{ padding:"13px 16px", borderBottom:"1px solid #f8fafc",
-            background:i%2===0?"#fff":"#fafafa", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:36, height:36, borderRadius:"50%", background:"linear-gradient(135deg,#f3e8ff,#e9d5ff)",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0, fontWeight:700, color:T.purple }}>
-              {c.name.charAt(0).toUpperCase()}
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontWeight:600, color:T.text, fontSize:13 }}>{c.name}</div>
-              <div style={{ fontSize:11, color:"#64748b", marginTop:1 }}>{c.phone||""}{c.phone&&c.email?" · ":""}{c.email||""}</div>
-            </div>
-            <button onClick={()=>remove(c.id)} style={{ background:"none", border:"1px solid #fee2e2",
-              borderRadius:6, padding:"4px 10px", fontSize:11, color:"#dc2626",
-              cursor:"pointer", fontFamily:"inherit", fontWeight:600, flexShrink:0 }}>Remove</button>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-// ── MESSAGE LOG ───────────────────────────────────────
-function MessageLog({ user }) {
-  const [reminders, setReminders] = useState([]);
-  const [loading, setLoading]     = useState(true);
-
-  useEffect(()=>{
-    supabase.from("reminders").select("*").eq("user_id",user.id)
-      .order("created_at",{ascending:false}).limit(100)
-      .then(({data})=>{ setReminders(data||[]); setLoading(false); });
-  },[]);
-
-  return (
-    <div>
-      <div style={{ marginBottom:24 }}>
-        <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Message Log</h1>
-        <div style={{ fontSize:13, color:T.muted }}>{reminders.length} reminders sent</div>
-      </div>
-      <Card>
-        {loading && <div style={{ padding:"40px", textAlign:"center", color:T.muted }}>Loading...</div>}
-        {!loading && reminders.length===0 && (
-          <div style={{ padding:"48px", textAlign:"center", color:T.muted }}>
-            <div style={{ fontSize:32, marginBottom:10 }}>📋</div>
-            No messages sent yet
-          </div>
-        )}
-        {reminders.map((r)=>(
-          <div key={r.id} style={{ padding:"16px 20px", borderBottom:"1px solid #f8fafc",
-            display:"flex", gap:14, alignItems:"flex-start" }}>
-            <div style={{ width:36, height:36, borderRadius:"50%", background:"#f3e8ff",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>
-              {r.channel==="sms"?"📱":r.channel==="email"?"✉️":"💬"}
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                <div style={{ fontWeight:700, color:T.text, fontSize:13 }}>{r.contact_name}</div>
-                <div style={{ fontSize:11, color:T.muted }}>{new Date(r.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
-              </div>
-              <div style={{ fontSize:12, color:"#64748b", background:"#f8fafc", borderRadius:8,
-                padding:"8px 10px", lineHeight:1.6, marginBottom:6 }}>{r.message}</div>
-              <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:20,
-                background:r.status==="sent"||r.status==="delivered"?"#dcfce7":"#fef2f2",
-                color:r.status==="sent"||r.status==="delivered"?"#166534":"#dc2626" }}>
-                {r.status==="sent"||r.status==="delivered"?"✓ Delivered":"✗ Failed"}
-              </span>
-            </div>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-// ── UPCOMING ──────────────────────────────────────────
-function Upcoming({ user }) {
-  const [events, setEvents]         = useState([]);
-  const [profile, setProfile]       = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [dayOffset, setDayOffset]   = useState(0);
-  const [editingPhone, setEditingPhone] = useState(null);
-  const [phoneVal, setPhoneVal]     = useState("");
-  const [isMobile, setIsMobile]     = useState(()=>window.matchMedia("(max-width:767px)").matches);
-
-  useEffect(()=>{
-    const mq = window.matchMedia("(max-width:767px)");
-    const h = (e)=>setIsMobile(e.matches);
-    mq.addEventListener("change",h);
-    return ()=>mq.removeEventListener("change",h);
-  },[]);
-
-  useEffect(()=>{
-    Promise.all([
-      supabase.from("calendar_events").select("*").eq("user_id",user.id).order("start_time").limit(200),
-      supabase.from("profiles").select("*").eq("id",user.id).single(),
-    ]).then(([{data:evs},{data:prof}])=>{ setEvents(evs||[]); setProfile(prof); setLoading(false); });
-  },[]);
-
-  function getWeekDays(offset) {
-    const today = new Date();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (today.getDay()===0?6:today.getDay()-1) + offset*7);
-    return Array.from({length:7}, (_,i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      return d;
-    });
-  }
-
-  function getSingleDay(offset) {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return d;
-  }
-
-  const weekDays = getWeekDays(weekOffset);
-  const singleDay = getSingleDay(dayOffset);
-  const hours = Array.from({length:16}, (_,i) => i + 6);
-
-  function getEventsForSlot(day, hour) {
-    return events.filter(e => {
-      const start = new Date(e.start_time);
-      return start.toDateString() === day.toDateString() && start.getHours() === hour;
-    });
-  }
-
-  async function savePhone(eventId) {
-    await supabase.from("calendar_events").update({ phone: phoneVal }).eq("id", eventId);
-    setEvents(prev => prev.map(e => e.id === eventId ? {...e, phone: phoneVal} : e));
-    setEditingPhone(null);
-    setPhoneVal("");
-  }
-
-  const todayStr = new Date().toDateString();
-
-  const ApptBlock = ({ ev }) => (
-    <div style={{ background:"linear-gradient(135deg,#f3e8ff,#fdf4ff)",
-      border:`1px solid ${T.border}`, borderRadius:6, padding:"4px 7px", marginBottom:3,
-      borderLeft:`3px solid ${T.purple}` }}>
-      <div style={{ fontSize:11, fontWeight:700, color:T.text, lineHeight:1.3 }}>
-        {new Date(ev.start_time).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})} {ev.title}
-      </div>
-      {editingPhone === ev.id ? (
-        <div style={{ display:"flex", gap:3, marginTop:4 }}>
-          <input value={phoneVal} onChange={e=>setPhoneVal(e.target.value)}
-            onKeyDown={e=>{ if(e.key==="Enter") savePhone(ev.id); if(e.key==="Escape") setEditingPhone(null); }}
-            placeholder="07700 900123" autoFocus
-            style={{ flex:1, fontSize:10, padding:"3px 6px", border:`1px solid ${T.purple}`,
-              borderRadius:4, outline:"none", fontFamily:"inherit" }}/>
-          <button onClick={()=>savePhone(ev.id)} style={{ background:T.purple, color:"#fff",
-            border:"none", borderRadius:4, padding:"3px 7px", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>✓</button>
-          <button onClick={()=>setEditingPhone(null)} style={{ background:"#f1f5f9", color:"#64748b",
-            border:"none", borderRadius:4, padding:"3px 7px", fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>✕</button>
-        </div>
-      ) : (
-        <div onClick={()=>{ setEditingPhone(ev.id); setPhoneVal(ev.phone||""); }}
-          style={{ fontSize:10, color:ev.phone?T.green:"#94a3b8", marginTop:3, cursor:"pointer",
-            display:"flex", alignItems:"center", gap:3 }}>
-          📱 {ev.phone || "Add phone"}
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:isMobile?"flex-start":"center",
-        flexDirection:isMobile?"column":"row", gap:isMobile?12:0, marginBottom:20 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Upcoming Appointments</h1>
-          <div style={{ fontSize:13, color:T.muted }}>
-            {profile?.calendar_provider
-              ? <><span style={{ width:6, height:6, borderRadius:"50%", background:T.green, display:"inline-block", marginRight:6 }}/>Synced from {profile.calendar_provider} calendar</>
-              : "No calendar connected — go to Settings to connect one"}
-          </div>
-        </div>
-        {isMobile ? (
-          <div style={{ display:"flex", alignItems:"center", gap:8, width:"100%" }}>
-            <button onClick={()=>setDayOffset(p=>p-1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
-              borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>←</button>
-            <div style={{ flex:1, textAlign:"center" }}>
-              <div style={{ fontSize:14, fontWeight:800, color:singleDay.toDateString()===todayStr?T.purple:T.text }}>
-                {singleDay.toDateString()===todayStr ? "Today" : singleDay.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short"})}
-              </div>
-            </div>
-            <button onClick={()=>setDayOffset(0)} style={{ background:dayOffset===0?"#f3e8ff":"#fff",
-              border:`1px solid ${dayOffset===0?T.purple:T.border}`, borderRadius:8, padding:"8px 10px",
-              cursor:"pointer", fontSize:11, fontWeight:600, color:dayOffset===0?T.purple:T.text, fontFamily:"inherit" }}>Today</button>
-            <button onClick={()=>setDayOffset(p=>p+1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
-              borderRadius:8, padding:"8px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>→</button>
-          </div>
-        ) : (
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={()=>setWeekOffset(p=>p-1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
-              borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>← Prev</button>
-            <button onClick={()=>setWeekOffset(0)} style={{ background:weekOffset===0?"#f3e8ff":"#fff",
-              border:`1px solid ${weekOffset===0?T.purple:T.border}`, borderRadius:8, padding:"7px 14px",
-              cursor:"pointer", fontSize:13, fontWeight:600, color:weekOffset===0?T.purple:T.text, fontFamily:"inherit" }}>This Week</button>
-            <button onClick={()=>setWeekOffset(p=>p+1)} style={{ background:"#fff", border:`1px solid ${T.border}`,
-              borderRadius:8, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:T.text, fontFamily:"inherit" }}>Next →</button>
-          </div>
-        )}
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign:"center", padding:60, color:T.muted }}>Loading...</div>
-      ) : isMobile ? (
-        <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, overflow:"hidden" }}>
-          {hours.map(hour => {
-            const slotEvents = getEventsForSlot(singleDay, hour);
-            return (
-              <div key={hour} style={{ display:"flex", borderBottom:"1px solid #f8fafc", minHeight:44 }}>
-                <div style={{ width:56, padding:"10px 8px 0", fontSize:11, color:"#94a3b8", fontWeight:600,
-                  borderRight:"1px solid #f1f5f9", flexShrink:0 }}>
-                  {hour.toString().padStart(2,"0")}:00
-                </div>
-                <div style={{ flex:1, padding: slotEvents.length?"4px 8px":"0" }}>
-                  {slotEvents.map(ev => <ApptBlock key={ev.id} ev={ev}/>)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, overflow:"auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"60px repeat(7,1fr)", borderBottom:"2px solid #e2e8f0", position:"sticky", top:0, background:"#fff", zIndex:10 }}>
-            <div style={{ padding:"10px 8px" }}/>
-            {weekDays.map((day,i) => {
-              const isToday = day.toDateString() === todayStr;
-              return (
-                <div key={i} style={{ padding:"10px 8px", textAlign:"center", borderLeft:"1px solid #f1f5f9",
-                  background:isToday?"#fdf4ff":"#fff" }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:isToday?T.purple:T.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>
-                    {day.toLocaleDateString("en-GB",{weekday:"short"})}
-                  </div>
-                  <div style={{ fontSize:18, fontWeight:800, color:isToday?T.purple:T.text, marginTop:2 }}>
-                    {day.getDate()}
-                  </div>
-                  <div style={{ fontSize:10, color:T.muted }}>
-                    {day.toLocaleDateString("en-GB",{month:"short"})}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {hours.map(hour => (
-            <div key={hour} style={{ display:"grid", gridTemplateColumns:"60px repeat(7,1fr)", borderBottom:"1px solid #f8fafc", minHeight:56 }}>
-              <div style={{ padding:"8px 8px 0", fontSize:11, color:"#94a3b8", fontWeight:600, borderRight:"1px solid #f1f5f9" }}>
-                {hour.toString().padStart(2,"0")}:00
-              </div>
-              {weekDays.map((day,di) => {
-                const slotEvents = getEventsForSlot(day, hour);
-                const isToday = day.toDateString() === todayStr;
-                return (
-                  <div key={di} style={{ borderLeft:"1px solid #f1f5f9", padding:"3px 4px",
-                    background:isToday?"#fefcff":"#fff", minHeight:56 }}>
-                    {slotEvents.map(ev => <ApptBlock key={ev.id} ev={ev}/>)}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── SETTINGS ──────────────────────────────────────────
-function Settings({ user, onCalendarConnected }) {
-  const [form, setForm] = useState({
-    business_name:"", phone:"",
-    message_template:"Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.",
-    reminder_hours:24,
-  });
-  const [profile, setProfile]         = useState(null);
-  const [saving, setSaving]           = useState(false);
-  const [saved, setSaved]             = useState(false);
-  const [calConnecting, setCalConnecting] = useState(false);
-  const set = (k,v) => setForm(p=>({...p,[k]:v}));
-
-  useEffect(()=>{
-    supabase.from("profiles").select("*").eq("id",user.id).single()
-      .then(({data})=>{
-        if(data) {
-          setProfile(data);
-          setForm(p=>({...p,
-            business_name:data.business_name||"",
-            phone:data.phone||"",
-            message_template:data.message_template||p.message_template,
-            reminder_hours:data.reminder_hours||24,
-          }));
-        }
-      });
-  },[]);
-
-  async function save() {
-    setSaving(true);
-    await supabase.from("profiles").update(form).eq("id",user.id);
-    setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),2500);
-  }
-
-  function connectGoogleCalendar() {
-    setCalConnecting(true);
-    const params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: CALENDAR_REDIRECT,
-      response_type: "code",
-      scope: CALENDAR_SCOPES,
-      access_type: "offline",
-      prompt: "consent",
-      state: user.id,
-    });
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-  }
-
-  async function disconnectCalendar() {
-    await supabase.from("profiles").update({ calendar_provider:null, google_access_token:null, google_refresh_token:null }).eq("id",user.id);
-    setProfile(p=>({...p, calendar_provider:null}));
-  }
-
-  const SectionWrap = ({title,sub,children})=>(
-    <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, padding:24, marginBottom:16 }}>
-      <div style={{ fontSize:15, fontWeight:700, color:T.text, marginBottom:3 }}>{title}</div>
-      {sub&&<div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>{sub}</div>}
-      {children}
-    </div>
-  );
-
-  return (
-    <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
-        <div>
-          <h1 style={{ fontSize:22, fontWeight:800, color:T.text, marginBottom:4 }}>Settings</h1>
-          <div style={{ fontSize:13, color:T.muted }}>Configure your account and reminders</div>
-        </div>
-        <Btn onClick={save} disabled={saving} style={{ padding:"9px 20px", fontSize:13 }}>
-          {saving?"Saving...":saved?"✓ Saved!":"Save Changes"}
-        </Btn>
-      </div>
-
-      <SectionWrap title="Business Details" sub="Used in your reminder messages">
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:14 }}>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Business Name</div>
-            <Input value={form.business_name} onChange={e=>set("business_name",e.target.value)} placeholder="e.g. Four Shires Window Cleaning"/>
-          </div>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Contact Number</div>
-            <Input value={form.phone} onChange={e=>set("phone",e.target.value)} placeholder="07700 900123"/>
-          </div>
-        </div>
-      </SectionWrap>
-
-      <SectionWrap title="Message Template" sub="Use {name}, {time}, and {business_phone} as placeholders">
-        <textarea value={form.message_template} onChange={e=>set("message_template",e.target.value)}
-          rows={3} style={{ width:"100%", border:`1px solid ${T.border}`, borderRadius:8,
-            padding:"10px 12px", fontSize:13, color:T.text, outline:"none", fontFamily:"inherit",
-            background:"#fff", resize:"vertical", lineHeight:1.6, boxSizing:"border-box" }}/>
-        <div style={{ background:"#f8fafc", borderRadius:8, padding:"10px 13px", fontSize:12,
-          color:"#475569", lineHeight:1.6, marginTop:10 }}>
-          <strong>Preview: </strong>
-          <em>{form.message_template.replace("{name}","Sarah").replace("{time}","9am").replace("{business_phone}",form.phone||"07700 900123")}</em>
-        </div>
-      </SectionWrap>
-
-      <SectionWrap title="Reminder Timing" sub="How many hours before the appointment?">
-        <div style={{ display:"flex", gap:8 }}>
-          {[12,24,48].map(h=>(
-            <button key={h} onClick={()=>set("reminder_hours",h)} style={{ padding:"9px 20px",
-              borderRadius:8, border:`1px solid ${form.reminder_hours===h?T.purple:"#e2e8f0"}`,
-              background:form.reminder_hours===h?"#f3e8ff":"#fff",
-              color:form.reminder_hours===h?"#7c3aed":"#475569",
-              fontSize:13, fontWeight:form.reminder_hours===h?700:400,
-              cursor:"pointer", fontFamily:"inherit" }}>{h} hours</button>
-          ))}
-        </div>
-      </SectionWrap>
-
-      <SectionWrap title="Calendar Connection" sub="Connect your calendar to automatically import appointments">
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12 }}>
-          <div style={{ border:`1px solid ${profile?.calendar_provider==="google"?T.green:T.border}`,
-            borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
-            <div style={{ fontSize:24, marginBottom:6 }}>📅</div>
-            <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:4 }}>Google Calendar</div>
-            {profile?.calendar_provider==="google" ? (
-              <>
-                <div style={{ fontSize:11, color:T.green, fontWeight:700, marginBottom:8 }}>✓ Connected</div>
-                <button onClick={disconnectCalendar} style={{ fontSize:11, fontWeight:700, color:"#dc2626",
-                  background:"none", border:"1px solid #fee2e2", borderRadius:6, padding:"5px 12px",
-                  cursor:"pointer", fontFamily:"inherit" }}>Disconnect</button>
-              </>
-            ) : (
-              <button onClick={connectGoogleCalendar} disabled={calConnecting}
-                style={{ fontSize:11, fontWeight:700, color:T.purple, background:"none",
-                  border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
-                  cursor:"pointer", fontFamily:"inherit", opacity:calConnecting?0.5:1 }}>
-                {calConnecting?"Connecting...":"Connect"}
-              </button>
-            )}
-          </div>
-          <div style={{ border:`1px solid ${T.border}`, borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
-            <div style={{ fontSize:24, marginBottom:6 }}>🍎</div>
-            <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>Apple Calendar</div>
-            <button style={{ fontSize:11, fontWeight:700, color:T.muted, background:"none",
-              border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
-              cursor:"not-allowed", fontFamily:"inherit" }}>Coming Soon</button>
-          </div>
-          <div style={{ border:`1px solid ${T.border}`, borderRadius:10, padding:"14px 16px", textAlign:"center", background:"#fff" }}>
-            <div style={{ fontSize:24, marginBottom:6 }}>💼</div>
-            <div style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:10 }}>Outlook</div>
-            <button style={{ fontSize:11, fontWeight:700, color:T.muted, background:"none",
-              border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px",
-              cursor:"not-allowed", fontFamily:"inherit" }}>Coming Soon</button>
-          </div>
-        </div>
-      </SectionWrap>
-
-      <SectionWrap title="Plan & Billing">
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"14px 16px", background:"#fdf4ff", borderRadius:10, border:`1px solid ${T.border}` }}>
-          <div>
-            <div style={{ fontSize:14, fontWeight:700, color:T.text }}>Free Trial</div>
-            <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>14 days included</div>
-          </div>
-          <Btn style={{ padding:"8px 18px", fontSize:12 }}>Upgrade — £20/month</Btn>
-        </div>
-      </SectionWrap>
-    </div>
-  );
-}
-
-// ── MAIN APP ──────────────────────────────────────────
-export default function App() {
-  const [view, setView]       = useState("home");
-  const [user, setUser]       = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [dashPage, setDashPage] = useState("dashboard");
-
-  useEffect(()=>{
-    // Check for Google Calendar OAuth callback
-    const params = new URLSearchParams(window.location.search);
-    const code  = params.get("code");
-    const state = params.get("state");
-
-    if (code && state) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        const jwt = session?.access_token ?? "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO";
-        fetch("https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback", {
-          method: "POST",
+      try {
+        const res = await fetch(EDGE_FN, {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${jwt}`,
-            "apikey": "sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO"
+            'Content-Type': 'application/json',
+            Authorization:  `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ code, user_id: state })
+          body: JSON.stringify({ code, user_id: userId }),
         })
-          .then(async (res) => {
-            const data = await res.json();
-            if (!res.ok) {
-              console.error("Calendar connection failed:", data);
-              alert("Calendar connection failed. Please try again.");
-              return;
-            }
-            console.log("Calendar connected:", data);
-            window.history.replaceState({}, "", "/");
-            window.location.href = "/";
-          })
-          .catch((err) => {
-            console.error("Calendar connection error:", err);
-            alert("Calendar connection failed. Please try again.");
-          });
-      });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.message || `Server error ${res.status}`)
+        }
+        setStatus('success')
+        setMsg('Google Calendar connected! Redirecting...')
+        setTimeout(() => { window.location.href = '/' }, 2200)
+      } catch (err) {
+        setStatus('error')
+        setMsg(err.message || 'Connection failed. Please try again.')
+      }
+    }
+    handle()
+  }, [session])
+
+  const iconBg = { processing: '#faf5ff', success: '#dcfce7', error: '#fee2e2' }[status]
+  const iconCl = { processing: C.purple,  success: C.success, error: C.error }[status]
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.navy,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div className="card slide-up" style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
+        <div style={{ width: 60, height: 60, borderRadius: 18, background: iconBg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 20px', color: iconCl }}>
+          {status === 'success' ? <IC.Check />
+           : status === 'error'  ? <IC.X />
+           : <IC.Calendar />}
+        </div>
+        <h2 style={{ fontSize: 21, fontWeight: 800, marginBottom: 10 }}>
+          {status === 'processing' ? 'Connecting calendar'
+           : status === 'success'  ? 'Calendar connected!'
+           : 'Connection failed'}
+        </h2>
+        <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65 }}>{msg}</p>
+        {status === 'error' && (
+          <button className="btn-primary" onClick={() => window.location.href = '/'}
+            style={{ marginTop: 20 }}>
+            Back to app
+          </button>
+        )}
+        {status === 'processing' && (
+          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 24, height: 24, border: `3px solid ${C.border}`,
+              borderTop: `3px solid ${C.purple}`, borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// AUTHENTICATED APP SHELL
+// ═════════════════════════════════════════════════════════════════════════════
+function AppShell({ user, onLogout }) {
+  const [page,  setPage]  = useState('dashboard')
+  const [toast, setToast] = useState(null)
+
+  function showToast(message, type = 'success') {
+    setToast({ message, type })
+  }
+
+  const sharedProps = { user, setPage, showToast }
+
+  const PAGE_MAP = {
+    dashboard:   <Dashboard   {...sharedProps} />,
+    upcoming:    <Upcoming    {...sharedProps} />,
+    contacts:    <Contacts    {...sharedProps} />,
+    'message-log': <MessageLog {...sharedProps} />,
+    settings:    <SettingsPage {...sharedProps} />,
+    upgrade:     <UpgradePage  {...sharedProps} />,
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: C.bg }}>
+      <AppNav page={page} setPage={setPage} user={user} onLogout={onLogout} />
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 20px 60px' }}>
+        {PAGE_MAP[page] || PAGE_MAP.dashboard}
+      </main>
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ROOT APP
+// ═════════════════════════════════════════════════════════════════════════════
+export default function App() {
+  const [view,     setView]     = useState('home')   // 'home' | 'auth' | 'app'
+  const [authMode, setAuthMode] = useState('login')  // 'login' | 'signup'
+  const [user,     setUser]     = useState(null)
+  const [session,  setSession]  = useState(null)
+  const [isCalCB,  setIsCalCB]  = useState(false)
+
+  useEffect(() => {
+    // Check for Google Calendar OAuth callback path
+    if (window.location.pathname.includes('/auth/calendar/callback')) {
+      setIsCalCB(true)
     }
 
-    supabase.auth.getSession().then(({data:{session}})=>{
-      setUser(session?.user??null);
-      if(session?.user) setView("app");
-      setLoading(false);
-    });
-    const {data:{subscription}} = supabase.auth.onAuthStateChange((_e,session)=>{
-      setUser(session?.user??null);
-      if(session?.user) setView("app");
-      else setView("home");
-    });
-    return ()=>subscription.unsubscribe();
-  },[]);
+    // Restore session
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (s) { setSession(s); setUser(s.user); setView('app') }
+    })
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    setUser(null); setView("home");
+    // Listen for auth changes (e.g. Google OAuth redirect)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (s) { setSession(s); setUser(s.user); setView('app') }
+      else   { setSession(null); setUser(null); setView('home') }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    setUser(null); setSession(null); setView('home')
   }
 
-  if (loading) return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-      background:T.light, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
-      <div style={{ width:32, height:32, border:"3px solid #e9d5ff", borderTopColor:T.purple,
-        borderRadius:"50%", animation:"spin 0.8s linear infinite" }}/>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
+  function handleAuthSuccess(u) {
+    setUser(u); setView('app')
+  }
 
-  if (view==="home") return (
+  // Render
+  return (
     <>
-      <HomePage onSignup={()=>setView("signup")} onLogin={()=>setView("login")}/>
-      <AiChat/>
-    </>
-  );
+      <GlobalStyles />
 
-  if (view==="login"||view==="signup") return (
-    <>
-      <AuthPage mode={view} onSuccess={()=>setView("app")} onSwitch={setView}/>
-      <AiChat/>
-    </>
-  );
+      {/* Google Calendar OAuth callback */}
+      {isCalCB && <CalendarCallback session={session} />}
 
-  if (view==="app" && user) return (
-    <>
-      <DashLayout page={dashPage} setPage={setDashPage} user={user} onSignOut={signOut}>
-        {dashPage==="dashboard" && <Dashboard user={user} setDashPage={setDashPage}/>}
-        {dashPage==="upcoming"  && <Upcoming user={user}/>}
-        {dashPage==="contacts"  && <Contacts user={user}/>}
-        {dashPage==="log"       && <MessageLog user={user}/>}
-        {dashPage==="settings"  && <Settings user={user}/>}
-        {dashPage==="upgrade"   && <UpgradePage user={user}/>}
-      </DashLayout>
-      <AiChat/>
-    </>
-  );
+      {/* Normal views */}
+      {!isCalCB && (
+        <>
+          {view === 'home' && (
+            <HomePage
+              onLogin={()  => { setAuthMode('login');  setView('auth') }}
+              onSignup={() => { setAuthMode('signup'); setView('auth') }}
+            />
+          )}
 
-  return null;
+          {view === 'auth' && (
+            <AuthPage
+              mode={authMode}
+              setMode={setAuthMode}
+              onAuthSuccess={handleAuthSuccess}
+            />
+          )}
+
+          {view === 'app' && user && (
+            <AppShell user={user} onLogout={handleLogout} />
+          )}
+        </>
+      )}
+    </>
+  )
 }
