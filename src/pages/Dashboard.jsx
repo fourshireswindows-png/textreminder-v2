@@ -93,7 +93,7 @@ export default function Dashboard() {
       {onTrial && trialDaysLeft > 0 && (
         <div style={{ background:'linear-gradient(135deg,#fdf4ff,#faf5ff)', border:'1px solid #e9d5ff', borderRadius:12, padding:'12px 18px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
           <div style={{ fontSize:13, color:'#7c3aed' }}>
-            <strong>{trialDaysLeft} days</strong> left on your free trial
+            <strong>{trialDaysLeft} days</strong> left on your free plan
           </div>
           <Link to="/settings" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:700, textDecoration:'none' }}>Upgrade — £20/month</Link>
         </div>

@@ -100,7 +100,7 @@ export default function Home() {
             <Link to="/signup" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:10, padding:'15px 32px', fontSize:16, fontWeight:700, textDecoration:'none', boxShadow:'0 6px 20px rgba(168,85,247,0.35)' }}>Start Free Trial</Link>
             <a href="#how" style={{ background:'transparent', color:'#a855f7', border:'2px solid #a855f7', borderRadius:10, padding:'14px 30px', fontSize:16, fontWeight:700, textDecoration:'none' }}>See How It Works</a>
           </div>
-          <div style={{ fontSize:12, color:'#9ca3af' }}>No credit card required · 14-day free trial · Set up in 5 minutes</div>
+          <div style={{ fontSize:12, color:'#9ca3af' }}>No credit card required · Free plan available · Set up in 5 minutes</div>
         </div>
 
         {/* SMS preview card */}
@@ -231,14 +231,14 @@ export default function Home() {
             <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:6 }}>Monthly</div>
             <div style={{ fontSize:56, fontWeight:900, color:'#fff', lineHeight:1, marginBottom:4, fontFamily:'Syne,sans-serif' }}>£20<span style={{ fontSize:20, fontWeight:400, color:'rgba(255,255,255,0.4)' }}>/month</span></div>
             <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)', marginBottom:24 }}>or £180/year — save two months</div>
-            {['Google, Apple & Outlook Calendar','SMS, Email & WhatsApp','Unlimited contacts & reminders','AI support assistant','Full message log','14-day free trial'].map((f,i)=>(
+            {['Google, Apple & Outlook Calendar','SMS, Email & WhatsApp','Unlimited contacts & reminders','AI support assistant','Full message log','Free plan included'].map((f,i)=>(
               <div key={i} style={{ display:'flex', alignItems:'center', gap:9, marginBottom:9 }}>
                 <span style={{ color:'#22c55e' }}>✓</span>
                 <span style={{ fontSize:13, color:'rgba(255,255,255,0.8)' }}>{f}</span>
               </div>
             ))}
             <Link to="/signup" style={{ display:'block', background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:10, padding:15, fontSize:15, fontWeight:700, textDecoration:'none', marginTop:22, boxShadow:'0 4px 16px rgba(236,72,153,0.4)' }}>Start Free Trial →</Link>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:10 }}>14-day free trial · No credit card required</div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:10 }}>Free plan available · No credit card required</div>
           </div>
           <div style={{ background:'#fef9c3', borderRadius:12, padding:'14px 18px', display:'flex', alignItems:'center', gap:12 }}>
             <span style={{ fontSize:20 }}>💡</span>

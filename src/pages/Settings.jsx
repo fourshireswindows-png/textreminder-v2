@@ -17,7 +17,8 @@ export default function Settings() {
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
   const [form, setForm]       = useState({
-    business_name:'', phone:'', message_template:'', reminder_hours:24,
+    business_name:'', phone:'', message_template:'',
+    reminder_schedule:[{ value:24, unit:'hours' }],
     channels:{ sms:true, email:false, whatsapp:false },
     twilio_account_sid:'', twilio_auth_token:'', twilio_phone_number:'', resend_api_key:'',
   })
@@ -32,7 +33,7 @@ export default function Settings() {
           business_name: data.business_name || '',
           phone: data.phone || '',
           message_template: data.message_template || 'Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.',
-          reminder_hours: data.reminder_hours || 24,
+          reminder_schedule: data.reminder_schedule || [{ value:24, unit:'hours' }],
           channels: data.channels || { sms:true, email:false, whatsapp:false },
           twilio_account_sid: data.twilio_account_sid || '',
           twilio_auth_token: data.twilio_auth_token || '',
@@ -100,13 +101,51 @@ export default function Settings() {
       </Section>
 
       {/* Reminder timing */}
-      <Section title="Reminder Timing" sub="How many hours before the appointment should reminders send?">
-        <div style={{ display:'flex', gap:8 }}>
-          {[12,24,48].map(h => (
-            <button key={h} onClick={()=>set('reminder_hours',h)} style={{ padding:'9px 20px', borderRadius:8, border:`1px solid ${form.reminder_hours===h?'#a855f7':'#e2e8f0'}`, background:form.reminder_hours===h?'#f3e8ff':'#fff', color:form.reminder_hours===h?'#7c3aed':'#475569', fontSize:13, fontWeight:form.reminder_hours===h?700:400, cursor:'pointer', fontFamily:'inherit' }}>
-              {h} hours
-            </button>
+      <Section title="Reminder Schedule" sub="Send up to 5 reminders before each appointment. Add as many as you need.">
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {form.reminder_schedule.map((r, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:13, color:'#94a3b8', minWidth:24, textAlign:'right' }}>#{i+1}</span>
+              <input
+                type="number" min={1} max={999} value={r.value}
+                onChange={e => {
+                  const s = [...form.reminder_schedule]
+                  s[i] = { ...s[i], value: Math.max(1, parseInt(e.target.value)||1) }
+                  set('reminder_schedule', s)
+                }}
+                style={{ width:72, border:'1.5px solid #e2e8f0', borderRadius:8, padding:'8px 10px', fontSize:14, fontFamily:'inherit', outline:'none', textAlign:'center' }}
+                onFocus={e=>e.target.style.borderColor='#a855f7'} onBlur={e=>e.target.style.borderColor='#e2e8f0'}
+              />
+              <select
+                value={r.unit}
+                onChange={e => {
+                  const s = [...form.reminder_schedule]
+                  s[i] = { ...s[i], unit: e.target.value }
+                  set('reminder_schedule', s)
+                }}
+                style={{ border:'1.5px solid #e2e8f0', borderRadius:8, padding:'8px 12px', fontSize:14, fontFamily:'inherit', outline:'none', background:'#fff', cursor:'pointer', flex:1 }}
+                onFocus={e=>e.target.style.borderColor='#a855f7'} onBlur={e=>e.target.style.borderColor='#e2e8f0'}
+              >
+                <option value="hours">hours before</option>
+                <option value="days">days before</option>
+                <option value="weeks">weeks before</option>
+              </select>
+              {form.reminder_schedule.length > 1 && (
+                <button onClick={() => set('reminder_schedule', form.reminder_schedule.filter((_,j)=>j!==i))}
+                  style={{ width:30, height:30, borderRadius:'50%', border:'1px solid #fecdd3', background:'#fff5f5', color:'#ef4444', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
+              )}
+            </div>
           ))}
+          {form.reminder_schedule.length < 5 && (
+            <button onClick={() => set('reminder_schedule', [...form.reminder_schedule, { value:1, unit:'hours' }])}
+              style={{ alignSelf:'flex-start', marginTop:4, padding:'8px 16px', borderRadius:8, border:'1.5px dashed #e9d5ff', background:'#faf5ff', color:'#a855f7', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', transition:'all 0.15s' }}
+              onMouseEnter={e=>e.target.style.borderColor='#a855f7'} onMouseLeave={e=>e.target.style.borderColor='#e9d5ff'}>
+              + Add another reminder
+            </button>
+          )}
+          <div style={{ fontSize:12, color:'#94a3b8', marginTop:4 }}>
+            e.g. send one 24 hours before <em>and</em> one 2 hours before for a double reminder.
+          </div>
         </div>
       </Section>
 

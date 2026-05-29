@@ -42,7 +42,7 @@ export default function Login() {
             </button>
           </form>
           <div style={{ textAlign:'center', marginTop:20, fontSize:13, color:'#6b7280' }}>
-            No account? <Link to="/signup" style={{ color:'#a855f7', fontWeight:600 }}>Start free trial</Link>
+            No account? <Link to="/signup" style={{ color:'#a855f7', fontWeight:600 }}>Start free</Link>
           </div>
         </div>
       </div>

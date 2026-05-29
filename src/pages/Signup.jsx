@@ -30,7 +30,7 @@ export default function Signup() {
       <div style={{ textAlign:'center', maxWidth:400 }}>
         <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
         <h2 style={{ fontFamily:'Syne,sans-serif', fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:8 }}>Check your email</h2>
-        <p style={{ color:'#6b7280', fontSize:14, lineHeight:1.7, marginBottom:24 }}>We've sent a confirmation link to <strong>{email}</strong>. Click it to activate your 14-day free trial.</p>
+        <p style={{ color:'#6b7280', fontSize:14, lineHeight:1.7, marginBottom:24 }}>We've sent a confirmation link to <strong>{email}</strong>. Click it to activate your free account.</p>
         <Link to="/login" style={{ color:'#a855f7', fontWeight:600, fontSize:14 }}>Back to login</Link>
       </div>
     </div>
@@ -41,8 +41,8 @@ export default function Signup() {
       <div style={{ width:'100%', maxWidth:420 }}>
         <div style={{ textAlign:'center', marginBottom:28 }}>
           <div style={{ display:'flex', justifyContent:'center', marginBottom:12 }}><Logo size={48}/></div>
-          <h1 style={{ fontFamily:'Syne,sans-serif', fontSize:26, fontWeight:800, color:'#0f172a', marginBottom:6 }}>Start your free trial</h1>
-          <p style={{ color:'#6b7280', fontSize:14 }}>14 days free · No credit card required</p>
+          <h1 style={{ fontFamily:'Syne,sans-serif', fontSize:26, fontWeight:800, color:'#0f172a', marginBottom:6 }}>Start free</h1>
+          <p style={{ color:'#6b7280', fontSize:14 }}>Free plan · No credit card required</p>
         </div>
 
         {/* Benefits */}
