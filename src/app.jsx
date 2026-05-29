@@ -74,14 +74,16 @@ const C = {
 
 // ─── Plans ────────────────────────────────────────────────────────────────────
 const PLANS = [
-  { id: 'free',         name: 'Free',         price: 0,  reminders: 20,   popular: false,
+  { id: 'free',         name: 'Free',         price: 0,   annualPrice: 0,    reminders: 20,   popular: false,
     features: ['20 SMS reminders/month','Google Calendar sync','Up to 20 contacts','Basic templates','Message log'] },
-  { id: 'starter',      name: 'Starter',      price: 9,  reminders: 100,  popular: false,
+  { id: 'starter',      name: 'Starter',      price: 15,  annualPrice: 150,  reminders: 100,  popular: false,
     features: ['100 SMS reminders/month','Google Calendar sync','Unlimited contacts','Custom templates','Message log','Email support'] },
-  { id: 'professional', name: 'Professional', price: 19, reminders: 500,  popular: true,
-    features: ['500 SMS reminders/month','Google Calendar sync','Unlimited contacts','Custom templates','Priority delivery','Delivery reports','Priority support'] },
-  { id: 'business',     name: 'Business',     price: 39, reminders: 2000, popular: false,
-    features: ['2,000 SMS reminders/month','Everything in Pro','Multiple calendars','API access','Dedicated account manager','Custom sender ID'] },
+  { id: 'professional', name: 'Professional', price: 29,  annualPrice: 290,  reminders: 200,  popular: true,
+    features: ['200 SMS reminders/month','Google Calendar sync','Unlimited contacts','Custom templates','Priority delivery','Delivery reports','Priority support'] },
+  { id: 'business',     name: 'Business',     price: 55,  annualPrice: 550,  reminders: 400,  popular: false,
+    features: ['400 SMS reminders/month','Everything in Pro','Multiple calendars','API access','Dedicated account manager','Custom sender ID'] },
+  { id: 'enterprise',   name: 'Enterprise',   price: 249, annualPrice: 2490, reminders: 2000, popular: false,
+    features: ['2,000 SMS reminders/month','Everything in Business','Dedicated account manager','Custom integrations','SLA guarantee','Custom sender ID'] },
 ]
 
 // ─── Global styles ────────────────────────────────────────────────────────────
@@ -297,11 +299,18 @@ function LogoMark({ dark = false, size = 34 }) {
 }
 
 // ─── PUBLIC NAV ───────────────────────────────────────────────────────────────
-function PublicNav({ onLogin, onSignup }) {
+function PublicNav({ onLogin, onSignup, onNavigate }) {
   return (
     <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: C.navy, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 62 }}>
-        <LogoMark />
+        <button onClick={() => onNavigate && onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          <LogoMark />
+        </button>
+        <div className="hide-mobile" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {[['pricing','Pricing'],['blog','Blog'],['compare','Compare'],['resources','Resources']].map(([k,l]) => (
+            <button key={k} className="btn-ghost" onClick={() => onNavigate && onNavigate(k)} style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>{l}</button>
+          ))}
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button className="btn-ghost" onClick={onLogin} style={{ color: 'rgba(255,255,255,0.75)' }}>Log in</button>
           <button className="btn-primary" onClick={onSignup} style={{ padding: '9px 20px' }}>Get started free</button>
@@ -420,28 +429,39 @@ function AppNav({ page, setPage, user, onLogout }) {
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE: HOME (landing)
 // ═════════════════════════════════════════════════════════════════════════════
-function HomePage({ onLogin, onSignup }) {
+function HomePage({ onLogin, onSignup, onNavigate }) {
   return (
     <div style={{ background: '#fff' }}>
-      <PublicNav onLogin={onLogin} onSignup={onSignup} />
+      <PublicNav onLogin={onLogin} onSignup={onSignup} onNavigate={onNavigate} />
 
       {/* Hero */}
       <section style={{ background: C.navy, padding: '90px 20px 110px' }}>
         <div style={{ maxWidth: 780, margin: '0 auto', textAlign: 'center' }} className="fade-in">
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 24, background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', borderRadius: 24, padding: '6px 16px' }}>
             <IC.Bell />
-            <span style={{ color: C.pink, fontSize: 13, fontWeight: 600 }}>SMS reminder automation for UK businesses</span>
+            <span style={{ color: C.pink, fontSize: 13, fontWeight: 600 }}>Built by tradespeople, for tradespeople.</span>
           </div>
           <h1 style={{ fontSize: 'clamp(34px, 5.5vw, 58px)', fontWeight: 800, color: '#fff', lineHeight: 1.13, letterSpacing: '-1.5px', marginBottom: 22 }}>
-            Stop no-shows.{' '}
-            <span style={{ color: C.pink }}>Automate your reminders.</span>
+            Stop Losing Jobs{' '}
+            <span style={{ color: C.pink }}>to No-Shows</span>
           </h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.62)', lineHeight: 1.75, maxWidth: 560, margin: '0 auto 40px' }}>
-            TextReminder syncs with your Google Calendar and sends SMS reminders to clients automatically. No manual work. No missed appointments.
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.62)', lineHeight: 1.75, maxWidth: 580, margin: '0 auto 16px' }}>
+            TextReminder automatically texts your customers the day before their appointment. Set it up once, never chase a no-show again.
+          </p>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', fontStyle: 'italic', marginBottom: 36, maxWidth: 480, margin: '0 auto 36px' }}>
+            "I was paying £28.80 a month for 100 texts with my old provider. So I built something better."
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={onSignup} style={{ padding: '14px 30px', fontSize: 16 }}>Start free — no card needed</button>
-            <button onClick={onLogin} style={{ padding: '14px 30px', fontSize: 16, fontWeight: 500, border: '1.5px solid rgba(255,255,255,0.18)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}>Log in</button>
+            <button className="btn-primary" onClick={onSignup} style={{ padding: '14px 30px', fontSize: 16 }}>Start Free — No Card Needed</button>
+            <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '14px 30px', fontSize: 16, fontWeight: 500, border: '1.5px solid rgba(255,255,255,0.18)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}>See How It Works</button>
+          </div>
+          {/* Trust signals */}
+          <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28 }}>
+            {['No contracts','Cancel any time','UK-based','98% SMS open rate'].map(t => (
+              <span key={t} style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ color: C.success }}>✓</span> {t}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -459,7 +479,7 @@ function HomePage({ onLogin, onSignup }) {
       </section>
 
       {/* Features */}
-      <section style={{ padding: '88px 20px' }}>
+      <section id="how-it-works" style={{ padding: '88px 20px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 60 }}>
             <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Everything you need to reduce no-shows</h2>
@@ -485,54 +505,577 @@ function HomePage({ onLogin, onSignup }) {
       </section>
 
       {/* Pricing */}
-      <section style={{ background: '#f8fafc', padding: '88px 20px', borderTop: `1px solid ${C.border}` }}>
-        <div style={{ maxWidth: 1040, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Simple, honest pricing</h2>
-            <p style={{ color: C.muted, marginTop: 10, fontSize: 16 }}>No contracts. Cancel any time.</p>
+      <PricingSection onSignup={onSignup} />
+
+      {/* From the Blog */}
+      <BlogPreviewSection onNavigate={onNavigate} />
+
+      {/* Footer */}
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// ─── Pricing Section (reusable with toggle) ──────────────────────────────────
+function PricingSection({ onSignup }) {
+  const [annual, setAnnual] = useState(false)
+  return (
+    <section style={{ background: '#f8fafc', padding: '88px 20px', borderTop: `1px solid ${C.border}` }}>
+      <div style={{ maxWidth: 1140, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Simple, honest pricing</h2>
+          <p style={{ color: C.muted, marginTop: 10, fontSize: 16 }}>No contracts. Cancel any time.</p>
+          {/* Toggle */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginTop: 24, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 40, padding: '6px 8px' }}>
+            <button onClick={() => setAnnual(false)} style={{ padding: '7px 18px', borderRadius: 30, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: !annual ? C.navy : 'transparent', color: !annual ? '#fff' : C.muted, transition: 'all 0.2s' }}>Monthly</button>
+            <button onClick={() => setAnnual(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 18px', borderRadius: 30, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: annual ? C.navy : 'transparent', color: annual ? '#fff' : C.muted, transition: 'all 0.2s' }}>
+              Annual
+              <span style={{ background: C.success, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>Save 2 months</span>
+            </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
-            {PLANS.map(plan => (
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          {PLANS.map(plan => {
+            const monthlyEquiv = annual && plan.annualPrice > 0 ? (plan.annualPrice / 12).toFixed(2) : null
+            return (
               <div key={plan.id} className="card" style={{ border: plan.popular ? `2px solid ${C.pink}` : `1px solid ${C.border}`, position: 'relative' }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(168,85,247,0.12)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
                 {plan.popular && <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: C.pink, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 14px', borderRadius: 20 }}>MOST POPULAR</div>}
                 <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.muted, marginBottom: 8 }}>{plan.name}</div>
-                <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1, letterSpacing: '-1px', marginBottom: 4 }}>
-                  {plan.price === 0 ? 'Free' : `£${plan.price}`}
-                  {plan.price > 0 && <span style={{ fontSize: 15, fontWeight: 400, color: C.muted }}>/mo</span>}
+                <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, letterSpacing: '-1px', marginBottom: 2 }}>
+                  {plan.price === 0 ? 'Free' : annual ? `£${plan.annualPrice}` : `£${plan.price}`}
+                  {plan.price > 0 && <span style={{ fontSize: 14, fontWeight: 400, color: C.muted }}>{annual ? '/yr' : '/mo'}</span>}
                 </div>
-                <div style={{ fontSize: 13, color: C.muted, marginBottom: 22, fontWeight: 500 }}>{plan.reminders} reminders/month</div>
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 22 }}>
+                {monthlyEquiv && <div style={{ fontSize: 12, color: C.success, fontWeight: 600, marginBottom: 14 }}>£{monthlyEquiv}/mo</div>}
+                {!monthlyEquiv && <div style={{ marginBottom: 14 }} />}
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, fontWeight: 500 }}>{plan.reminders} SMS/month</div>
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {plan.features.map(f => (
-                    <div key={f} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13 }}>
+                    <div key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5 }}>
                       <span style={{ color: C.success, flexShrink: 0, marginTop: 1 }}><IC.Check /></span>{f}
                     </div>
                   ))}
                 </div>
-                <button className={plan.popular ? 'btn-primary' : 'btn-secondary'} onClick={onSignup} style={{ width: '100%', justifyContent: 'center', padding: 11 }}>
+                <button className={plan.popular ? 'btn-primary' : 'btn-secondary'} onClick={onSignup} style={{ width: '100%', justifyContent: 'center', padding: 10, fontSize: 13 }}>
                   {plan.price === 0 ? 'Get started free' : 'Start free trial'}
                 </button>
+              </div>
+            )
+          })}
+        </div>
+        <p style={{ textAlign: 'center', fontSize: 13, color: C.muted, marginTop: 24 }}>14-day free trial on all paid plans — no credit card required</p>
+      </div>
+    </section>
+  )
+}
+
+// ─── Blog data ────────────────────────────────────────────────────────────────
+const BLOG_POSTS = [
+  {
+    slug: 'how-to-reduce-no-shows-window-cleaner',
+    title: 'How to Reduce No-Shows as a Window Cleaner',
+    category: 'Window Cleaning',
+    date: '2026-05-29',
+    readTime: '5 min read',
+    metaDesc: 'Tired of customers forgetting their window cleaning appointment? Here\'s how UK window cleaners are cutting no-shows to almost zero.',
+    excerpt: 'No-shows cost UK window cleaners hundreds of pounds every month. Here\'s the simple fix that\'s working right now.',
+    content: `
+Every window cleaner knows the feeling. You've loaded the van, driven across town, parked up — and there's nobody home.
+
+No answer at the door. No text. No warning.
+
+It's not just frustrating. It's money out of your pocket. Fuel wasted. A slot you could have filled with a paying job.
+
+**The no-show problem is bigger than you think**
+
+Industry surveys suggest that up to 1 in 5 service appointments end in a no-show or late cancellation. For a window cleaner doing 6–8 jobs a day, that could mean losing 1–2 jobs daily. At even £25 a job, that's £50+ a day — over £1,000 a month — just walking out the door.
+
+And it's rarely intentional. Most customers simply forgot.
+
+**Why customers forget**
+
+People are busy. They book their window clean weeks in advance, life happens, and by the time you turn up they've got the kids to school, they're on a work call, or they've just genuinely forgotten you were coming.
+
+This isn't a character flaw. It's human nature. The fix isn't to get better customers — it's to remind the ones you already have.
+
+**The simple solution: a text the day before**
+
+Research consistently shows that a simple reminder message sent 24 hours before an appointment reduces no-shows by up to 40%.
+
+That's not a made-up figure. That's what happens when you give people a chance to remember.
+
+A text doesn't need to be fancy. Something like:
+
+*"Hi Sarah, just a reminder that your window clean is booked for tomorrow, Thursday 30th May at 10am. Reply STOP to cancel. — Dave, Crystal Clear Windows"*
+
+Simple. Friendly. Effective.
+
+**But who's got time to send texts all day?**
+
+That's the problem. If you're a one-man band or running a small team, you're already juggling quotes, jobs, invoices, and everything else that comes with running a business. Sitting down every evening to send reminder texts to tomorrow's customers is another hour you don't have.
+
+That's exactly why we built TextReminder.
+
+**How TextReminder works for window cleaners**
+
+1. You connect your Google Calendar (takes about 5 minutes)
+2. TextReminder reads your appointments automatically
+3. 24 hours before each job, your customer gets a personalised SMS reminder
+4. You get fewer no-shows, no extra admin
+
+You don't have to log in every day. You don't have to do anything differently. Just book jobs in your calendar like you always do — the reminders go out automatically.
+
+**What about the customers who reply?**
+
+That's actually one of the best parts. When a customer replies to say they need to reschedule, you find out 24 hours in advance instead of when you're parked outside their house. You can fill that slot with another job.
+
+A cancellation with notice is worth money. A no-show costs you money.
+
+**The numbers stack up**
+
+TextReminder starts from free (20 texts/month) and goes up to £29/month for 200 texts. If you're doing 20 jobs a week, that's roughly 80 texts a month — the Starter plan at £15/month covers that.
+
+Compare that to the cost of even one no-show a month. Most window cleaners recover the cost of TextReminder in a single job saved.
+
+**Getting started**
+
+It takes about 5 minutes to set up. No contract. No credit card for the free trial. Just connect your calendar, customise your message, and let it run.
+
+If you're tired of driving to empty houses, give it a go — the first 20 reminders are completely free.
+    `
+  },
+]
+
+// ─── Blog Preview Section ─────────────────────────────────────────────────────
+function BlogPreviewSection({ onNavigate }) {
+  const posts = BLOG_POSTS.slice(0, 3)
+  if (posts.length === 0) return null
+  return (
+    <section style={{ padding: '80px 20px', borderTop: `1px solid ${C.border}` }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h2 style={{ fontSize: 'clamp(22px, 3.5vw, 32px)', fontWeight: 800, letterSpacing: '-0.6px' }}>From the Blog</h2>
+            <p style={{ color: C.muted, fontSize: 15, marginTop: 6 }}>Tips and guides for UK tradespeople</p>
+          </div>
+          <button className="btn-secondary" onClick={() => onNavigate && onNavigate('blog')} style={{ fontSize: 13 }}>View all posts <IC.ChevRight /></button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+          {posts.map(post => (
+            <div key={post.slug} className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+              onClick={() => onNavigate && onNavigate('blog-post', post.slug)}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+              <div style={{ background: `linear-gradient(135deg, ${C.pink}18, ${C.purple}18)`, borderRadius: 8, height: 140, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>📝</div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '3px 10px', borderRadius: 12 }}>{post.category}</span>
+                <span style={{ fontSize: 11, color: C.muted }}>{post.readTime}</span>
+              </div>
+              <h3 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 8 }}>{post.title}</h3>
+              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{post.excerpt}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Site Footer ──────────────────────────────────────────────────────────────
+function SiteFooter({ onNavigate, onSignup }) {
+  const navLinks = [
+    ['home','Home'],['pricing','Pricing'],['compare','Compare'],
+    ['blog','Blog'],['resources','Resources'],['contact','Contact'],
+    ['privacy','Privacy Policy'],['terms','Terms'],
+  ]
+  return (
+    <footer style={{ background: C.navy, padding: '52px 20px 32px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 32, marginBottom: 44 }}>
+          <div>
+            <LogoMark />
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 14, lineHeight: 1.7, maxWidth: 240 }}>
+              Built by tradespeople, for tradespeople. The UK's appointment reminder service.
+            </p>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Navigation</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {navLinks.map(([k, l]) => (
+                <button key={k} onClick={() => onNavigate && onNavigate(k)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0, transition: 'color 0.15s' }}
+                  onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.85)'}
+                  onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.5)'}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Trades</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[['trade-window-cleaning','Window Cleaners'],['trade-plumbing','Plumbers'],['trade-electrical','Electricians'],['trade-gardening','Gardeners'],['trade-hairdressing','Hairdressers']].map(([k, l]) => (
+                <button key={k} onClick={() => onNavigate && onNavigate(k)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0, transition: 'color 0.15s' }}
+                  onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.85)'}
+                  onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.5)'}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Get started</div>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>14-day free trial. No credit card required.</p>
+            <button className="btn-primary" onClick={onSignup} style={{ fontSize: 13, padding: '10px 20px' }}>Start free today</button>
+          </div>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>&copy; {new Date().getFullYear()} TextReminder. All rights reserved. Built by tradespeople, for tradespeople.</p>
+          <button onClick={() => onNavigate && onNavigate('compare')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer', transition: 'color 0.15s' }}
+            onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.6)'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.3)'}>Compare us to Remindlo →</button>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+// ─── PWA Install Banner ───────────────────────────────────────────────────────
+function PwaBanner() {
+  const [show, setShow] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    try { if (localStorage.getItem('pwa-banner-dismissed')) return } catch {}
+    const t = setTimeout(() => setShow(true), 15000)
+    return () => clearTimeout(t)
+  }, [])
+
+  function dismiss() {
+    setShow(false); setDismissed(true)
+    try { localStorage.setItem('pwa-banner-dismissed', '1') } catch {}
+  }
+
+  if (!show || dismissed) return null
+
+  return (
+    <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', zIndex: 999,
+      background: C.navy, color: '#fff', borderRadius: 14, padding: '14px 18px',
+      display: 'flex', alignItems: 'center', gap: 12, maxWidth: 420, width: 'calc(100% - 40px)',
+      boxShadow: '0 8px 40px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+      animation: 'slideUp 0.3s ease' }}>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>📱</span>
+      <span style={{ fontSize: 13, lineHeight: 1.5, flex: 1 }}>Add TextReminder to your home screen — works like an app, completely free</span>
+      <button onClick={dismiss} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit' }}>Dismiss</button>
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: COMPARISON
+// ═════════════════════════════════════════════════════════════════════════════
+function ComparePage({ onSignup, onNavigate }) {
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '64px 20px 80px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 52 }}>
+          <div style={{ display: 'inline-block', background: '#faf5ff', color: C.purple, fontSize: 12, fontWeight: 700, padding: '4px 14px', borderRadius: 20, marginBottom: 16 }}>COMPARISON</div>
+          <h1 style={{ fontSize: 'clamp(26px, 4vw, 42px)', fontWeight: 800, letterSpacing: '-1px', lineHeight: 1.2 }}>TextReminder vs Remindlo — Which is Better for UK Trades?</h1>
+          <p style={{ color: C.muted, fontSize: 17, marginTop: 16, maxWidth: 600, margin: '16px auto 0' }}>
+            At £29/month you get 200 texts. Remindlo charges £49 for 250. Why pay more?
+          </p>
+        </div>
+
+        {/* Comparison table */}
+        <div style={{ overflowX: 'auto', marginBottom: 48 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr style={{ background: C.navy }}>
+                <th style={{ padding: '14px 20px', textAlign: 'left', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 13 }}>Feature</th>
+                <th style={{ padding: '14px 20px', textAlign: 'center', color: C.pink, fontWeight: 800, fontSize: 15 }}>TextReminder</th>
+                <th style={{ padding: '14px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 13 }}>Remindlo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['Free tier', '20 SMS', '10 SMS'],
+                ['Entry paid plan', '£15 — 100 SMS', '£19 — 75 SMS'],
+                ['Mid tier', '£29 — 200 SMS', '£49 — 250 SMS'],
+                ['Built for UK trades', '✅', '❌'],
+                ['Built by a tradesperson', '✅', '❌'],
+                ['Two-way SMS', '✅ Coming soon', '❌'],
+                ['Add to home screen', '✅', '❌'],
+              ].map(([feat, us, them], i) => (
+                <tr key={feat} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc', borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: '14px 20px', fontWeight: 500 }}>{feat}</td>
+                  <td style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 600, color: us.startsWith('✅') ? C.success : C.text }}>{us}</td>
+                  <td style={{ padding: '14px 20px', textAlign: 'center', color: them === '❌' ? C.error : C.muted }}>{them}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ textAlign: 'center', background: `linear-gradient(135deg, ${C.pink}10, ${C.purple}10)`, border: `1px solid ${C.border}`, borderRadius: 16, padding: '40px 24px' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Start Free Today — No Card Needed</h2>
+          <p style={{ color: C.muted, marginBottom: 24, fontSize: 15 }}>14-day free trial. Cancel any time. Built for UK tradespeople.</p>
+          <button className="btn-primary" onClick={onSignup} style={{ padding: '14px 32px', fontSize: 16 }}>Start Free Today</button>
+        </div>
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: BLOG LIST
+// ═════════════════════════════════════════════════════════════════════════════
+function BlogPage({ onSignup, onNavigate }) {
+  const categories = ['All', ...Array.from(new Set(BLOG_POSTS.map(p => p.category)))]
+  const [cat, setCat] = useState('All')
+  const filtered = cat === 'All' ? BLOG_POSTS : BLOG_POSTS.filter(p => p.category === cat)
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px 80px' }}>
+        <div style={{ marginBottom: 44 }}>
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-1px' }}>The Trades Blog</h1>
+          <p style={{ color: C.muted, fontSize: 16, marginTop: 10 }}>Tips, guides and insights for UK tradespeople</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 36, flexWrap: 'wrap' }}>
+          {categories.map(c => (
+            <button key={c} onClick={() => setCat(c)} className={`pill${cat === c ? ' pill-active' : ''}`}>{c}</button>
+          ))}
+        </div>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>No posts in this category yet.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24 }}>
+            {filtered.map(post => (
+              <div key={post.slug} className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                onClick={() => onNavigate('blog-post', post.slug)}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+                <div style={{ background: `linear-gradient(135deg, ${C.pink}18, ${C.purple}18)`, borderRadius: 8, height: 160, marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>📝</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '3px 10px', borderRadius: 12 }}>{post.category}</span>
+                  <span style={{ fontSize: 11, color: C.muted }}>{post.readTime}</span>
+                  <span style={{ fontSize: 11, color: C.muted }}>{new Date(post.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+                <h2 style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.4, marginBottom: 10 }}>{post.title}</h2>
+                <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65 }}>{post.excerpt}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: BLOG POST
+// ═════════════════════════════════════════════════════════════════════════════
+function BlogPostPage({ slug, onSignup, onNavigate }) {
+  const post = BLOG_POSTS.find(p => p.slug === slug)
+  useEffect(() => { window.scrollTo(0, 0) }, [slug])
+  if (!post) return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800 }}>Post not found</h1>
+        <button className="btn-primary" onClick={() => onNavigate('blog')} style={{ marginTop: 20 }}>Back to Blog</button>
+      </div>
+    </div>
+  )
+
+  const paragraphs = post.content.trim().split('\n\n').filter(Boolean)
+
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '56px 20px 80px' }}>
+        <button className="btn-ghost" onClick={() => onNavigate('blog')} style={{ marginBottom: 24, color: C.muted, fontSize: 13 }}>← Back to Blog</button>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '4px 12px', borderRadius: 12 }}>{post.category}</span>
+          <span style={{ fontSize: 12, color: C.muted }}>{post.readTime}</span>
+          <span style={{ fontSize: 12, color: C.muted }}>{new Date(post.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+        </div>
+        <h1 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, lineHeight: 1.25, letterSpacing: '-0.8px', marginBottom: 32 }}>{post.title}</h1>
+        <div style={{ fontSize: 16, lineHeight: 1.8, color: '#1e293b' }}>
+          {paragraphs.map((para, i) => {
+            if (para.startsWith('**') && para.endsWith('**')) {
+              return <h2 key={i} style={{ fontSize: 20, fontWeight: 700, margin: '32px 0 12px', letterSpacing: '-0.3px' }}>{para.replace(/\*\*/g, '')}</h2>
+            }
+            if (para.startsWith('*') && para.endsWith('*')) {
+              return <blockquote key={i} style={{ borderLeft: `3px solid ${C.pink}`, paddingLeft: 20, margin: '24px 0', color: C.muted, fontStyle: 'italic' }}>{para.replace(/\*/g, '')}</blockquote>
+            }
+            return <p key={i} style={{ marginBottom: 20 }}>{para}</p>
+          })}
+        </div>
+        <div style={{ marginTop: 52, background: `linear-gradient(135deg, ${C.pink}10, ${C.purple}10)`, border: `1px solid ${C.border}`, borderRadius: 16, padding: '32px 24px', textAlign: 'center' }}>
+          <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Ready to stop losing jobs to no-shows?</h3>
+          <p style={{ color: C.muted, marginBottom: 20, fontSize: 14 }}>Start your free 14-day trial — no credit card needed.</p>
+          <button className="btn-primary" onClick={onSignup} style={{ padding: '13px 28px', fontSize: 15 }}>Start Free Today</button>
+        </div>
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// ─── Trade page data ──────────────────────────────────────────────────────────
+const TRADE_PAGES = {
+  'trade-window-cleaning': {
+    trade: 'Window Cleaners', emoji: '🪟',
+    headline: 'SMS Appointment Reminders for Window Cleaners',
+    pain: 'Tired of turning up to empty houses? Window cleaners lose hundreds every month to customers who simply forgot. A simple text the day before fixes that.',
+    points: ['Customers forget when they booked — a reminder fixes it','No-shows cost you fuel, time, and money','Your Google Calendar already has everything TextReminder needs'],
+  },
+  'trade-plumbing': {
+    trade: 'Plumbers', emoji: '🔧',
+    headline: 'SMS Appointment Reminders for Plumbers',
+    pain: 'Emergency callouts and routine jobs both suffer from no-shows. Keep your diary full and your customers informed with automatic SMS reminders.',
+    points: ['Remind customers before planned maintenance visits','Reduce wasted callouts to empty properties','Works with your existing Google Calendar'],
+  },
+  'trade-electrical': {
+    trade: 'Electricians', emoji: '⚡',
+    headline: 'SMS Appointment Reminders for Electricians',
+    pain: 'Whether it\'s a rewire, inspection, or fault-finding job, no-shows disrupt your whole day. Automated reminders keep your schedule running smoothly.',
+    points: ['Send reminders for all booked electrical work','Customers confirm or reschedule with plenty of notice','Sync directly with Google Calendar in minutes'],
+  },
+  'trade-gardening': {
+    trade: 'Gardeners', emoji: '🌱',
+    headline: 'SMS Appointment Reminders for Gardeners',
+    pain: 'Seasonal garden maintenance relies on regular customers turning up. Don\'t let a forgotten appointment disrupt your round.',
+    points: ['Remind regular customers of their upcoming garden visits','Works perfectly for weekly, fortnightly, or monthly rounds','Fully automatic once your calendar is connected'],
+  },
+  'trade-decorating': {
+    trade: 'Decorators', emoji: '🎨',
+    headline: 'SMS Appointment Reminders for Decorators',
+    pain: 'Painting and decorating jobs often depend on customers being home to let you in. A reminder the day before means no wasted journeys.',
+    points: ['Ensure customers are home and ready for you to start','Reduce costly delays and wasted prep time','Simple setup, fully automatic reminders'],
+  },
+  'trade-cleaning': {
+    trade: 'Cleaners', emoji: '🧹',
+    headline: 'SMS Appointment Reminders for Cleaners',
+    pain: 'Regular cleaning rounds live and die by consistency. Keep customers on track and your diary full with automatic appointment reminders.',
+    points: ['Perfect for weekly and fortnightly cleaning rounds','Customers reply to cancel or reschedule in advance','Replaces expensive booking software for most small businesses'],
+  },
+  'trade-hairdressing': {
+    trade: 'Hairdressers', emoji: '✂️',
+    headline: 'SMS Appointment Reminders for Hairdressers',
+    pain: 'Empty chairs cost money. A reminder text 24 hours before keeps clients showing up and gives you time to fill last-minute gaps.',
+    points: ['Reduce no-shows in your appointment book','Give clients the chance to cancel with notice so you can rebook','Works for salons and mobile hairdressers'],
+  },
+  'trade-mot-garages': {
+    trade: 'MOT Garages', emoji: '🚗',
+    headline: 'SMS Appointment Reminders for MOT Garages',
+    pain: 'MOT slots are valuable and hard to fill at short notice. Automated reminders mean fewer missed bookings and a busier workshop.',
+    points: ['Remind customers of upcoming MOT and service bookings','Reduce last-minute slot wastage','Connects with Google Calendar in under 5 minutes'],
+  },
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: TRADE LANDING
+// ═════════════════════════════════════════════════════════════════════════════
+function TradePage({ tradeKey, onSignup, onNavigate }) {
+  const data = TRADE_PAGES[tradeKey]
+  useEffect(() => { window.scrollTo(0, 0) }, [tradeKey])
+  if (!data) return null
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      {/* Hero */}
+      <section style={{ background: C.navy, padding: '80px 20px 100px' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 52, marginBottom: 20 }}>{data.emoji}</div>
+          <h1 style={{ fontSize: 'clamp(28px, 4.5vw, 50px)', fontWeight: 800, color: '#fff', lineHeight: 1.2, letterSpacing: '-1.2px', marginBottom: 20 }}>
+            {data.headline}
+          </h1>
+          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.65)', lineHeight: 1.75, maxWidth: 560, margin: '0 auto 36px' }}>{data.pain}</p>
+          <button className="btn-primary" onClick={onSignup} style={{ padding: '14px 32px', fontSize: 16 }}>Start Free — No Card Needed</button>
+        </div>
+      </section>
+      {/* Why it works */}
+      <section style={{ padding: '72px 20px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 32, textAlign: 'center', letterSpacing: '-0.5px' }}>Why {data.trade} love TextReminder</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+            {data.points.map((pt, i) => (
+              <div key={i} className="card">
+                <div style={{ width: 36, height: 36, background: `${C.pink}18`, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.pink, fontWeight: 800, fontSize: 15, marginBottom: 14 }}>{i + 1}</div>
+                <p style={{ fontSize: 14, lineHeight: 1.65, color: C.text }}>{pt}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
+      {/* Pricing */}
+      <PricingSection onSignup={onSignup} />
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
 
-      {/* Footer */}
-      <footer style={{ background: C.navy, padding: '44px 20px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <LogoMark />
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>&copy; {new Date().getFullYear()} TextReminder. All rights reserved.</p>
-          <div style={{ display: 'flex', gap: 20 }}>
-            {['Privacy','Terms','Contact'].map(l => (
-              <span key={l} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, cursor: 'pointer' }}
-                onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.75)'}
-                onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.4)'}>{l}</span>
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: RESOURCES
+// ═════════════════════════════════════════════════════════════════════════════
+function ResourcesPage({ onSignup, onNavigate }) {
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '60px 20px 80px' }}>
+        <div style={{ marginBottom: 52 }}>
+          <div style={{ display: 'inline-block', background: '#faf5ff', color: C.purple, fontSize: 12, fontWeight: 700, padding: '4px 14px', borderRadius: 20, marginBottom: 14 }}>RESOURCES</div>
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-1px' }}>The Trades Library</h1>
+          <p style={{ color: C.muted, fontSize: 16, marginTop: 10 }}>Guides, articles, and recommended reading for UK tradespeople</p>
+        </div>
+        {/* Blog articles */}
+        <div style={{ marginBottom: 60 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, letterSpacing: '-0.4px' }}>Latest Articles</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+            {BLOG_POSTS.map(post => (
+              <div key={post.slug} className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                onClick={() => onNavigate('blog-post', post.slug)}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.07)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '3px 10px', borderRadius: 12, display: 'inline-block', marginBottom: 10 }}>{post.category}</div>
+                <h3 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 8 }}>{post.title}</h3>
+                <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{post.excerpt}</p>
+              </div>
             ))}
           </div>
         </div>
-      </footer>
+        {/* Recommended reading */}
+        <div style={{ marginBottom: 52 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, letterSpacing: '-0.4px' }}>Recommended Reading</h2>
+          <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Books worth reading if you run a trades business in the UK.</p>
+          <div style={{ background: '#f8fafc', border: `1px solid ${C.border}`, borderRadius: 12, padding: '32px 24px', textAlign: 'center', color: C.muted }}>
+            <p style={{ fontSize: 15 }}>📚 Recommended books coming soon</p>
+          </div>
+        </div>
+        {/* CTA */}
+        <div style={{ background: `linear-gradient(135deg, ${C.pink}10, ${C.purple}10)`, border: `1px solid ${C.border}`, borderRadius: 16, padding: '40px 24px', textAlign: 'center' }}>
+          <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Ready to reduce no-shows?</h3>
+          <p style={{ color: C.muted, marginBottom: 24, fontSize: 15 }}>Start your free 14-day trial — no credit card needed.</p>
+          <button className="btn-primary" onClick={onSignup} style={{ padding: '13px 28px', fontSize: 15 }}>Start Free Today</button>
+        </div>
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PAGE: PRICING (standalone)
+// ═════════════════════════════════════════════════════════════════════════════
+function PricingPage({ onSignup, onNavigate }) {
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ paddingTop: 40 }}>
+        <PricingSection onSignup={onSignup} />
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
     </div>
   )
 }
@@ -540,7 +1083,7 @@ function HomePage({ onLogin, onSignup }) {
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE: AUTH
 // ═════════════════════════════════════════════════════════════════════════════
-function AuthPage({ mode, setMode, onAuthSuccess }) {
+function AuthPage({ mode, setMode, onAuthSuccess, onNavigate }) {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
@@ -568,7 +1111,7 @@ function AuthPage({ mode, setMode, onAuthSuccess }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.navy, display: 'flex', flexDirection: 'column' }}>
-      <PublicNav onLogin={() => setMode('login')} onSignup={() => setMode('signup')} />
+      <PublicNav onLogin={() => setMode('login')} onSignup={() => setMode('signup')} onNavigate={onNavigate} />
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <div className="card slide-up" style={{ width: '100%', maxWidth: 430 }}>
           <div style={{ textAlign: 'center', marginBottom: 30 }}>
@@ -1379,6 +1922,7 @@ function AppShell({ user, onLogout }) {
 // ═════════════════════════════════════════════════════════════════════════════
 export default function App() {
   const [view, setView]         = useState('home')
+  const [subView, setSubView]   = useState(null) // for blog-post slug, trade key etc.
   const [authMode, setAuthMode] = useState('login')
   const [user, setUser]         = useState(null)
   const [session, setSession]   = useState(null)
@@ -1401,18 +1945,36 @@ export default function App() {
     setUser(null); setSession(null); setView('home')
   }
 
+  function handleNavigate(page, sub) {
+    setSubView(sub || null)
+    if (page === 'auth-login') { setAuthMode('login'); setView('auth'); return }
+    if (page === 'home') { setView('home'); return }
+    setView(page)
+    window.scrollTo(0, 0)
+  }
+
+  function goSignup() { setAuthMode('signup'); setView('auth') }
+  function goLogin()  { setAuthMode('login');  setView('auth') }
+
   return (
     <>
       <GlobalStyles />
       {isCalCB && <CalendarCallback session={session} />}
       {!isCalCB && (
         <>
-          {view === 'home' && <HomePage onLogin={() => { setAuthMode('login'); setView('auth') }} onSignup={() => { setAuthMode('signup'); setView('auth') }} />}
-          {view === 'auth' && <AuthPage mode={authMode} setMode={setAuthMode} onAuthSuccess={u => { setUser(u); setView('app') }} />}
-          {view === 'app' && user && <AppShell user={user} onLogout={handleLogout} />}
+          {view === 'home'    && <HomePage    onLogin={goLogin} onSignup={goSignup} onNavigate={handleNavigate} />}
+          {view === 'auth'    && <AuthPage    mode={authMode} setMode={setAuthMode} onAuthSuccess={u => { setUser(u); setView('app') }} onNavigate={handleNavigate} />}
+          {view === 'app'     && user && <AppShell user={user} onLogout={handleLogout} />}
+          {view === 'compare' && <ComparePage onSignup={goSignup} onNavigate={handleNavigate} />}
+          {view === 'blog'    && <BlogPage    onSignup={goSignup} onNavigate={handleNavigate} />}
+          {view === 'blog-post' && <BlogPostPage slug={subView} onSignup={goSignup} onNavigate={handleNavigate} />}
+          {view === 'pricing' && <PricingPage  onSignup={goSignup} onNavigate={handleNavigate} />}
+          {view === 'resources' && <ResourcesPage onSignup={goSignup} onNavigate={handleNavigate} />}
+          {view?.startsWith('trade-') && <TradePage tradeKey={view} onSignup={goSignup} onNavigate={handleNavigate} />}
         </>
       )}
       <AiChat />
+      <PwaBanner />
     </>
   )
 }
