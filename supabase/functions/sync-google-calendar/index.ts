@@ -100,38 +100,61 @@ serve(async (req) => {
 
     const events = calData.items ?? [];
 
-    // ── Step 4: Delete existing future events for this user ──────────────────
-    // Only delete events from today onwards so past events with phone numbers are preserved
-    await supabase
+    // ── Step 4: Get existing events to preserve reminder_sent status ─────────
+    const { data: existingEvents } = await supabase
       .from("calendar_events")
-      .delete()
-      .eq("user_id", user_id)
-      .gte("start_time", now.toISOString());
+      .select("external_id, start_time, reminder_sent")
+      .eq("user_id", user_id);
 
-    // ── Step 5: Insert fresh events ──────────────────────────────────────────
+    const existingMap = new Map(
+      (existingEvents ?? []).map((e: any) => [e.external_id, e])
+    );
+
+    // ── Step 5: Upsert events — reset reminder_sent only if rescheduled ──────
     const rows = events
       .filter((e: any) => e.start?.dateTime || e.start?.date)
-      .map((e: any) => ({
-        user_id,
-        external_id: e.id,
-        title:       e.summary ?? "Appointment",
-        start_time:  e.start.dateTime ?? e.start.date,
-        end_time:    e.end?.dateTime  ?? e.end?.date ?? e.start.dateTime ?? e.start.date,
-        location:    e.location ?? null,
-      }));
+      .map((e: any) => {
+        const newStartTime = e.start.dateTime ?? e.start.date;
+        const existing = existingMap.get(e.id);
+        // Reset reminder_sent if appointment was rescheduled
+        const reminderSent = existing && existing.start_time === newStartTime
+          ? existing.reminder_sent
+          : false;
+        return {
+          user_id,
+          external_id: e.id,
+          title:       e.summary ?? "Appointment",
+          start_time:  newStartTime,
+          end_time:    e.end?.dateTime ?? e.end?.date ?? newStartTime,
+          location:    e.location ?? null,
+          reminder_sent: reminderSent,
+          last_synced:  now.toISOString(),
+        };
+      });
 
     if (rows.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from("calendar_events")
-        .insert(rows);
+        .upsert(rows, { onConflict: "user_id,external_id" });
 
-      if (insertError) {
-        console.error("Insert error:", insertError);
+      if (upsertError) {
+        console.error("Upsert error:", upsertError);
         return new Response(
-          JSON.stringify({ error: "Failed to insert events", detail: insertError }),
+          JSON.stringify({ error: "Failed to upsert events", detail: upsertError }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+    }
+
+    // Delete events that are no longer in the calendar
+    const currentIds = rows.map((r: any) => r.external_id);
+    if (currentIds.length > 0) {
+      await supabase
+        .from("calendar_events")
+        .delete()
+        .eq("user_id", user_id)
+        .gte("start_time", now.toISOString())
+        .not("external_id", "in", `(${currentIds.map((id: string) => `"${id}"`).join(",")})`);
     }
 
     return new Response(

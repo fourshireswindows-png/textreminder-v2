@@ -42,15 +42,23 @@ serve(async (req) => {
     const session = data.object;
     const userId = session.metadata?.user_id;
     const plan = session.metadata?.plan;
-    const billing = session.metadata?.billing;
+    const customerEmail = session.customer_details?.email ?? session.customer_email;
 
-    if (userId && plan) {
-      await supabase.from("profiles").update({
+    if (plan) {
+      const update = {
         plan,
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
         updated_at: new Date().toISOString(),
-      }).eq("id", userId);
+      };
+
+      if (userId) {
+        // Logged-in user — update by ID
+        await supabase.from("profiles").update(update).eq("id", userId);
+      } else if (customerEmail) {
+        // Public checkout — match by email
+        await supabase.from("profiles").update(update).eq("email", customerEmail);
+      }
     }
   }
 
