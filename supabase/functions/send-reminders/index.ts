@@ -66,15 +66,22 @@ serve(async (req) => {
         .lte("start_time", windowEnd.toISOString());
 
       for (const event of events ?? []) {
+        // Phone number priority: 1) phone column set in app, 2) attendees, 3) number in title
+        const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
         const attendees: { name?: string; email?: string; phone?: string }[] =
           event.attendees ?? [];
 
-        const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
-        const targets = attendees.length > 0 ? attendees : (phoneFromTitle ? [{ phone: phoneFromTitle }] : []);
+        // Get the phone number — prefer the phone column saved directly in the app
+        const phone = event.phone
+          ?? (attendees.length > 0 ? attendees[0].phone : null)
+          ?? phoneFromTitle;
 
-        for (const attendee of targets) {
-          const phone = attendee.phone ?? phoneFromTitle;
-          if (!phone) continue;
+        if (!phone) continue;
+
+        const attendee = attendees[0] ?? {};
+
+        // Wrap in a single-iteration block
+        for (const _ of [1]) {
 
           const appointmentTime = new Date(event.start_time);
           const timeStr = appointmentTime.toLocaleTimeString("en-GB", {
@@ -158,7 +165,7 @@ serve(async (req) => {
               .update({ reminder_sent: true })
               .eq("id", event.id);
           }
-        }
+        } // end single-iteration block
       }
     }
   }
