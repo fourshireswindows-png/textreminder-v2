@@ -16,13 +16,12 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  // TextReminder's own Twilio credentials — shared for all users
-  const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
-  const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-  const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
+  // The SMS Works credentials
+  const SMS_WORKS_JWT = Deno.env.get("SMS_WORKS_JWT");
+  const SMS_WORKS_SENDER = Deno.env.get("SMS_WORKS_SENDER") ?? "TextRemind";
 
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
-    return new Response(JSON.stringify({ error: "Twilio credentials not configured" }), {
+  if (!SMS_WORKS_JWT) {
+    return new Response(JSON.stringify({ error: "SMS Works credentials not configured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -70,9 +69,7 @@ serve(async (req) => {
         const attendees: { name?: string; email?: string; phone?: string }[] =
           event.attendees ?? [];
 
-        // Also try to extract phone number from event title
         const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
-
         const targets = attendees.length > 0 ? attendees : (phoneFromTitle ? [{ phone: phoneFromTitle }] : []);
 
         for (const attendee of targets) {
@@ -102,41 +99,37 @@ serve(async (req) => {
             .replace("{business_phone}", profile.phone ?? "")
             .replace("{business_name}", profile.business_name ?? "");
 
-          // Normalise to E.164
+          // Normalise to E.164 for UK numbers
           const toNumber = phone.startsWith("+") ? phone : phone.replace(/^0/, "+44");
 
-          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-          const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-
-          const body = new URLSearchParams({
-            From: TWILIO_PHONE_NUMBER,
-            To: toNumber,
-            Body: message,
-          });
-
           let status = "sent";
-          let twilioSid = null;
-          let errorMessage = null;
+          let messageSid: string | null = null;
+          let errorMessage: string | null = null;
 
           try {
-            const twilioRes = await fetch(twilioUrl, {
+            const smsRes = await fetch("https://api.thesmsworks.co.uk/v1/message/send", {
               method: "POST",
               headers: {
-                Authorization: `Basic ${auth}`,
-                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": `JWT ${SMS_WORKS_JWT}`,
+                "Content-Type": "application/json",
               },
-              body: body.toString(),
+              body: JSON.stringify({
+                sender: SMS_WORKS_SENDER,
+                destination: toNumber,
+                content: message,
+                schedule: "",
+              }),
             });
 
-            const twilioData = await twilioRes.json();
+            const smsData = await smsRes.json();
 
-            if (!twilioRes.ok) {
+            if (!smsRes.ok || smsData.status === "REJECTED" || smsData.status === "FAILED") {
               status = "failed";
-              errorMessage = twilioData.message ?? "Twilio error";
+              errorMessage = smsData.message ?? smsData.error ?? "SMS Works error";
               errors.push(`Event ${event.id}: ${errorMessage}`);
             } else {
-              twilioSid = twilioData.sid;
-              results.push({ event: event.id, phone: toNumber, sid: twilioSid });
+              messageSid = smsData.messageid ?? smsData.messageId ?? null;
+              results.push({ event: event.id, phone: toNumber, messageid: messageSid });
             }
           } catch (e) {
             status = "failed";
@@ -155,7 +148,7 @@ serve(async (req) => {
             status,
             sent_at: status === "sent" ? now.toISOString() : null,
             calendar_event_id: event.external_id,
-            twilio_sid: twilioSid,
+            twilio_sid: messageSid, // reusing column for message ID
             error_message: errorMessage,
           });
 
