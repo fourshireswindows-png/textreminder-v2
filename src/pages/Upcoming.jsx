@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 import { Link } from 'react-router-dom'
 
+const SUPABASE_URL     = 'https://fxzfaxlhhypiigcmlasx.supabase.co'
+const SUPABASE_ANON    = 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO'
+
 export default function Upcoming() {
   const [events, setEvents]         = useState([])
   const [profile, setProfile]       = useState(null)
   const [loading, setLoading]       = useState(true)
+  const [syncing, setSyncing]       = useState(false)
+  const [syncMsg, setSyncMsg]       = useState('')
   const [weekOffset, setWeekOffset] = useState(0)
   const [dayOffset, setDayOffset]   = useState(0)
   const [editingPhone, setEditingPhone] = useState(null)
@@ -18,19 +23,46 @@ export default function Upcoming() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  async function loadEvents() {
+    const { data: { user } } = await supabase.auth.getUser()
+    const [{ data: evs }, { data: prof }] = await Promise.all([
+      supabase.from('calendar_events').select('*').eq('user_id', user.id).order('start_time').limit(200),
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+    ])
+    setEvents(evs || [])
+    setProfile(prof)
+    return user.id
+  }
+
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      const [{ data: evs }, { data: prof }] = await Promise.all([
-        supabase.from('calendar_events').select('*').eq('user_id', user.id).order('start_time').limit(200),
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-      ])
-      setEvents(evs || [])
-      setProfile(prof)
+      await loadEvents()
       setLoading(false)
     }
     load()
   }, [])
+
+  async function syncNow() {
+    setSyncing(true)
+    setSyncMsg('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-google-calendar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ user_id: user.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      setSyncMsg(`✓ Synced ${data.events_synced} events`)
+      await loadEvents()
+    } catch (e) {
+      setSyncMsg(`✗ ${e.message}`)
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMsg(''), 4000)
+    }
+  }
 
   function getWeekDays(offset) {
     const today = new Date()
@@ -120,6 +152,12 @@ export default function Upcoming() {
             ) : (
               <><span style={{ color: '#f59e0b' }}>⚠</span> No calendar — <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
             )}
+            {profile?.calendar_provider && (
+              <button onClick={syncNow} disabled={syncing} style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: purple, background: 'none', border: `1px solid ${border}`, borderRadius: 6, padding: '3px 10px', cursor: syncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                {syncing ? 'Syncing...' : '↻ Sync now'}
+              </button>
+            )}
+            {syncMsg && <span style={{ marginLeft: 8, fontSize: 11, color: syncMsg.startsWith('✓') ? green : '#ef4444', fontWeight: 600 }}>{syncMsg}</span>}
           </div>
         </div>
 
