@@ -89,3 +89,7 @@ for (const page of PAGES) {
 }
 
 console.log('✅ Pre-render complete — HTML stubs written for all routes.')
+
+// Copy built app.js from dist/ to root so GitHub Pages serves the latest build
+fs.copyFileSync('./dist/app.js', './app.js')
+console.log('✅ app.js copied to root.')
