@@ -7,8 +7,6 @@ export default function Upcoming() {
   const [events, setEvents]         = useState([])
   const [profile, setProfile]       = useState(null)
   const [loading, setLoading]       = useState(true)
-  const [syncing, setSyncing]       = useState(false)
-  const [syncMsg, setSyncMsg]       = useState('')
   const [weekOffset, setWeekOffset] = useState(0)
   const [dayOffset, setDayOffset]   = useState(0)
   const [editingPhone, setEditingPhone] = useState(null)
@@ -40,24 +38,15 @@ export default function Upcoming() {
     load()
   }, [])
 
-  async function syncNow() {
-    setSyncing(true)
-    setSyncMsg('')
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
-      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
-        body: { user_id: user.id },
-      })
-      if (error) throw new Error(error.message || 'Sync failed')
-      setSyncMsg(`✓ Synced ${data.events_synced} events`)
-      await loadEvents()
-    } catch (e) {
-      setSyncMsg(`✗ ${e.message}`)
-    } finally {
-      setSyncing(false)
-      setTimeout(() => setSyncMsg(''), 4000)
-    }
+  function lastSyncedText(evs) {
+    const times = (evs || []).map(e => e.last_synced).filter(Boolean)
+    if (!times.length) return null
+    const latest = new Date(times.sort().at(-1))
+    const mins = Math.floor((Date.now() - latest) / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`
+    const hrs = Math.floor(mins / 60)
+    return `${hrs} hour${hrs === 1 ? '' : 's'} ago`
   }
 
   function getWeekDays(offset) {
@@ -148,12 +137,9 @@ export default function Upcoming() {
             ) : (
               <><span style={{ color: '#f59e0b' }}>⚠</span> No calendar — <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
             )}
-            {profile?.calendar_provider && (
-              <button onClick={syncNow} disabled={syncing} style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: purple, background: 'none', border: `1px solid ${border}`, borderRadius: 6, padding: '3px 10px', cursor: syncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                {syncing ? 'Syncing...' : '↻ Sync now'}
-              </button>
+            {profile?.calendar_provider && lastSyncedText(events) && (
+              <span style={{ marginLeft: 8, fontSize: 11, color: muted }}>· Last synced {lastSyncedText(events)}</span>
             )}
-            {syncMsg && <span style={{ marginLeft: 8, fontSize: 11, color: syncMsg.startsWith('✓') ? green : '#ef4444', fontWeight: 600 }}>{syncMsg}</span>}
           </div>
         </div>
 
