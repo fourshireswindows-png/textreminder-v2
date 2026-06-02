@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 import { Link } from 'react-router-dom'
 
-const SUPABASE_URL     = 'https://fxzfaxlhhypiigcmlasx.supabase.co'
-const SUPABASE_ANON    = 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO'
 
 export default function Upcoming() {
   const [events, setEvents]         = useState([])
@@ -46,20 +44,12 @@ export default function Upcoming() {
     setSyncing(true)
     setSyncMsg('')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const user = session?.user
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-google-calendar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON,
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ user_id: user.id }),
+      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
+        body: { user_id: user.id },
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      if (error) throw new Error(error.message || 'Sync failed')
       setSyncMsg(`✓ Synced ${data.events_synced} events`)
       await loadEvents()
     } catch (e) {
