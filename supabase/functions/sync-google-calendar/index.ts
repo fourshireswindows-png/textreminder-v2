@@ -100,15 +100,42 @@ serve(async (req) => {
 
     const events = calData.items ?? [];
 
-    // ── Step 4: Get existing events to preserve reminder_sent status ─────────
+    // ── Step 4: Get existing events to preserve reminder_sent + phone ────────
     const { data: existingEvents } = await supabase
       .from("calendar_events")
-      .select("external_id, start_time, reminder_sent")
+      .select("external_id, start_time, reminder_sent, phone")
       .eq("user_id", user_id);
 
     const existingMap = new Map(
       (existingEvents ?? []).map((e: any) => [e.external_id, e])
     );
+
+    // ── Step 4b: Load contacts so we can match phone numbers to events ────────
+    const { data: contacts } = await supabase
+      .from("contacts")
+      .select("name, phone")
+      .eq("user_id", user_id);
+
+    // Build a lookup: normalised contact name → phone number
+    const contactPhoneMap = new Map<string, string>();
+    for (const c of contacts ?? []) {
+      if (c.name && c.phone) {
+        contactPhoneMap.set(c.name.toLowerCase().trim(), c.phone);
+      }
+    }
+
+    // Try to find a phone number for an event title by matching contact names
+    function lookupPhone(title: string): string | null {
+      if (!title) return null;
+      const t = title.toLowerCase();
+      // Exact match first
+      for (const [name, phone] of contactPhoneMap) {
+        if (t.includes(name)) return phone;
+      }
+      // Also check if title itself looks like a phone number
+      const m = title.match(/(\+44\d{10}|07\d{9})/);
+      return m ? m[0] : null;
+    }
 
     // ── Step 5: Upsert events — reset reminder_sent only if rescheduled ──────
     const rows = events
@@ -116,18 +143,22 @@ serve(async (req) => {
       .map((e: any) => {
         const newStartTime = e.start.dateTime ?? e.start.date;
         const existing = existingMap.get(e.id);
+        const title = e.summary ?? "Appointment";
         // Reset reminder_sent if appointment was rescheduled
         const reminderSent = existing && existing.start_time === newStartTime
           ? existing.reminder_sent
           : false;
+        // Use existing phone if already set, otherwise look up from contacts
+        const phone = existing?.phone ?? lookupPhone(title);
         return {
           user_id,
           external_id: e.id,
-          title:       e.summary ?? "Appointment",
+          title,
           start_time:  newStartTime,
           end_time:    e.end?.dateTime ?? e.end?.date ?? newStartTime,
           location:    e.location ?? null,
           reminder_sent: reminderSent,
+          phone,
           last_synced:  now.toISOString(),
         };
       });
