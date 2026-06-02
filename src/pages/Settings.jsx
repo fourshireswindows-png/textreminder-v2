@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 
+const GOOGLE_CLIENT_ID    = '508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com'
+const GOOGLE_REDIRECT_URI = 'https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback'
+const GOOGLE_SCOPE        = 'https://www.googleapis.com/auth/calendar.readonly'
+
+async function connectGoogle() {
+  const { data: { user } } = await supabase.auth.getUser()
+  const state = user.id
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=consent&state=${state}`
+  window.location.href = url
+}
+
 function Section({ title, sub, children }) {
   return (
     <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:14, padding:24, marginBottom:16 }}>
@@ -186,7 +197,11 @@ export default function Settings() {
               {profile?.calendar_provider === cal.key ? (
                 <div style={{ fontSize:11, color:'#22c55e', fontWeight:700 }}>✓ Connected</div>
               ) : (
-                <button style={{ fontSize:11, fontWeight:700, color:'#a855f7', background:'none', border:'1px solid #e9d5ff', borderRadius:6, padding:'5px 12px', cursor:'pointer', fontFamily:'inherit' }}>Connect</button>
+                <button
+                  onClick={cal.key === 'google' ? connectGoogle : undefined}
+                  style={{ fontSize:11, fontWeight:700, color:'#a855f7', background:'none', border:'1px solid #e9d5ff', borderRadius:6, padding:'5px 12px', cursor: cal.key === 'google' ? 'pointer' : 'not-allowed', fontFamily:'inherit', opacity: cal.key === 'google' ? 1 : 0.5 }}>
+                  {cal.key === 'google' ? 'Connect' : 'Coming soon'}
+                </button>
               )}
             </div>
           ))}
