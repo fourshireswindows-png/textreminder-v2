@@ -31,10 +31,10 @@ serve(async (req) => {
   const results: object[] = [];
   const errors: string[] = [];
 
-  // Get all active profiles
+  // Get all active profiles with their settings (message_template lives in settings table)
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("*");
+    .select("*, settings(*)");
 
   if (profilesError) {
     return new Response(JSON.stringify({ error: profilesError.message }), {
@@ -53,10 +53,8 @@ serve(async (req) => {
       else if (schedule.unit === "days") offsetMs = schedule.value * 24 * 60 * 60 * 1000;
       else if (schedule.unit === "weeks") offsetMs = schedule.value * 7 * 24 * 60 * 60 * 1000;
 
-      // Window: events that should have been reminded (catch up to 2 hours late)
-      // Lower bound: offset - 2 hours (catch up on missed runs)
-      // Upper bound: offset + 30 minutes (don't send too early)
-      const windowStart = new Date(now.getTime() + offsetMs - 2 * 60 * 60 * 1000);
+      // Window: ±30 minutes around the target send time to account for cron drift
+      const windowStart = new Date(now.getTime() + offsetMs - 30 * 60 * 1000);
       const windowEnd = new Date(now.getTime() + offsetMs + 30 * 60 * 1000);
 
       const { data: events } = await supabase
@@ -98,7 +96,8 @@ serve(async (req) => {
             timeZone: "Europe/London",
           });
 
-          const template = profile.message_template
+          const settings = Array.isArray(profile.settings) ? profile.settings[0] : profile.settings;
+          const template = settings?.message_template
             ?? "Hi {name}, just a reminder your appointment is on {date} at {time}. Any questions call {business_phone}. Reply STOP to opt out.";
 
           const message = template
