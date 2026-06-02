@@ -31,10 +31,10 @@ serve(async (req) => {
   const results: object[] = [];
   const errors: string[] = [];
 
-  // Get all active profiles with their settings (message_template lives in settings table)
+  // Get all active profiles
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("*, settings(*)");
+    .select("*");
 
   if (profilesError) {
     return new Response(JSON.stringify({ error: profilesError.message }), {
@@ -44,6 +44,12 @@ serve(async (req) => {
   }
 
   for (const profile of profiles ?? []) {
+    // Fetch this user's settings row separately (avoids FK join issues)
+    const { data: settingsRow } = await supabase
+      .from("settings")
+      .select("*")
+      .eq("user_id", profile.id)
+      .single();
     const reminderSchedule: { value: number; unit: string }[] =
       profile.reminder_schedule ?? [{ value: 24, unit: "hours" }];
 
@@ -78,6 +84,18 @@ serve(async (req) => {
 
         if (!phone) continue;
 
+        // Atomically claim the event before sending — prevents duplicate sends
+        // if the function runs twice simultaneously
+        const { data: claimed } = await supabase
+          .from("calendar_events")
+          .update({ reminder_sent: true })
+          .eq("id", event.id)
+          .eq("reminder_sent", false)
+          .select("id")
+          .single();
+
+        if (!claimed) continue; // Already claimed by another run
+
         const attendee = attendees[0] ?? {};
 
         // Wrap in a single-iteration block
@@ -96,8 +114,7 @@ serve(async (req) => {
             timeZone: "Europe/London",
           });
 
-          const settings = Array.isArray(profile.settings) ? profile.settings[0] : profile.settings;
-          const template = settings?.message_template
+          const template = settingsRow?.message_template
             ?? "Hi {name}, just a reminder your appointment is on {date} at {time}. Any questions call {business_phone}. Reply STOP to opt out.";
 
           const message = template
@@ -150,20 +167,21 @@ serve(async (req) => {
             user_id: profile.id,
             contact_name: attendee.name ?? event.title ?? "Unknown",
             contact_phone: toNumber,
-            appointment_time: event.start_time,
+            scheduled_for: event.start_time,
             channel: "sms",
             message,
             status,
             sent_at: status === "sent" ? now.toISOString() : null,
             calendar_event_id: event.external_id,
-            twilio_sid: messageSid, // reusing column for message ID
+            twilio_sid: messageSid,
             error_message: errorMessage,
           });
 
-          if (status === "sent") {
+          // If SMS failed, release the claim so it can be retried next run
+          if (status === "failed") {
             await supabase
               .from("calendar_events")
-              .update({ reminder_sent: true })
+              .update({ reminder_sent: false })
               .eq("id", event.id);
           }
         } // end single-iteration block
