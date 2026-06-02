@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import Logo from '../components/Logo.jsx'
@@ -9,6 +9,12 @@ export default function Login() {
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
   const navigate                = useNavigate()
+
+  useEffect(() => {
+    document.title = 'Log In — TextReminder'
+    const desc = document.querySelector('meta[name="description"]')
+    if (desc) desc.setAttribute('content', 'Log in to your TextReminder account to manage your SMS appointment reminders.')
+  }, [])
 
   async function handleLogin(e) {
     e.preventDefault()

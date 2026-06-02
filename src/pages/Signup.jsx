@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase.js'
 import Logo from '../components/Logo.jsx'
@@ -11,6 +11,12 @@ export default function Signup() {
   const [loading, setLoading]     = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const navigate                  = useNavigate()
+
+  useEffect(() => {
+    document.title = 'Start Free — TextReminder | SMS Appointment Reminders UK'
+    const desc = document.querySelector('meta[name="description"]')
+    if (desc) desc.setAttribute('content', 'Create your free TextReminder account. Send automatic SMS appointment reminders to your customers. No credit card required.')
+  }, [])
 
   async function handleSignup(e) {
     e.preventDefault()

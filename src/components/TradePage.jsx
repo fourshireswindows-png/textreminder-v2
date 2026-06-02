@@ -1,10 +1,30 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 
 export default function TradePage({ trade, headline, subhead, painPoints, benefits, keywords }) {
+  useEffect(() => {
+    const titleMap = {
+      'Window Cleaners': 'SMS Reminders for Window Cleaners UK — Stop No-Shows | TextReminder',
+      'Plumbers': 'SMS Appointment Reminders for Plumbers UK | TextReminder',
+      'Electricians': 'Appointment Reminders for Electricians UK — Reduce No-Shows | TextReminder',
+      'Hairdressers': 'SMS Reminders for Hairdressers UK — Never Miss a Booking | TextReminder',
+      'Gardeners': 'Appointment Reminders for Gardeners UK — Cut No-Shows | TextReminder',
+    }
+    document.title = titleMap[trade] ?? `SMS Appointment Reminders for ${trade} UK | TextReminder`
+    const desc = document.querySelector('meta[name="description"]')
+    if (desc) desc.setAttribute('content', `${subhead} Free plan available. Built for UK tradespeople.`)
+    const ogTitle = document.querySelector('meta[property="og:title"]')
+    if (ogTitle) ogTitle.setAttribute('content', document.title)
+    const ogDesc = document.querySelector('meta[property="og:description"]')
+    if (ogDesc) ogDesc.setAttribute('content', subhead)
+    const keywords_meta = document.querySelector('meta[name="keywords"]')
+    if (keywords_meta && keywords) keywords_meta.setAttribute('content', keywords)
+  }, [trade, subhead, keywords])
+
   return (
     <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:'#0f172a', background:'#fff' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Syne:wght@700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0;}`}</style>
+      <style>{`*{box-sizing:border-box;margin:0;padding:0;}`}</style>
 
       {/* Nav */}
       <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.95)', backdropFilter:'blur(12px)', borderBottom:'1px solid #f3e8ff', padding:'0 24px' }}>

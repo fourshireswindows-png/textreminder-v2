@@ -38,6 +38,17 @@ export default function Home() {
   const [fade, setFade]         = useState(true)
   const [email, setEmail]       = useState('')
 
+  // Per-page SEO
+  useEffect(() => {
+    document.title = 'TextReminder — Automatic SMS Appointment Reminders for UK Tradespeople'
+    const desc = document.querySelector('meta[name="description"]')
+    if (desc) desc.setAttribute('content', 'TextReminder automatically sends SMS reminders to your customers before every appointment. Cut no-shows by up to 80%. Built for UK tradespeople. Free plan, no card needed.')
+    const ogTitle = document.querySelector('meta[property="og:title"]')
+    if (ogTitle) ogTitle.setAttribute('content', 'TextReminder — Automatic SMS Appointment Reminders for UK Tradespeople')
+    const ogDesc = document.querySelector('meta[property="og:description"]')
+    if (ogDesc) ogDesc.setAttribute('content', 'Automatically text your customers before every appointment. Cut no-shows by up to 80%. Built for UK tradespeople. Free plan, no card needed.')
+  }, [])
+
   useEffect(() => {
     const t = setInterval(() => {
       setFade(false)
@@ -49,7 +60,6 @@ export default function Home() {
   return (
     <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:'#0f172a', background:'#fff', overflowX:'hidden' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
         .hov-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(168,85,247,0.1);border-color:#d8b4fe!important;}
         .hov-card{transition:all 0.2s;}
