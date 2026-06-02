@@ -46,10 +46,16 @@ export default function Upcoming() {
     setSyncing(true)
     setSyncMsg('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+      if (!user) throw new Error('Not logged in')
       const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-google-calendar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ user_id: user.id }),
       })
       const data = await res.json()
