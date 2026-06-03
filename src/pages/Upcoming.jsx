@@ -159,10 +159,7 @@ export default function Upcoming() {
             {profile?.calendar_provider && (
               <>
                 {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>· Last synced {lastSyncedText(events)}</span>}
-                <button onClick={syncNow} disabled={syncing} style={{ fontSize: 11, fontWeight: 700, color: purple, background: 'none', border: `1px solid #e9d5ff`, borderRadius: 6, padding: '3px 10px', cursor: syncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                  {syncing ? 'Refreshing...' : '↻ Refresh'}
-                </button>
-                {syncMsg && <span style={{ fontSize: 11, color: syncMsg.startsWith('✓') ? green : '#ef4444', fontWeight: 600 }}>{syncMsg}</span>}
+                <span style={{ fontSize: 11, color: muted }}>· Syncs every 10 minutes</span>
               </>
             )}
           </div>
