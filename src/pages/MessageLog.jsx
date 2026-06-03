@@ -1,38 +1,75 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 
+function formatDate(val) {
+  if (!val) return '—'
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+}
+
 export default function MessageLog() {
   const [reminders, setReminders] = useState([])
   const [loading, setLoading]     = useState(true)
   const [filter, setFilter]       = useState('all')
 
+  async function load() {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data } = await supabase
+      .from('reminders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending:false })
+      .limit(100)
+    setReminders(data || [])
+    setLoading(false)
+    return user.id
+  }
+
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data } = await supabase.from('reminders').select('*').eq('user_id', user.id).order('created_at', { ascending:false }).limit(100)
-      setReminders(data || [])
-      setLoading(false)
-    }
-    load()
+    let channel
+    load().then(userId => {
+      channel = supabase
+        .channel('reminders-log')
+        .on('postgres_changes', { event:'*', schema:'public', table:'reminders', filter:`user_id=eq.${userId}` }, () => load())
+        .subscribe()
+    })
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
-  const channelIcon = { sms:'📱', email:'✉️', whatsapp:'💬' }
-  const filtered = filter === 'all' ? reminders : reminders.filter(r => r.channel === filter || r.status === filter)
+  const filters = ['all','sent','failed','pending','cancelled']
+  const filtered = filter === 'all' ? reminders : reminders.filter(r => r.status === filter)
+
+  const statusStyle = (status) => {
+    if (status === 'sent' || status === 'delivered') return { bg:'#dcfce7', color:'#166534' }
+    if (status === 'failed') return { bg:'#fef2f2', color:'#dc2626' }
+    if (status === 'pending') return { bg:'#fef9c3', color:'#854d0e' }
+    return { bg:'#f1f5f9', color:'#64748b' }
+  }
 
   return (
     <div>
       <div style={{ marginBottom:24 }}>
         <h1 style={{ fontSize:22, fontWeight:800, color:'#0f172a', marginBottom:4, fontFamily:'Syne,sans-serif' }}>Message Log</h1>
-        <div style={{ fontSize:13, color:'#94a3b8' }}>{reminders.length} reminders sent</div>
+        <div style={{ fontSize:13, color:'#94a3b8' }}>Complete history of all reminders</div>
       </div>
 
       <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-        {['all','sms','email','whatsapp','sent','failed'].map(f => (
-          <button key={f} onClick={()=>setFilter(f)} style={{ padding:'6px 14px', borderRadius:20, border:`1px solid ${filter===f?'#a855f7':'#e2e8f0'}`, background:filter===f?'#f3e8ff':'#fff', color:filter===f?'#7c3aed':'#64748b', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize' }}>{f}</button>
+        {filters.map(f => (
+          <button key={f} onClick={()=>setFilter(f)} style={{ padding:'6px 14px', borderRadius:20, border:`1px solid ${filter===f?'#a855f7':'#e2e8f0'}`, background:filter===f?'#f3e8ff':'#fff', color:filter===f?'#7c3aed':'#64748b', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textTransform:'capitalize' }}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>
         ))}
       </div>
 
       <div className="card">
+        {/* Table header */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 2fr 1.5fr 100px', gap:12, padding:'10px 20px', borderBottom:'1px solid #e2e8f0', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.05em' }}>
+          <div>Contact</div>
+          <div>Phone</div>
+          <div>Message</div>
+          <div>Scheduled</div>
+          <div>Status</div>
+        </div>
+
         {loading && <div style={{ padding:'40px', textAlign:'center', color:'#94a3b8' }}>Loading...</div>}
         {!loading && filtered.length === 0 && (
           <div style={{ padding:'48px', textAlign:'center', color:'#94a3b8' }}>
@@ -40,27 +77,22 @@ export default function MessageLog() {
             <div style={{ fontWeight:600, color:'#475569' }}>No messages yet</div>
           </div>
         )}
-        {filtered.map((r,i) => (
-          <div key={r.id} style={{ padding:'16px 20px', borderBottom:'1px solid #f8fafc', display:'flex', gap:14, alignItems:'flex-start' }}>
-            <div style={{ width:36, height:36, borderRadius:'50%', background:'#f3e8ff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>
-              {channelIcon[r.channel] || '📱'}
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-                <div style={{ fontWeight:700, color:'#0f172a', fontSize:13 }}>{r.contact_name}</div>
-                <div style={{ fontSize:11, color:'#94a3b8' }}>{new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
-              </div>
-              <div style={{ fontSize:12, color:'#64748b', background:'#f8fafc', borderRadius:8, padding:'8px 10px', lineHeight:1.6, marginBottom:6 }}>{r.message}</div>
-              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:20, background:r.status==='sent'||r.status==='delivered'?'#dcfce7':'#fef2f2', color:r.status==='sent'||r.status==='delivered'?'#166534':'#dc2626' }}>
-                  {r.status==='sent'||r.status==='delivered' ? '✓ Delivered' : '✗ Failed'}
+        {filtered.map((r) => {
+          const s = statusStyle(r.status)
+          return (
+            <div key={r.id} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 2fr 1.5fr 100px', gap:12, padding:'14px 20px', borderBottom:'1px solid #f8fafc', alignItems:'center' }}>
+              <div style={{ fontWeight:600, color:'#0f172a', fontSize:13 }}>{r.contact_name || '—'}</div>
+              <div style={{ fontSize:12, color:'#64748b' }}>{r.contact_phone || '—'}</div>
+              <div style={{ fontSize:12, color:'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={r.message}>{r.message}</div>
+              <div style={{ fontSize:12, color:'#64748b' }}>{formatDate(r.scheduled_for || r.appointment_time || r.sent_at)}</div>
+              <div>
+                <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:s.bg, color:s.color, textTransform:'capitalize' }}>
+                  {r.status}
                 </span>
-                <span style={{ fontSize:11, color:'#94a3b8', textTransform:'capitalize' }}>{r.channel}</span>
-                {r.appointment_time && <span style={{ fontSize:11, color:'#94a3b8' }}>Appt: {new Date(r.appointment_time).toLocaleDateString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>}
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
