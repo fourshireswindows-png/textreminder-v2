@@ -47,18 +47,13 @@ export default function Upcoming() {
     setSyncing(true)
     setSyncMsg('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
-        body: { user_id: user.id },
-      })
-      if (error) throw error
-      setSyncMsg(`✓ Synced ${data.events_synced} events`)
       await loadEvents()
+      setSyncMsg('✓ Refreshed')
     } catch (e) {
-      setSyncMsg(`✗ ${e.message || 'Sync failed'}`)
+      setSyncMsg('✗ Failed')
     } finally {
       setSyncing(false)
-      setTimeout(() => setSyncMsg(''), 4000)
+      setTimeout(() => setSyncMsg(''), 3000)
     }
   }
 
@@ -165,7 +160,7 @@ export default function Upcoming() {
               <>
                 {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>· Last synced {lastSyncedText(events)}</span>}
                 <button onClick={syncNow} disabled={syncing} style={{ fontSize: 11, fontWeight: 700, color: purple, background: 'none', border: `1px solid #e9d5ff`, borderRadius: 6, padding: '3px 10px', cursor: syncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                  {syncing ? 'Syncing...' : '↻ Sync'}
+                  {syncing ? 'Refreshing...' : '↻ Refresh'}
                 </button>
                 {syncMsg && <span style={{ fontSize: 11, color: syncMsg.startsWith('✓') ? green : '#ef4444', fontWeight: 600 }}>{syncMsg}</span>}
               </>
