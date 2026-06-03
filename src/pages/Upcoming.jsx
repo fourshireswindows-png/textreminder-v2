@@ -38,6 +38,9 @@ export default function Upcoming() {
       setLoading(false)
     }
     load()
+    // Auto-refresh every 10 minutes to match sync interval
+    const interval = setInterval(() => loadEvents(), 10 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
 
   async function syncNow() {
