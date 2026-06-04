@@ -4,11 +4,10 @@ import { supabase } from '../supabase.js'
 import Logo from './Logo.jsx'
 
 const NAV = [
-  { to:'dashboard', icon:'▦',  label:'Dashboard'    },
   { to:'upcoming',  icon:'📅', label:'Upcoming'      },
-  { to:'contacts',  icon:'👥', label:'Contacts'      },
   { to:'log',       icon:'📋', label:'Message Log'   },
   { to:'settings',  icon:'⚙️', label:'Settings'      },
+  { to:'upgrade',   icon:'⭐', label:'Upgrade'        },
 ]
 
 export default function Layout({ user }) {
