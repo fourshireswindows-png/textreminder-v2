@@ -61,6 +61,11 @@ export default function Layout({ user }) {
           <button onClick={signOut} disabled={signing} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', fontSize:12, cursor:'pointer', padding:0, fontFamily:'inherit', marginTop:4 }}>
             {signing ? 'Signing out...' : 'Sign out'}
           </button>
+          <div style={{ marginTop:12, display:'flex', gap:10, flexWrap:'wrap' }}>
+            <a href="/terms" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Terms</a>
+            <a href="/privacy" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Privacy</a>
+            <a href="mailto:support@textreminder.co.uk" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Support</a>
+          </div>
         </div>
       </div>
 
