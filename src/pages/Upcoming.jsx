@@ -102,7 +102,7 @@ export default function Upcoming() {
 
   const weekDays = getWeekDays(weekOffset)
   const singleDay = getSingleDay(dayOffset)
-  const hours = Array.from({ length: 16 }, (_, i) => i + 6)
+  const hours = Array.from({ length: 24 }, (_, i) => i)
 
   function getEventsForSlot(day, hour) {
     return events.filter(e => {
