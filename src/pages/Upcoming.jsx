@@ -32,14 +32,29 @@ export default function Upcoming() {
     return user.id
   }
 
+  async function syncCalendar() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    try {
+      await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/sync-google-calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO' },
+        body: JSON.stringify({ user_id: user.id }),
+      })
+      await loadEvents()
+    } catch (e) {
+      console.error('Sync failed', e)
+    }
+  }
+
   useEffect(() => {
     async function load() {
       await loadEvents()
       setLoading(false)
     }
     load()
-    // Auto-refresh every 10 minutes to match sync interval
-    const interval = setInterval(() => loadEvents(), 10 * 60 * 1000)
+    // Auto-sync Google Calendar every 10 minutes
+    const interval = setInterval(() => syncCalendar(), 10 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 
