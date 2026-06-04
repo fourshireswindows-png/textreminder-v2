@@ -206,6 +206,7 @@ export default function Upcoming() {
       ) : isMobile ? (
         /* ── MOBILE: Single day list view ── */
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
           {hours.map(hour => {
             const slotEvents = getEventsForSlot(singleDay, hour)
             if (slotEvents.length === 0) return (
@@ -233,9 +234,11 @@ export default function Upcoming() {
             </div>
           )}
         </div>
+        </div>
       ) : (
         /* ── DESKTOP: 7-day grid view ── */
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'auto' }}>
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(7,1fr)', borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
             <div style={{ padding: '10px 8px' }} />
             {weekDays.map((day, i) => {
@@ -271,6 +274,7 @@ export default function Upcoming() {
               })}
             </div>
           ))}
+        </div>
         </div>
       )}
     </div>
