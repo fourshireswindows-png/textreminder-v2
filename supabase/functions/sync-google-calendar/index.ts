@@ -113,7 +113,7 @@ serve(async (req) => {
         .upsert(rows, { onConflict: "user_id,external_id" });
     }
 
-    // Remove events no longer in Google Calendar
+    // Remove events no longer in Google Calendar (but preserve manually added ones)
     const ids = rows.map((r: any) => r.external_id);
     if (ids.length > 0) {
       await supabase
@@ -121,7 +121,8 @@ serve(async (req) => {
         .delete()
         .eq("user_id", user_id)
         .gte("start_time", now.toISOString())
-        .not("external_id", "in", `(${ids.map((id: string) => `"${id}"`).join(",")})`);
+        .not("external_id", "in", `(${ids.map((id: string) => `"${id}"`).join(",")})`)
+        .not("external_id", "like", "manual-%");
     }
 
     return new Response(
