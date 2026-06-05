@@ -66,12 +66,6 @@ serve(async (req) => {
 
     for (const event of events ?? []) {
 
-      // Mark as reminder_sent immediately to prevent duplicate sends from concurrent runs
-      await supabase
-        .from("calendar_events")
-        .update({ reminder_sent: true })
-        .eq("id", event.id);
-
       // Get phone numbers (supports comma-separated multiple numbers)
       const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
       const attendees: { name?: string; phone?: string }[] = event.attendees ?? [];
@@ -80,6 +74,12 @@ serve(async (req) => {
         ?? phoneFromTitle;
 
       if (!rawPhone) continue;
+
+      // Mark as reminder_sent now that we have a phone number (prevents duplicate sends)
+      await supabase
+        .from("calendar_events")
+        .update({ reminder_sent: true })
+        .eq("id", event.id);
 
       // Split comma-separated phones and send to each
       const phoneList = rawPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
