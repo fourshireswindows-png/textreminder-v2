@@ -139,11 +139,14 @@ export default function Upcoming() {
         <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
           <input
             value={phoneVal}
-            onChange={e => setPhoneVal(e.target.value)}
+            onChange={e => setPhoneVal(e.target.value.replace(/[^0-9+]/g, ''))}
             onKeyDown={e => { if (e.key === 'Enter') savePhone(ev.id); if (e.key === 'Escape') setEditingPhone(null) }}
             placeholder="07700 900123"
             autoFocus
-            style={{ flex: 1, fontSize: 10, padding: '3px 6px', border: `1px solid ${purple}`, borderRadius: 4, outline: 'none', fontFamily: 'inherit' }}
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9+]*"
+            style={{ flex: 1, fontSize: 16, padding: '3px 6px', border: `1px solid ${purple}`, borderRadius: 4, outline: 'none', fontFamily: 'inherit' }}
           />
           <button onClick={() => savePhone(ev.id)} style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
           <button onClick={() => setEditingPhone(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
