@@ -1038,3 +1038,190 @@ function BlogPage({ onSignup, onNavigate }) {
                   <span style={{ fontSize: 11, color: C.muted }}>{new Date(post.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
              
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '12px 0 8px', lineHeight: 1.4 }}>{post.title}</h3>
+                <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, margin: 0 }}>{post.excerpt}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// PAGE: PRICING
+function PricingPage({ onLogin, onSignup, onNavigate }) {
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={onLogin} onSignup={onSignup} onNavigate={onNavigate} />
+      <PricingSection onSignup={onSignup} />
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// PAGE: BLOG POST
+function BlogPostPage({ slug, onSignup, onNavigate }) {
+  const post = BLOG_POSTS.find(p => p.slug === slug)
+  if (!post) return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ maxWidth: 700, margin: '80px auto', padding: '0 20px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: C.text, marginBottom: 20 }}>Post not found</h1>
+        <button onClick={() => onNavigate('blog')} className="btn-primary">Back to Blog</button>
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={() => onNavigate('auth-login')} onSignup={onSignup} onNavigate={onNavigate} />
+      <div style={{ maxWidth: 700, margin: '0 auto', padding: '52px 20px 80px' }}>
+        <button onClick={() => onNavigate('blog')} style={{ fontSize: 13, color: C.purple, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontWeight: 600 }}>
+          &larr; All Posts
+        </button>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '3px 12px', borderRadius: 12 }}>{post.category}</span>
+          <span style={{ fontSize: 11, color: C.muted }}>{post.readTime}</span>
+          <span style={{ fontSize: 11, color: C.muted }}>{new Date(post.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+        </div>
+        <h1 style={{ fontSize: 'clamp(26px,4vw,38px)', fontWeight: 800, color: C.text, lineHeight: 1.2, marginBottom: 28, letterSpacing: '-0.5px' }}>{post.title}</h1>
+        <div style={{ background: `linear-gradient(135deg,${C.pink}18,${C.purple}18)`, borderRadius: 12, height: 200, marginBottom: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>📝</div>
+        <div style={{ fontSize: 16, color: C.text, lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{post.content}</div>
+        <div style={{ marginTop: 52, padding: 32, background: `linear-gradient(135deg,${C.pink}08,${C.purple}08)`, border: `1px solid ${C.border}`, borderRadius: 14, textAlign: 'center' }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>Ready to stop losing jobs?</h3>
+          <p style={{ color: C.muted, marginBottom: 20 }}>Start free — no card needed.</p>
+          <button className="btn-primary" onClick={onSignup} style={{ padding: '12px 28px', fontSize: 15 }}>Start Free Today</button>
+        </div>
+      </div>
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
+// ─── Page component imports ───────────────────────────────────────────────────
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
+import DashboardPage  from './pages/Dashboard.jsx'
+import UpcomingPage   from './pages/Upcoming.jsx'
+import SettingsPage   from './pages/Settings.jsx'
+import ContactsPage   from './pages/Contacts.jsx'
+import MessageLogPage from './pages/MessageLog.jsx'
+import LoginPage      from './pages/Login.jsx'
+import SignupPage     from './pages/Signup.jsx'
+
+// ─── App shell (logged-in layout with AppNav) ─────────────────────────────────
+function AppShell({ user, onLogout, children }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const raw = location.pathname.replace(/^\//, '') || 'dashboard'
+  const page = raw === 'log' ? 'message-log' : raw
+
+  function setPage(key) {
+    const map = { dashboard: '/dashboard', upcoming: '/upcoming', 'message-log': '/log', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
+    navigate(map[key] || '/dashboard')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: C.bg }}>
+      <AppNav page={page} setPage={setPage} user={user} onLogout={onLogout} />
+      <div style={{ flex: 1, maxWidth: 1100, margin: '0 auto', width: '100%', padding: '24px 20px' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ─── Auth guard ───────────────────────────────────────────────────────────────
+function RequireAuth({ user, loading, children }) {
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: C.muted }}>Loading...</div>
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+// ─── Blog post route (reads :slug param) ──────────────────────────────────────
+function BlogPostRoute(props) {
+  const { slug } = useParams()
+  return <BlogPostPage slug={slug} {...props} />
+}
+
+// ─── AppRouter (must live inside BrowserRouter to use useNavigate) ────────────
+function AppRouter({ user, loading, onLogout }) {
+  const navigate = useNavigate()
+
+  function nav(page, slug) {
+    const map = {
+      home: '/', pricing: '/pricing', blog: '/blog', compare: '/compare',
+      'blog-post': `/blog/${slug || ''}`, resources: '/',
+      'auth-login': '/login', 'auth-signup': '/signup',
+      dashboard: '/dashboard', upcoming: '/upcoming', settings: '/settings',
+      contacts: '/contacts', 'message-log': '/log', upgrade: '/pricing',
+      'window-cleaners': '/window-cleaners', plumbers: '/plumbers',
+      electricians: '/electricians', gardeners: '/gardeners', hairdressers: '/hairdressers',
+    }
+    navigate(map[page] || '/')
+  }
+
+  const pub = { onLogin: () => navigate('/login'), onSignup: () => navigate('/signup'), onNavigate: nav }
+
+  function shell(comp) {
+    return (
+      <RequireAuth user={user} loading={loading}>
+        <AppShell user={user} onLogout={onLogout}>{comp}</AppShell>
+      </RequireAuth>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route path="/"                element={<HomePage {...pub} />} />
+      <Route path="/pricing"         element={<PricingPage {...pub} />} />
+      <Route path="/blog"            element={<BlogPage   {...pub} />} />
+      <Route path="/blog/:slug"      element={<BlogPostRoute {...pub} />} />
+      <Route path="/compare"         element={<ComparePage {...pub} />} />
+      <Route path="/window-cleaners" element={<HomePage {...pub} />} />
+      <Route path="/plumbers"        element={<HomePage {...pub} />} />
+      <Route path="/electricians"    element={<HomePage {...pub} />} />
+      <Route path="/gardeners"       element={<HomePage {...pub} />} />
+      <Route path="/hairdressers"    element={<HomePage {...pub} />} />
+      <Route path="/login"           element={<LoginPage />} />
+      <Route path="/signup"          element={<SignupPage />} />
+      <Route path="/dashboard"       element={shell(<DashboardPage />)} />
+      <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
+      <Route path="/settings"        element={shell(<SettingsPage />)} />
+      <Route path="/contacts"        element={shell(<ContactsPage />)} />
+      <Route path="/log"             element={shell(<MessageLogPage />)} />
+      <Route path="*"                element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+// ─── Root App ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [user, setUser]       = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return (
+    <BrowserRouter>
+      <GlobalStyles />
+      <AiChat />
+      <PwaBanner />
+      <AppRouter
+        user={user}
+        loading={loading}
+        onLogout={() => supabase.auth.signOut().then(() => setUser(null))}
+      />
+    </BrowserRouter>
+  )
+}
