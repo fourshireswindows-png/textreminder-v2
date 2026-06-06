@@ -1,44 +1,4 @@
-name: Build and Deploy
+name: Disabled
 
 on:
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - 'app.js'
-      - 'index.html'
-      - 'dist/**'
-
-permissions:
-  contents: write
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Commit and push built files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp dist/app.js app.js
-          git fetch origin main
-          git reset --soft origin/main
-          git add app.js dist/
-          git diff --staged --quiet || git commit -m "Auto-build [skip ci]"
-          git push origin HEAD:main
+  workflow_dispatch:
