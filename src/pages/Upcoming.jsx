@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 import { Link } from 'react-router-dom'
 
-
 export default function Upcoming() {
   const [events, setEvents]         = useState([])
   const [profile, setProfile]       = useState(null)
@@ -14,6 +13,19 @@ export default function Upcoming() {
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
+
+  // Add appointment modal
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addForm, setAddForm] = useState({
+    title: '', date: '', time: '09:00', phone: '',
+    recurring: false, intervalNum: 1, intervalUnit: 'weeks',
+    endType: 'date', endDate: '',
+  })
+  const [savingAdd, setSavingAdd] = useState(false)
+  const [addError, setAddError]   = useState('')
+
+  // Delete confirm (recurring series)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -53,7 +65,6 @@ export default function Upcoming() {
       setLoading(false)
     }
     load()
-    // Auto-sync Google Calendar every 10 minutes
     const interval = setInterval(() => syncCalendar(), 10 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
@@ -63,12 +74,98 @@ export default function Upcoming() {
     setSyncMsg('')
     try {
       await loadEvents()
-      setSyncMsg('✓ Refreshed')
+      setSyncMsg('Refreshed')
     } catch (e) {
-      setSyncMsg('✗ Failed')
+      setSyncMsg('Failed')
     } finally {
       setSyncing(false)
       setTimeout(() => setSyncMsg(''), 3000)
+    }
+  }
+
+  // Save manual appointment (single or recurring)
+  async function saveManualAppointment() {
+    setAddError('')
+    if (!addForm.title.trim()) { setAddError('Please enter a title.'); return }
+    if (!addForm.date)         { setAddError('Please pick a date.'); return }
+    if (!addForm.time)         { setAddError('Please pick a time.'); return }
+    if (addForm.recurring && addForm.endType === 'date' && !addForm.endDate) {
+      setAddError('Please pick an end date, or choose "Until cancelled".'); return
+    }
+
+    setSavingAdd(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const startDt = new Date(`${addForm.date}T${addForm.time}`)
+    const endDt   = new Date(startDt.getTime() + 60 * 60 * 1000)
+
+    if (!addForm.recurring) {
+      const { error } = await supabase.from('calendar_events').insert({
+        user_id:       user.id,
+        title:         addForm.title.trim(),
+        start_time:    startDt.toISOString(),
+        end_time:      endDt.toISOString(),
+        phone:         addForm.phone || null,
+        is_manual:     true,
+        reminder_sent: false,
+      })
+      if (error) { setAddError('Failed to save. Try again.'); setSavingAdd(false); return }
+    } else {
+      const intervalDays = addForm.intervalNum * (addForm.intervalUnit === 'weeks' ? 7 : 1)
+      const groupId      = crypto.randomUUID()
+      const cutoff = (addForm.endType === 'date' && addForm.endDate)
+        ? new Date(`${addForm.endDate}T23:59:59`)
+        : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+
+      const rows = []
+      let cur = new Date(startDt)
+      while (cur <= cutoff) {
+        rows.push({
+          user_id:                 user.id,
+          title:                   addForm.title.trim(),
+          start_time:              new Date(cur).toISOString(),
+          end_time:                new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
+          phone:                   addForm.phone || null,
+          is_manual:               true,
+          reminder_sent:           false,
+          recurring_group_id:      groupId,
+          recurring_interval_days: intervalDays,
+          recurring_end_date:      (addForm.endType === 'date' && addForm.endDate) ? addForm.endDate : null,
+        })
+        cur = new Date(cur.getTime() + intervalDays * 24 * 60 * 60 * 1000)
+      }
+
+      if (rows.length === 0) {
+        setAddError('No appointments fall within that range. Check your start and end dates.')
+        setSavingAdd(false)
+        return
+      }
+
+      const { error } = await supabase.from('calendar_events').insert(rows)
+      if (error) { setAddError('Failed to save. Try again.'); setSavingAdd(false); return }
+    }
+
+    await loadEvents()
+    setSavingAdd(false)
+    setShowAddModal(false)
+    setAddForm({ title: '', date: '', time: '09:00', phone: '', recurring: false, intervalNum: 1, intervalUnit: 'weeks', endType: 'date', endDate: '' })
+  }
+
+  // Delete manual appointment (one occurrence or whole series)
+  async function deleteManualEvent(ev, scope) {
+    if (scope === 'all' && ev.recurring_group_id) {
+      await supabase.from('calendar_events').delete().eq('recurring_group_id', ev.recurring_group_id)
+    } else {
+      await supabase.from('calendar_events').delete().eq('id', ev.id)
+    }
+    setDeleteTarget(null)
+    await loadEvents()
+  }
+
+  function requestDelete(ev) {
+    if (ev.recurring_group_id) {
+      setDeleteTarget(ev)
+    } else {
+      deleteManualEvent(ev, 'one')
     }
   }
 
@@ -100,9 +197,9 @@ export default function Upcoming() {
     return d
   }
 
-  const weekDays = getWeekDays(weekOffset)
+  const weekDays  = getWeekDays(weekOffset)
   const singleDay = getSingleDay(dayOffset)
-  const hours = Array.from({ length: 24 }, (_, i) => i)
+  const hours     = Array.from({ length: 24 }, (_, i) => i)
 
   function getEventsForSlot(day, hour) {
     return events.filter(e => {
@@ -126,15 +223,29 @@ export default function Upcoming() {
   const todayStr = new Date().toDateString()
   const purple = '#a855f7'
   const border = '#e9d5ff'
-  const muted = '#6b7280'
-  const text = '#1a1a2e'
-  const green = '#22c55e'
+  const muted  = '#6b7280'
+  const text   = '#1a1a2e'
+  const green  = '#22c55e'
 
+  // Appointment block shown in the calendar grid
   const AppointmentBlock = ({ ev }) => (
-    <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${purple}` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3 }}>
+    <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? '#ec4899' : purple}`, position: 'relative' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 16 : 0 }}>
         {new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {ev.title}
+        {ev.is_manual && ev.recurring_group_id && (
+          <span title="Recurring" style={{ marginLeft: 3, fontSize: 9, opacity: 0.7 }}>&#x1F504;</span>
+        )}
       </div>
+
+      {ev.is_manual && (
+        <button
+          onClick={e => { e.stopPropagation(); requestDelete(ev) }}
+          title="Delete appointment"
+          style={{ position: 'absolute', top: 3, right: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: 0, lineHeight: 1 }}>
+          &#x2715;
+        </button>
+      )}
+
       {editingPhone === ev.id ? (
         <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
           <input
@@ -148,17 +259,24 @@ export default function Upcoming() {
             pattern="[0-9+]*"
             style={{ flex: 1, fontSize: 16, padding: '3px 6px', border: `1px solid ${purple}`, borderRadius: 4, outline: 'none', fontFamily: 'inherit' }}
           />
-          <button onClick={() => savePhone(ev.id)} style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
-          <button onClick={() => setEditingPhone(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+          <button onClick={() => savePhone(ev.id)} style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>&#x2713;</button>
+          <button onClick={() => setEditingPhone(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>&#x2715;</button>
         </div>
       ) : (
         <div onClick={() => { setEditingPhone(ev.id); setPhoneVal(ev.phone || '') }}
           style={{ fontSize: 10, color: ev.phone ? green : '#94a3b8', marginTop: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-          📱 {ev.phone || 'Add phone'}
+          &#x1F4F1; {ev.phone || 'Add phone'}
         </div>
       )}
     </div>
   )
+
+  const inputStyle = {
+    width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: 14,
+    border: `1px solid ${border}`, borderRadius: 7, outline: 'none', fontFamily: 'inherit', color: text,
+  }
+
+  const todayIso = new Date().toISOString().split('T')[0]
 
   return (
     <div>
@@ -172,112 +290,244 @@ export default function Upcoming() {
             {profile?.calendar_provider ? (
               <><span style={{ width: 6, height: 6, borderRadius: '50%', background: green, display: 'inline-block' }} /> Synced from {profile.calendar_provider} calendar</>
             ) : (
-              <><span style={{ color: '#f59e0b' }}>⚠</span> No calendar — <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
+              <><span style={{ color: '#f59e0b' }}>&#x26A0;</span> No calendar &mdash; <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
             )}
             {profile?.calendar_provider && (
               <>
-                {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>· Last synced {lastSyncedText(events)}</span>}
-                <span style={{ fontSize: 11, color: muted }}>· Syncs every 10 minutes</span>
+                {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>&middot; Last synced {lastSyncedText(events)}</span>}
+                <span style={{ fontSize: 11, color: muted }}>&middot; Syncs every 10 minutes</span>
               </>
             )}
           </div>
         </div>
 
-        {/* Navigation */}
-        {isMobile ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-            <button onClick={() => setDayOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>←</button>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: singleDay.toDateString() === todayStr ? purple : text }}>
-                {singleDay.toDateString() === todayStr ? 'Today' : singleDay.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+        {/* Navigation + Add button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{ background: 'linear-gradient(135deg,#ec4899,#a855f7)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+            + Add Appointment
+          </button>
+          {isMobile ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setDayOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>&larr;</button>
+              <div style={{ textAlign: 'center', minWidth: 120 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: singleDay.toDateString() === todayStr ? purple : text }}>
+                  {singleDay.toDateString() === todayStr ? 'Today' : singleDay.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+                </div>
               </div>
+              <button onClick={() => setDayOffset(0)} style={{ background: dayOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${dayOffset === 0 ? purple : border}`, borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: dayOffset === 0 ? purple : text, fontFamily: 'inherit' }}>Today</button>
+              <button onClick={() => setDayOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>&rarr;</button>
             </div>
-            <button onClick={() => setDayOffset(0)} style={{ background: dayOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${dayOffset === 0 ? purple : border}`, borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: dayOffset === 0 ? purple : text, fontFamily: 'inherit' }}>Today</button>
-            <button onClick={() => setDayOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>→</button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => setWeekOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>← Prev</button>
-            <button onClick={() => setWeekOffset(0)} style={{ background: weekOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${weekOffset === 0 ? purple : border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: weekOffset === 0 ? purple : text, fontFamily: 'inherit' }}>This Week</button>
-            <button onClick={() => setWeekOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Next →</button>
-          </div>
-        )}
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: muted }}>Loading...</div>
-      ) : isMobile ? (
-        /* ── MOBILE: Single day list view ── */
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-          {hours.map(hour => {
-            const slotEvents = getEventsForSlot(singleDay, hour)
-            if (slotEvents.length === 0) return (
-              <div key={hour} style={{ display: 'flex', borderBottom: '1px solid #f8fafc', minHeight: 44 }}>
-                <div style={{ width: 56, padding: '10px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9', flexShrink: 0 }}>
-                  {hour.toString().padStart(2, '0')}:00
-                </div>
-                <div style={{ flex: 1 }} />
-              </div>
-            )
-            return (
-              <div key={hour} style={{ display: 'flex', borderBottom: '1px solid #f8fafc' }}>
-                <div style={{ width: 56, padding: '10px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9', flexShrink: 0 }}>
-                  {hour.toString().padStart(2, '0')}:00
-                </div>
-                <div style={{ flex: 1, padding: '4px 8px' }}>
-                  {slotEvents.map(ev => <AppointmentBlock key={ev.id} ev={ev} />)}
-                </div>
-              </div>
-            )
-          })}
-          {getEventsForDay(singleDay).length === 0 && (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: muted, fontSize: 13 }}>
-              No appointments today
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setWeekOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>&larr; Prev</button>
+              <button onClick={() => setWeekOffset(0)} style={{ background: weekOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${weekOffset === 0 ? purple : border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: weekOffset === 0 ? purple : text, fontFamily: 'inherit' }}>This Week</button>
+              <button onClick={() => setWeekOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Next &rarr;</button>
             </div>
           )}
         </div>
-        </div>
-      ) : (
-        /* ── DESKTOP: 7-day grid view ── */
+      </div>
+
+      {/* Calendar grid */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: muted }}>Loading...</div>
+      ) : isMobile ? (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
-        <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(7,1fr)', borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
-            <div style={{ padding: '10px 8px' }} />
-            {weekDays.map((day, i) => {
-              const isToday = day.toDateString() === todayStr
+          <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
+            {hours.map(hour => {
+              const slotEvents = getEventsForSlot(singleDay, hour)
+              if (slotEvents.length === 0) return (
+                <div key={hour} style={{ display: 'flex', borderBottom: '1px solid #f8fafc', minHeight: 44 }}>
+                  <div style={{ width: 56, padding: '10px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9', flexShrink: 0 }}>
+                    {hour.toString().padStart(2, '0')}:00
+                  </div>
+                  <div style={{ flex: 1 }} />
+                </div>
+              )
               return (
-                <div key={i} style={{ padding: '10px 8px', textAlign: 'center', borderLeft: '1px solid #f1f5f9', background: isToday ? '#fdf4ff' : '#fff' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? purple : muted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+                <div key={hour} style={{ display: 'flex', borderBottom: '1px solid #f8fafc' }}>
+                  <div style={{ width: 56, padding: '10px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9', flexShrink: 0 }}>
+                    {hour.toString().padStart(2, '0')}:00
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: isToday ? purple : text, marginTop: 2 }}>
-                    {day.getDate()}
-                  </div>
-                  <div style={{ fontSize: 10, color: muted }}>
-                    {day.toLocaleDateString('en-GB', { month: 'short' })}
+                  <div style={{ flex: 1, padding: '4px 8px' }}>
+                    {slotEvents.map(ev => <AppointmentBlock key={ev.id} ev={ev} />)}
                   </div>
                 </div>
               )
             })}
+            {getEventsForDay(singleDay).length === 0 && (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: muted, fontSize: 13 }}>No appointments today</div>
+            )}
           </div>
-          {hours.map(hour => (
-            <div key={hour} style={{ display: 'grid', gridTemplateColumns: '60px repeat(7,1fr)', borderBottom: '1px solid #f8fafc', minHeight: 56 }}>
-              <div style={{ padding: '8px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9' }}>
-                {hour.toString().padStart(2, '0')}:00
-              </div>
-              {weekDays.map((day, di) => {
-                const slotEvents = getEventsForSlot(day, hour)
+        </div>
+      ) : (
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(7,1fr)', borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
+              <div style={{ padding: '10px 8px' }} />
+              {weekDays.map((day, i) => {
                 const isToday = day.toDateString() === todayStr
                 return (
-                  <div key={di} style={{ borderLeft: '1px solid #f1f5f9', padding: '3px 4px', background: isToday ? '#fefcff' : '#fff', minHeight: 56 }}>
-                    {slotEvents.map(ev => <AppointmentBlock key={ev.id} ev={ev} />)}
+                  <div key={i} style={{ padding: '10px 8px', textAlign: 'center', borderLeft: '1px solid #f1f5f9', background: isToday ? '#fdf4ff' : '#fff' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? purple : muted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: isToday ? purple : text, marginTop: 2 }}>{day.getDate()}</div>
+                    <div style={{ fontSize: 10, color: muted }}>{day.toLocaleDateString('en-GB', { month: 'short' })}</div>
                   </div>
                 )
               })}
             </div>
-          ))}
+            {hours.map(hour => (
+              <div key={hour} style={{ display: 'grid', gridTemplateColumns: '60px repeat(7,1fr)', borderBottom: '1px solid #f8fafc', minHeight: 56 }}>
+                <div style={{ padding: '8px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9' }}>
+                  {hour.toString().padStart(2, '0')}:00
+                </div>
+                {weekDays.map((day, di) => {
+                  const slotEvents = getEventsForSlot(day, hour)
+                  const isToday = day.toDateString() === todayStr
+                  return (
+                    <div key={di} style={{ borderLeft: '1px solid #f1f5f9', padding: '3px 4px', background: isToday ? '#fefcff' : '#fff', minHeight: 56 }}>
+                      {slotEvents.map(ev => <AppointmentBlock key={ev.id} ev={ev} />)}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Add Appointment Modal */}
+      {showAddModal && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false) }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.18)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: text, fontFamily: 'Syne,sans-serif', margin: 0 }}>Add Appointment</h2>
+              <button onClick={() => { setShowAddModal(false); setAddError('') }} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: muted, padding: 0 }}>&#x2715;</button>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Customer / title</label>
+              <input
+                value={addForm.title}
+                onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. John Smith - window clean"
+                style={inputStyle}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Date</label>
+                <input type="date" min={todayIso} value={addForm.date} onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Time</label>
+                <input type="time" value={addForm.time} onChange={e => setAddForm(f => ({ ...f, time: e.target.value }))} style={inputStyle} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number (optional)</label>
+              <input
+                type="tel" inputMode="numeric"
+                value={addForm.phone}
+                onChange={e => setAddForm(f => ({ ...f, phone: e.target.value.replace(/[^0-9+]/g, '') }))}
+                placeholder="07700 900123"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text }}>
+                <input
+                  type="checkbox"
+                  checked={addForm.recurring}
+                  onChange={e => setAddForm(f => ({ ...f, recurring: e.target.checked }))}
+                  style={{ width: 16, height: 16, accentColor: purple, cursor: 'pointer' }}
+                />
+                Recurring appointment
+              </label>
+            </div>
+
+            {addForm.recurring && (
+              <div style={{ background: '#fdf4ff', border: `1px solid ${border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Repeat every</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number" min={1} max={52}
+                      value={addForm.intervalNum}
+                      onChange={e => setAddForm(f => ({ ...f, intervalNum: Math.max(1, parseInt(e.target.value) || 1) }))}
+                      style={{ ...inputStyle, width: 64 }}
+                    />
+                    <select value={addForm.intervalUnit} onChange={e => setAddForm(f => ({ ...f, intervalUnit: e.target.value }))} style={{ ...inputStyle, flex: 1 }}>
+                      <option value="days">days</option>
+                      <option value="weeks">weeks</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 8 }}>End</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
+                      <input type="radio" name="endType" value="date" checked={addForm.endType === 'date'} onChange={() => setAddForm(f => ({ ...f, endType: 'date' }))} style={{ accentColor: purple }} />
+                      On date
+                      {addForm.endType === 'date' && (
+                        <input type="date" min={addForm.date || todayIso} value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4 }} />
+                      )}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
+                      <input type="radio" name="endType" value="indefinite" checked={addForm.endType === 'indefinite'} onChange={() => setAddForm(f => ({ ...f, endType: 'indefinite', endDate: '' }))} style={{ accentColor: purple }} />
+                      Until cancelled <span style={{ fontSize: 11, color: muted }}>(creates next 60 days)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {addError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#dc2626', marginBottom: 14 }}>
+                {addError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowAddModal(false); setAddError('') }} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button
+                onClick={saveManualAppointment}
+                disabled={savingAdd}
+                style={{ background: savingAdd ? '#e9d5ff' : 'linear-gradient(135deg,#ec4899,#a855f7)', color: savingAdd ? purple : '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: savingAdd ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                {savingAdd ? 'Saving...' : 'Save Appointment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal (recurring series only) */}
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 16px 50px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: text, fontFamily: 'Syne,sans-serif', marginBottom: 8 }}>Delete recurring appointment?</div>
+            <div style={{ fontSize: 13, color: muted, marginBottom: 20 }}>
+              <strong style={{ color: text }}>{deleteTarget.title}</strong> is part of a recurring series.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => deleteManualEvent(deleteTarget, 'one')} style={{ background: '#f1f5f9', color: text, border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                Delete just this occurrence
+              </button>
+              <button onClick={() => deleteManualEvent(deleteTarget, 'all')} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                Delete all in this series
+              </button>
+              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
