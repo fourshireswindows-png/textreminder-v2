@@ -381,18 +381,29 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
 (function(){
   const SB_URL = 'https://fxzfaxlhhypiigcmlasx.supabase.co';
   const SB_KEY = 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO';
+  const AUTH_KEY = 'sb-fxzfaxlhhypiigcmlasx-auth-token';
 
   function pad(n){return String(n).padStart(2,'0')}
   function toDateStr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
   function toTimeStr(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
 
-  function removeModal(){
-    const el = document.getElementById('__edit-appt-modal');
-    if(el) el.remove();
+  function getAuthToken(){
+    try {
+      const raw = localStorage.getItem(AUTH_KEY);
+      if(!raw) return SB_KEY;
+      const parsed = JSON.parse(raw);
+      return parsed.access_token || SB_KEY;
+    } catch(e){ return SB_KEY; }
   }
 
   function sbHeaders(){
-    return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'};
+    const token = getAuthToken();
+    return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+token,'Prefer':'return=minimal'};
+  }
+
+  function removeModal(){
+    const el = document.getElementById('__edit-appt-modal');
+    if(el) el.remove();
   }
 
   window.__editAppt = function(ev){
@@ -410,12 +421,10 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
           <button id="__edit-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b">×</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px">
-
           <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;color:#0f172a">Title</label>
             <input id="__edit-title" value="${(ev.title||'').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" />
           </div>
-
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div>
               <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;color:#0f172a">Date</label>
@@ -426,18 +435,16 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
               <input id="__edit-time" type="time" value="${toTimeStr(start)}" style="width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" />
             </div>
           </div>
-
           <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;color:#0f172a">Phone</label>
             <input id="__edit-phone" value="${(ev.phone||'').replace(/"/g,'&quot;')}" placeholder="07700 900123" style="width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none" />
           </div>
-
           <div style="border-top:1px solid #f1f5f9;padding-top:14px">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#0f172a">
               <input type="checkbox" id="__edit-recurring" style="width:16px;height:16px;cursor:pointer" />
               Create recurring copies going forward
             </label>
-            <div id="__edit-recur-opts" style="display:none;margin-top:12px;display:none;flex-direction:column;gap:10px">
+            <div id="__edit-recur-opts" style="display:none;margin-top:12px;flex-direction:column;gap:10px">
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <span style="font-size:13px;color:#374151">Every</span>
                 <input id="__edit-repeat-n" type="number" min="1" max="52" value="1" style="width:60px;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-size:14px;font-family:inherit;outline:none" />
@@ -456,7 +463,6 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
               </div>
             </div>
           </div>
-
           <div id="__edit-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:13px;color:#dc2626"></div>
           <button id="__edit-save" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Save Changes</button>
         </div>
@@ -465,19 +471,14 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
     document.body.appendChild(overlay);
     document.getElementById('__edit-close').onclick = removeModal;
 
-    // Toggle recurring options
     const recurChk = document.getElementById('__edit-recurring');
     const recurOpts = document.getElementById('__edit-recur-opts');
     recurChk.addEventListener('change', function(){
       recurOpts.style.display = this.checked ? 'flex' : 'none';
     });
-
-    // Toggle end date field
     document.getElementById('__edit-end-type').addEventListener('change', function(){
       document.getElementById('__edit-enddate-wrap').style.display = this.value === 'date' ? 'block' : 'none';
     });
-    // Hide end date by default since "Until date" needs it shown
-    // (it's already shown by default in the HTML)
 
     document.getElementById('__edit-save').onclick = async function(){
       const title     = document.getElementById('__edit-title').value.trim();
@@ -505,7 +506,6 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
       const dur = ev.end_time ? (new Date(ev.end_time)-new Date(ev.start_time)) : 3600000;
       const newEnd = new Date(newStart.getTime()+dur);
 
-      // 1. Update this event
       const res = await fetch(SB_URL+'/rest/v1/calendar_events?id=eq.'+ev.id, {
         method:'PATCH',
         headers:sbHeaders(),
@@ -514,47 +514,28 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
 
       if(!res.ok){
         btn.textContent='Save Changes'; btn.disabled=false;
-        errEl.style.display='block'; errEl.textContent='Save failed. Please try again.'; return;
+        errEl.style.display='block'; errEl.textContent='Save failed ('+res.status+'). Please try again.'; return;
       }
 
-      // 2. Create recurring copies if requested
       if(recurring){
         const intervalDays = repeatUnit==='weeks' ? repeatN*7 : repeatN;
         const cutoff = endType==='date' && endDate ? new Date(endDate) : (()=>{const d=new Date();d.setDate(d.getDate()+60);return d;})();
-
-        // Get user id from Supabase session
-        let userId = null;
-        try {
-          const sess = await fetch(SB_URL+'/auth/v1/user', {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+localStorage.getItem('sb-fxzfaxlhhypiigcmlasx-auth-token')?.match(/"access_token":"([^"]+)"/)?.[1]||SB_KEY}});
-          const sessData = await sess.json();
-          userId = sessData.id;
-        } catch(e){}
-
+        const token = getAuthToken();
+        const meRes = await fetch(SB_URL+'/auth/v1/user', {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+token}});
+        const meData = await meRes.json();
+        const userId = meData.id;
         if(userId){
           const toInsert = [];
           let cur = new Date(newStart);
           cur.setDate(cur.getDate()+intervalDays);
           while(cur <= cutoff){
             const cEnd = new Date(cur.getTime()+dur);
-            toInsert.push({
-              user_id: userId,
-              external_id: 'manual-'+Math.random().toString(36).slice(2),
-              title: title,
-              start_time: cur.toISOString(),
-              end_time: cEnd.toISOString(),
-              phone: phone||null,
-              location: '',
-              reminder_sent: false
-            });
+            toInsert.push({user_id:userId,external_id:'manual-'+Math.random().toString(36).slice(2),title:title,start_time:cur.toISOString(),end_time:cEnd.toISOString(),phone:phone||null,location:'',reminder_sent:false});
             cur = new Date(cur);
             cur.setDate(cur.getDate()+intervalDays);
           }
           if(toInsert.length>0){
-            await fetch(SB_URL+'/rest/v1/calendar_events', {
-              method:'POST',
-              headers:sbHeaders(),
-              body:JSON.stringify(toInsert)
-            });
+            await fetch(SB_URL+'/rest/v1/calendar_events',{method:'POST',headers:sbHeaders(),body:JSON.stringify(toInsert)});
           }
         }
       }
