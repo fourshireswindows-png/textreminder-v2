@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
+      input: 'index-dev.html',
       output: {
         entryFileNames: 'app.js',
         chunkFileNames: 'chunk-[name].js',

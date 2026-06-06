@@ -62,8 +62,8 @@ const PAGES = [
 
 const OUT_DIR = './dist'
 
-// Read the base index.html built by Vite
-const baseHtml = fs.readFileSync(path.join(OUT_DIR, 'index.html'), 'utf8')
+// Use the root index.html (with full SEO content) as the base template
+const baseHtml = fs.readFileSync('index.html', 'utf8')
 
 for (const page of PAGES) {
   // Swap in the page-specific title, description, and OG tags
@@ -88,20 +88,4 @@ for (const page of PAGES) {
   console.log(`  ✅ ${page.route}`)
 }
 
-console.log('✅ Pre-render complete — HTML stubs written for all routes.')
-
-// Copy built app.js from dist/ to root so GitHub Pages serves the latest build
-fs.copyFileSync('./dist/app.js', './app.js')
-console.log('✅ app.js copied to root.')
-
-// Touch root index.html with a build timestamp so GitHub Pages always redeployes
-const indexPath = './index.html'
-let indexHtml = fs.readFileSync(indexPath, 'utf8')
-// Replace or add the build timestamp comment
-const stamp = `<!-- build: ${new Date().toISOString()} -->`
-indexHtml = indexHtml.replace(/<!-- build: .*? -->/, stamp)
-if (!indexHtml.includes('<!-- build:')) {
-  indexHtml = indexHtml.replace('</html>', `${stamp}\n</html>`)
-}
-fs.writeFileSync(indexPath, indexHtml)
-console.log(`✅ index.html stamped: ${stamp}`)
+console.log('✅ Pre-render complete — HTML stubs written for all 
