@@ -38,7 +38,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cp dist/app.js app.js
           cp dist/index.html index.html
+          git fetch origin main
+          git reset --soft origin/main
           git add app.js index.html dist/
           git diff --staged --quiet || git commit -m "Auto-build [skip ci]"
-          git pull --rebase origin main
-          git push
+          git push origin HEAD:main
