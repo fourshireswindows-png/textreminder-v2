@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 import { Link } from 'react-router-dom'
+// v2
 
 export default function Upcoming() {
   const [events, setEvents]         = useState([])
