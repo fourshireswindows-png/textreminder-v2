@@ -30,59 +30,61 @@ serve(async (req) => {
   const results: object[] = [];
   const errors: string[] = [];
 
-  // Query calendar_events directly — no dependency on profiles table existing
-  const offsetMs = 24 * 60 * 60 * 1000;
-  const windowStart = new Date(now.getTime() + offsetMs - 60 * 60 * 1000);
-  const windowEnd   = new Date(now.getTime() + offsetMs + 60 * 60 * 1000);
+  // Get all profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("*");
 
-  const { data: events, error: eventsError } = await supabase
-    .from("calendar_events")
-    .select("*")
-    .eq("reminder_sent", false)
-    .gte("start_time", windowStart.toISOString())
-    .lte("start_time", windowEnd.toISOString());
-
-  if (eventsError) {
-    return new Response(JSON.stringify({ error: eventsError.message }), {
+  if (profilesError) {
+    return new Response(JSON.stringify({ error: profilesError.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Cache settings per user to avoid repeated DB calls
-  const settingsCache: Record<string, { message_template?: string; business_name?: string; phone_number?: string } | null> = {};
+  for (const profile of profiles ?? []) {
 
-  for (const event of events ?? []) {
+    // Get settings for this user's message template
+    const { data: settingsRow } = await supabase
+      .from("settings")
+      .select("message_template, business_name, phone_number")
+      .eq("user_id", profile.id)
+      .maybeSingle();
 
-    // Get phone number
-    const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
-    const attendees: { name?: string; phone?: string }[] = event.attendees ?? [];
-    const rawPhone = event.phone
-      ?? (attendees.length > 0 ? attendees[0].phone : null)
-      ?? phoneFromTitle;
+    // 24 hours ahead, ±1 hour window to catch cron drift
+    const offsetMs = 24 * 60 * 60 * 1000;
+    const windowStart = new Date(now.getTime() + offsetMs - 60 * 60 * 1000);
+    const windowEnd   = new Date(now.getTime() + offsetMs + 60 * 60 * 1000);
 
-    if (!rawPhone) continue;
-
-    // Mark as sent before sending to prevent duplicates on retry
-    await supabase
+    const { data: events } = await supabase
       .from("calendar_events")
-      .update({ reminder_sent: true })
-      .eq("id", event.id);
+      .select("*")
+      .eq("user_id", profile.id)
+      .eq("reminder_sent", false)
+      .gte("start_time", windowStart.toISOString())
+      .lte("start_time", windowEnd.toISOString());
 
-    // Load settings for this user (cached)
-    if (!(event.user_id in settingsCache)) {
-      const { data } = await supabase
-        .from("settings")
-        .select("message_template, business_name, phone_number")
-        .eq("user_id", event.user_id)
-        .maybeSingle();
-      settingsCache[event.user_id] = data;
-    }
-    const settingsRow = settingsCache[event.user_id];
+    for (const event of events ?? []) {
 
-    const phoneList = rawPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
+      // Get phone numbers (supports comma-separated multiple numbers)
+      const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
+      const attendees: { name?: string; phone?: string }[] = event.attendees ?? [];
+      const rawPhone = event.phone
+        ?? (attendees.length > 0 ? attendees[0].phone : null)
+        ?? phoneFromTitle;
 
-    for (const phone of phoneList) {
+      if (!rawPhone) continue;
+
+      // Mark as reminder_sent now that we have a phone number (prevents duplicate sends)
+      await supabase
+        .from("calendar_events")
+        .update({ reminder_sent: true })
+        .eq("id", event.id);
+
+      // Split comma-separated phones and send to each
+      const phoneList = rawPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
+
+      for (const phone of phoneList) {
 
       const attendee = attendees[0] ?? {};
       const appointmentTime = new Date(event.start_time);
@@ -96,8 +98,8 @@ serve(async (req) => {
       const template = settingsRow?.message_template
         ?? "Hi {name}, just a reminder your appointment is on {date} at {time}. Any questions call {business_phone}. Reply STOP to opt out.";
 
-      const businessName = settingsRow?.business_name ?? "";
-      const businessPhone = settingsRow?.phone_number ?? "";
+      const businessName = settingsRow?.business_name ?? profile.business_name ?? "";
+      const businessPhone = settingsRow?.phone_number ?? profile.phone ?? "";
       const message = template
         .replace("{name}",           attendee.name ?? "there")
         .replace("{time}",           timeStr)
@@ -146,7 +148,7 @@ serve(async (req) => {
 
       // Log to reminders table
       await supabase.from("reminders").insert({
-        user_id:           event.user_id,
+        user_id:           profile.id,
         contact_name:      attendee.name ?? event.title ?? "Unknown",
         contact_phone:     toNumber,
         channel:           "sms",
@@ -158,7 +160,8 @@ serve(async (req) => {
         error_message:     errorMessage,
       });
 
-    } // end for phoneList
+      } // end for phoneList
+    }
   }
 
   return new Response(
