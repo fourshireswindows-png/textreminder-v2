@@ -506,16 +506,22 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
       const newEnd = new Date(newStart.getTime()+dur);
 
       // 1. Update this event
-      const res = await fetch(SB_URL+'/functions/v1/edit-calendar-event', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+getToken()},
-        body:JSON.stringify({id:ev.id,title:title,start_time:newStart.toISOString(),end_time:newEnd.toISOString(),phone:phone||null})
-      });
+      let res;
+      try {
+        res = await fetch(SB_URL+'/functions/v1/edit-calendar-event', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+getToken()},
+          body:JSON.stringify({id:ev.id,title:title,start_time:newStart.toISOString(),end_time:newEnd.toISOString(),phone:phone||null})
+        });
+      } catch(fetchErr) {
+        btn.textContent='Save Changes'; btn.disabled=false;
+        errEl.style.display='block'; errEl.textContent='Network error: '+String(fetchErr); return;
+      }
 
       if(!res.ok){
         const errBody = await res.json().catch(()=>({}));
         btn.textContent='Save Changes'; btn.disabled=false;
-        errEl.style.display='block'; errEl.textContent='Save failed: '+(errBody.error||res.status); return;
+        errEl.style.display='block'; errEl.textContent='Save failed ('+res.status+'): '+(errBody.error||'unknown'); return;
       }
 
       // 2. Create recurring copies if requested
