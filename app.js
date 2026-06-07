@@ -381,6 +381,14 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
 (function(){
   const SB_URL = 'https://fxzfaxlhhypiigcmlasx.supabase.co';
   const SB_KEY = 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO';
+  const AUTH_KEY = 'sb-fxzfaxlhhypiigcmlasx-auth-token';
+
+  function getToken(){
+    try{
+      const raw = JSON.parse(localStorage.getItem(AUTH_KEY)||'{}');
+      return raw.access_token||(raw.currentSession&&raw.currentSession.access_token)||SB_KEY;
+    }catch(e){ return SB_KEY; }
+  }
 
   function pad(n){return String(n).padStart(2,'0')}
   function toDateStr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
