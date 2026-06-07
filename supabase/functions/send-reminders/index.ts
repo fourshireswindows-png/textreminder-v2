@@ -61,6 +61,7 @@ serve(async (req) => {
       .select("*")
       .eq("user_id", profile.id)
       .eq("reminder_sent", false)
+      .not("external_id", "like", "manual-%")
       .gte("start_time", windowStart.toISOString())
       .lte("start_time", windowEnd.toISOString());
 
