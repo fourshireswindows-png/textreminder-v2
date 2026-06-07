@@ -392,7 +392,7 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
   }
 
   function sbHeaders(){
-    return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=minimal'};
+    return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+getToken(),'Prefer':'return=representation'};
   }
 
   window.__editAppt = function(ev){
@@ -512,9 +512,10 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
         body:JSON.stringify({title:title,start_time:newStart.toISOString(),end_time:newEnd.toISOString(),phone:phone||null})
       });
 
-      if(!res.ok){
+      const resData=await res.json().catch(()=>[]);
+      if(!res.ok||(Array.isArray(resData)&&resData.length===0)){
         btn.textContent='Save Changes'; btn.disabled=false;
-        errEl.style.display='block'; errEl.textContent='Save failed. Please try again.'; return;
+        errEl.style.display='block'; errEl.textContent='Save failed — try signing out and back in.'; return;
       }
 
       // 2. Create recurring copies if requested
@@ -572,7 +573,11 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
   const AUTH_KEY = 'sb-fxzfaxlhhypiigcmlasx-auth-token';
 
   function getToken(){
-    try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||'{}').access_token||SB_KEY; }
+    try{
+      const raw = JSON.parse(localStorage.getItem(AUTH_KEY)||'{}');
+      // Handle both old format (access_token at root) and new Supabase format (currentSession.access_token)
+      return raw.access_token || (raw.currentSession && raw.currentSession.access_token) || SB_KEY;
+    }
     catch(e){ return SB_KEY; }
   }
 
