@@ -467,7 +467,7 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
 
           <div id="__edit-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:13px;color:#dc2626"></div>
           <button id="__edit-save" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">Save Changes</button>
-          ${ev.recurring_group_id ? `<button id="__edit-cancel-recur" style="background:none;border:1px solid #fecaca;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;color:#ef4444;font-family:inherit;margin-top:4px">Cancel recurring series</button>` : ''}
+          ${ev.recurring_group_id ? '<button id="__edit-cancel-recur" style="background:none;border:1px solid #fecaca;border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;color:#ef4444;font-family:inherit;margin-top:4px">Cancel recurring series</button>' : ''}
         </div>
       </div>`;
 
