@@ -101,7 +101,7 @@ serve(async (req) => {
         start_time:    startTime,
         end_time:      e.end?.dateTime ?? e.end?.date ?? startTime,
         location:      e.location ?? null,
-        reminder_sent: prev && prev.start_time === startTime ? prev.reminder_sent : false,
+        reminder_sent: prev ? (new Date(prev.start_time).getTime() === new Date(startTime).getTime() ? prev.reminder_sent : false) : false,
         phone:         prev?.phone ?? null,
         last_synced:   now.toISOString(),
       };
