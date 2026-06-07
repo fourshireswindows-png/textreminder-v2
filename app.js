@@ -506,16 +506,16 @@ TextReminder's free plan includes 20 SMS per month — enough for a week of appo
       const newEnd = new Date(newStart.getTime()+dur);
 
       // 1. Update this event
-      const res = await fetch(SB_URL+'/rest/v1/calendar_events?id=eq.'+ev.id, {
-        method:'PATCH',
-        headers:sbHeaders(),
-        body:JSON.stringify({title:title,start_time:newStart.toISOString(),end_time:newEnd.toISOString(),phone:phone||null})
+      const res = await fetch(SB_URL+'/functions/v1/edit-calendar-event', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+getToken()},
+        body:JSON.stringify({id:ev.id,title:title,start_time:newStart.toISOString(),end_time:newEnd.toISOString(),phone:phone||null})
       });
 
-      const resData=await res.json().catch(()=>[]);
-      if(!res.ok||(Array.isArray(resData)&&resData.length===0)){
+      if(!res.ok){
+        const errBody = await res.json().catch(()=>({}));
         btn.textContent='Save Changes'; btn.disabled=false;
-        errEl.style.display='block'; errEl.textContent='Save failed — try signing out and back in.'; return;
+        errEl.style.display='block'; errEl.textContent='Save failed: '+(errBody.error||res.status); return;
       }
 
       // 2. Create recurring copies if requested
