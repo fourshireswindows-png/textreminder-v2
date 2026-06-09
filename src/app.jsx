@@ -306,7 +306,7 @@ function PublicNav({ onLogin, onSignup, onNavigate }) {
           <LogoMark />
         </button>
         <div className="hide-mobile" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {[['pricing','Pricing'],['blog','Blog'],['compare','Compare'],['resources','Resources']].map(([k,l]) => (
+          {[['pricing','Pricing'],['roi-calculator','ROI Calculator'],['blog','Blog'],['compare','Compare'],['resources','Resources']].map(([k,l]) => (
             <button key={k} className="btn-ghost" onClick={() => onNavigate && onNavigate(k)} style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>{l}</button>
           ))}
         </div>
@@ -503,6 +503,9 @@ function HomePage({ onLogin, onSignup, onNavigate }) {
 
       {/* Pricing */}
       <PricingSection onSignup={onSignup} />
+
+      {/* ROI Calculator */}
+      <RoiSection onSignup={onSignup} />
 
       {/* From the Blog */}
       <BlogPreviewSection onNavigate={onNavigate} />
@@ -1050,6 +1053,97 @@ function BlogPage({ onSignup, onNavigate }) {
   )
 }
 
+// ─── ROI Calculator Section ───────────────────────────────────────────────────
+function RoiSection({ onSignup }) {
+  const [jobs, setJobs] = useState(20)
+  const [val,  setVal]  = useState(150)
+  const [rate, setRate] = useState(15)
+
+  const jobsLostYear  = Math.round(jobs * 52 * (rate / 100))
+  const recovered     = Math.round(jobsLostYear * 0.8)
+  const extraRevenue  = recovered * val
+  const planCost      = extraRevenue > 10000 ? 348 : extraRevenue > 4000 ? 180 : 0
+  const planName      = extraRevenue > 10000 ? 'Professional (£29/mo)' : extraRevenue > 4000 ? 'Starter (£15/mo)' : 'Free plan'
+  const netGain       = extraRevenue - planCost
+  const fmt           = n => '£' + n.toLocaleString('en-GB')
+
+  return (
+    <section id="roi-calculator" style={{ background: '#faf5ff', padding: '88px 20px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ display: 'inline-block', background: '#faf5ff', color: C.purple, fontSize: 11, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', padding: '5px 14px', borderRadius: 20, marginBottom: 14, border: `1px solid #e9d5ff` }}>ROI Calculator</div>
+          <h2 style={{ fontSize: 'clamp(26px,4vw,38px)', fontWeight: 800, letterSpacing: '-0.8px', marginBottom: 12 }}>How much are no-shows costing you?</h2>
+          <p style={{ fontSize: 16, color: C.muted, maxWidth: 520, margin: '0 auto' }}>Enter your numbers to see what you could get back.</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 24, alignItems: 'start' }}>
+          {/* Inputs */}
+          <div style={{ background: '#fff', borderRadius: 20, padding: 32, boxShadow: '0 4px 24px rgba(168,85,247,0.08)', border: '1px solid #f3e8ff' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 24 }}>Your numbers</h3>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: C.muted, display: 'block', marginBottom: 8 }}>Jobs per week</label>
+              <input type="number" min={1} max={200} value={jobs}
+                onChange={e => setJobs(Math.max(1, parseInt(e.target.value) || 1))}
+                className="inp" />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: C.muted, display: 'block', marginBottom: 8 }}>Average job value (£)</label>
+              <input type="number" min={1} max={5000} value={val}
+                onChange={e => setVal(Math.max(1, parseInt(e.target.value) || 1))}
+                className="inp" />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: C.muted, display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                No-show rate <span style={{ color: C.purple, fontWeight: 700 }}>{rate}%</span>
+              </label>
+              <input type="range" min={1} max={40} value={rate}
+                onChange={e => setRate(parseInt(e.target.value))}
+                style={{ width: '100%', accentColor: C.purple }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.mutedLight, marginTop: 4 }}>
+                <span>Low (1%)</span><span>High (40%)</span>
+              </div>
+            </div>
+          </div>
+          {/* Results */}
+          <div style={{ background: `linear-gradient(135deg,${C.purple},${C.pink})`, borderRadius: 20, padding: 32, color: '#fff' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24, opacity: 0.9 }}>Your results</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[
+                ['No-shows per year',      jobsLostYear],
+                ['Jobs recovered (80%)',   recovered],
+                ['Revenue recovered',      fmt(extraRevenue)],
+                [`TextReminder (${planName})`, planCost === 0 ? 'Free' : '-' + fmt(planCost) + '/yr'],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                  <span style={{ fontSize: 14, opacity: 0.85 }}>{label}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800 }}>{value}</span>
+                </div>
+              ))}
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>Additional revenue</span>
+                <span style={{ fontSize: 28, fontWeight: 800 }}>{fmt(netGain)}</span>
+              </div>
+            </div>
+            <button onClick={onSignup} style={{ width: '100%', marginTop: 24, background: '#fff', color: C.purple, border: 'none', borderRadius: 12, padding: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Start free — no card needed
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// PAGE: ROI CALCULATOR
+function RoiCalculatorPage({ onLogin, onSignup, onNavigate }) {
+  return (
+    <div style={{ background: '#fff' }}>
+      <PublicNav onLogin={onLogin} onSignup={onSignup} onNavigate={onNavigate} />
+      <RoiSection onSignup={onSignup} />
+      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
+    </div>
+  )
+}
+
 // PAGE: PRICING
 function PricingPage({ onLogin, onSignup, onNavigate }) {
   return (
@@ -1151,7 +1245,7 @@ function AppRouter({ user, loading, onLogout }) {
 
   function nav(page, slug) {
     const map = {
-      home: '/', pricing: '/pricing', blog: '/blog', compare: '/compare',
+      home: '/', pricing: '/pricing', 'roi-calculator': '/roi-calculator', blog: '/blog', compare: '/compare',
       'blog-post': `/blog/${slug || ''}`, resources: '/',
       'auth-login': '/login', 'auth-signup': '/signup',
       dashboard: '/dashboard', upcoming: '/upcoming', settings: '/settings',
@@ -1176,6 +1270,7 @@ function AppRouter({ user, loading, onLogout }) {
     <Routes>
       <Route path="/"                element={<HomePage {...pub} />} />
       <Route path="/pricing"         element={<PricingPage {...pub} />} />
+      <Route path="/roi-calculator"  element={<RoiCalculatorPage {...pub} />} />
       <Route path="/blog"            element={<BlogPage   {...pub} />} />
       <Route path="/blog/:slug"      element={<BlogPostRoute {...pub} />} />
       <Route path="/compare"         element={<ComparePage {...pub} />} />
