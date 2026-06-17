@@ -704,7 +704,7 @@ function SiteFooter({ onNavigate, onSignup }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {navLinks.map(([k, l]) => (
                 k === 'privacy'
-                  ? <a key={k} href="/privacy.html" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'left', textDecoration: 'none', transition: 'color 0.15s' }}
+                  ? <a key={k} href="/privacy" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'left', textDecoration: 'none', transition: 'color 0.15s' }}
                       onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.85)'}
                       onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.5)'}>{l}</a>
                   : <button key={k} onClick={() => onNavigate && onNavigate(k)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0, transition: 'color 0.15s' }}

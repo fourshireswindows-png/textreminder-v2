@@ -6,16 +6,11 @@
   <script>
     // GitHub Pages SPA redirect: encode the path into a query param and redirect to index.html
     var l = window.location;
-    // Static pages that should not go through the React app
-    if (l.pathname === '/privacy' || l.pathname === '/privacy/') {
-      l.replace(l.protocol + '//' + l.host + '/privacy.html');
-    } else {
-      l.replace(
-        l.protocol + '//' + l.host + '/?p=' +
-        encodeURIComponent(l.pathname + l.search) +
-        (l.hash || '')
-      );
-    }
+    l.replace(
+      l.protocol + '//' + l.host + '/?p=' +
+      encodeURIComponent(l.pathname + l.search) +
+      (l.hash || '')
+    );
   </script>
 </head>
 <body></body>
