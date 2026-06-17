@@ -63,7 +63,7 @@ export default function Layout({ user }) {
           </button>
           <div style={{ marginTop:12, display:'flex', gap:10, flexWrap:'wrap' }}>
             <a href="/terms" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Terms</a>
-            <a href="/privacy" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Privacy</a>
+            <a href="/privacy.html" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Privacy Policy</a>
             <a href="mailto:support@textreminder.co.uk" style={{ fontSize:10, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>Support</a>
           </div>
         </div>
