@@ -1246,6 +1246,14 @@ function BlogPostRoute(props) {
 // ─── AppRouter (must live inside BrowserRouter to use useNavigate) ────────────
 function AppRouter({ user, loading, onLogout }) {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // After Google OAuth, user lands at '/' — redirect to dashboard
+  useEffect(() => {
+    if (!loading && user && ['/', '/login', '/signup'].includes(location.pathname)) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, loading, location.pathname])
 
   function nav(page, slug) {
     const map = {
@@ -1308,19 +1316,4 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  return (
-    <BrowserRouter>
-      <GlobalStyles />
-      <AiChat />
-      <PwaBanner />
-      <AppRouter
-        user={user}
-        loading={loading}
-        onLogout={() => supabase.auth.signOut().then(() => setUser(null))}
-      />
-    </BrowserRouter>
-  )
-}
+    return () 
