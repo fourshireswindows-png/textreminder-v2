@@ -18,6 +18,7 @@ export default function Upcoming() {
   const [editingPhone, setEditingPhone] = useState(null)
   const [phoneVal, setPhoneVal]     = useState('')
   const [editingTemplate, setEditingTemplate] = useState(null)
+  const [pendingTemplateIds, setPendingTemplateIds] = useState([])
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
@@ -330,10 +331,12 @@ export default function Upcoming() {
     setPhoneVal('')
   }
 
-  async function saveTemplates(eventId, templateIds) {
-    await supabase.from('calendar_events').update({ template_ids: templateIds }).eq('id', eventId)
-    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, template_ids: templateIds } : e))
+  async function commitTemplates(eventId) {
+    if (!pendingTemplateIds.length) return
+    await supabase.from('calendar_events').update({ template_ids: pendingTemplateIds }).eq('id', eventId)
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, template_ids: pendingTemplateIds } : e))
     setEditingTemplate(null)
+    setPendingTemplateIds([])
   }
 
   const todayStr = new Date().toDateString()
@@ -387,11 +390,13 @@ export default function Upcoming() {
         <div style={{ marginTop: 4, padding: '4px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Select templates:</div>
           {templates.map(t => {
-            const checked = activeIds.includes(t.id)
+            const checked = pendingTemplateIds.includes(t.id)
             const toggle = () => {
-              const next = checked ? activeIds.filter(id => id !== t.id) : [...activeIds, t.id]
+              const next = checked
+                ? pendingTemplateIds.filter(id => id !== t.id)
+                : [...pendingTemplateIds, t.id]
               if (next.length === 0) return
-              saveTemplates(ev.id, next)
+              setPendingTemplateIds(next)
             }
             return (
               <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: text, cursor: 'pointer', marginBottom: 2 }}>
@@ -401,10 +406,10 @@ export default function Upcoming() {
               </label>
             )
           })}
-          <button onClick={() => setEditingTemplate(null)} style={{ marginTop: 4, background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+          <button onClick={() => commitTemplates(ev.id)} style={{ marginTop: 4, background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
         </div>
       ) : (
-        <div onClick={() => setEditingTemplate(ev.id)}
+        <div onClick={() => { setEditingTemplate(ev.id); setPendingTemplateIds(activeIds) }}
           style={{ fontSize: 9, color: purple, marginTop: 2, fontWeight: 600, opacity: 0.75, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
           title="Click to change templates">
           📋 {activeTemplates.length ? activeTemplates.map(t => t.name).join(', ') : 'Template 1'} <span style={{ opacity: 0.5, fontSize: 8 }}>▾</span>
