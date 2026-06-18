@@ -1320,6 +1320,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <GlobalStyles />
       <AppRouter user={user} loading={loading} onLogout={onLogout} />
     </BrowserRouter>
   )
