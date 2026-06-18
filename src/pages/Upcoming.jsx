@@ -389,7 +389,7 @@ export default function Upcoming() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: text, marginBottom: 4, fontFamily: 'Syne,sans-serif' }}>Upcoming Appointments</h1>
+          <h1 style={{ fontSize: 'clamp(22px,3.5vw,32px)', fontWeight: 800, color: text, marginBottom: 4, letterSpacing: '-0.6px' }}>Upcoming Appointments</h1>
           <div style={{ fontSize: 13, color: muted, display: 'flex', alignItems: 'center', gap: 8 }}>
             {profile?.calendar_provider ? (
               <><span style={{ width: 6, height: 6, borderRadius: '50%', background: green, display: 'inline-block' }} /> Synced from {profile.calendar_provider} calendar</>

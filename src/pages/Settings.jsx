@@ -72,7 +72,7 @@ export default function Settings() {
     <div>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
         <div>
-          <h1 style={{ fontSize:22, fontWeight:800, color:'#0f172a', marginBottom:4, fontFamily:'Syne,sans-serif' }}>Settings</h1>
+          <h1 style={{ fontSize:'clamp(22px,3.5vw,32px)', fontWeight:800, color:'#0f172a', marginBottom:4, letterSpacing:'-0.6px' }}>Settings</h1>
           <div style={{ fontSize:13, color:'#94a3b8' }}>Configure your account and reminders</div>
         </div>
         <button onClick={save} disabled={saving} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:8 }}>
