@@ -1,22 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 
-const GOOGLE_CLIENT_ID    = '508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com'
-const GOOGLE_REDIRECT_URI = 'https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/google-calendar-callback'
-const GOOGLE_SCOPE        = 'https://www.googleapis.com/auth/calendar.readonly'
-
 const DEFAULT_TEMPLATES = [
   { id: 1, name: 'Appointment Reminder', body: 'Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.' },
   { id: 2, name: 'Day-of Reminder',      body: 'Hi {name}, your appointment is today at {time}. See you then! Call {business_phone} if needed. Reply STOP to opt out.' },
   { id: 3, name: 'Quick Reminder',       body: 'Hi {name}, reminder: appointment at {time}. Call {business_phone} to reschedule. Reply STOP to opt out.' },
 ]
-
-async function connectGoogle() {
-  const { data: { user } } = await supabase.auth.getUser()
-  const state = user.id
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=consent&state=${state}`
-  window.location.href = url
-}
 
 function Section({ title, sub, children }) {
   return (
@@ -38,8 +27,6 @@ export default function Settings() {
     phone: '',
     message_templates: DEFAULT_TEMPLATES,
     reminder_schedule: [{ value:24, unit:'hours' }],
-    channels: { sms:true, email:false, whatsapp:false },
-    twilio_account_sid: '', twilio_auth_token: '', twilio_phone_number: '', resend_api_key: '',
   })
 
   useEffect(() => {
@@ -49,15 +36,10 @@ export default function Settings() {
       if (data) {
         setProfile(data)
         setForm({
-          business_name:      data.business_name || '',
-          phone:              data.phone || '',
-          message_templates:  data.message_templates || DEFAULT_TEMPLATES,
-          reminder_schedule:  data.reminder_schedule || [{ value:24, unit:'hours' }],
-          channels:           data.channels || { sms:true, email:false, whatsapp:false },
-          twilio_account_sid: data.twilio_account_sid || '',
-          twilio_auth_token:  data.twilio_auth_token || '',
-          twilio_phone_number:data.twilio_phone_number || '',
-          resend_api_key:     data.resend_api_key || '',
+          business_name:     data.business_name || '',
+          phone:             data.phone || '',
+          message_templates: data.message_templates || DEFAULT_TEMPLATES,
+          reminder_schedule: data.reminder_schedule || [{ value:24, unit:'hours' }],
         })
       } else {
         // First login — insert a fresh profile row
@@ -70,7 +52,6 @@ export default function Settings() {
   }, [])
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const setChannel = (k, v) => setForm(p => ({ ...p, channels: { ...p.channels, [k]: v } }))
 
   async function save() {
     setSaving(true)
@@ -204,101 +185,6 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Channels */}
-      <Section title="Reminder Channels" sub="Choose how reminders are sent">
-        {[
-          { key:'sms',      icon:'📱', label:'SMS',      desc:'Text message via Twilio' },
-          { key:'email',    icon:'✉️', label:'Email',    desc:'Email via Resend' },
-          { key:'whatsapp', icon:'💬', label:'WhatsApp', desc:'WhatsApp Business via Twilio' },
-        ].map(ch => (
-          <div key={ch.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:'1px solid #f1f5f9' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <span style={{ fontSize:22 }}>{ch.icon}</span>
-              <div>
-                <div style={{ fontSize:14, fontWeight:600, color:'#0f172a' }}>{ch.label}</div>
-                <div style={{ fontSize:12, color:'#94a3b8' }}>{ch.desc}</div>
-              </div>
-            </div>
-            <button onClick={() => setChannel(ch.key, !form.channels[ch.key])}
-              style={{ width:44, height:24, borderRadius:12, border:'none', cursor:'pointer', background:form.channels[ch.key]?'#a855f7':'#e2e8f0', transition:'all 0.2s', position:'relative' }}>
-              <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', position:'absolute', top:3, left:form.channels[ch.key]?23:3, transition:'all 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }}/>
-            </button>
-          </div>
-        ))}
-      </Section>
-
-      {/* Calendar */}
-      <Section title="Calendar Connection" sub="Connect your calendar to automatically import appointments">
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-          {[
-            { key:'google',  icon:'📅', label:'Google Calendar', desc:'Gmail / Google Workspace' },
-            { key:'apple',   icon:'🍎', label:'Apple Calendar',  desc:'iCloud Calendar' },
-            { key:'outlook', icon:'💼', label:'Outlook',         desc:'Microsoft 365' },
-          ].map(cal => (
-            <div key={cal.key} style={{ border:`1px solid ${profile?.calendar_provider===cal.key?'#a855f7':'#e2e8f0'}`, borderRadius:10, padding:'14px 16px', background:profile?.calendar_provider===cal.key?'#f3e8ff':'#fff', textAlign:'center' }}>
-              <div style={{ fontSize:24, marginBottom:6 }}>{cal.icon}</div>
-              <div style={{ fontSize:13, fontWeight:700, color:'#0f172a', marginBottom:3 }}>{cal.label}</div>
-              <div style={{ fontSize:11, color:'#94a3b8', marginBottom:10 }}>{cal.desc}</div>
-              {profile?.calendar_provider === cal.key ? (
-                <div style={{ fontSize:11, color:'#22c55e', fontWeight:700 }}>✓ Connected</div>
-              ) : (
-                <button
-                  onClick={cal.key === 'google' ? connectGoogle : undefined}
-                  style={{ fontSize:11, fontWeight:700, color:'#a855f7', background:'none', border:'1px solid #e9d5ff', borderRadius:6, padding:'5px 12px', cursor:cal.key==='google'?'pointer':'not-allowed', fontFamily:'inherit', opacity:cal.key==='google'?1:0.5 }}>
-                  {cal.key === 'google' ? 'Connect' : 'Coming soon'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Twilio */}
-      <Section title="Twilio (SMS & WhatsApp)" sub="Add your Twilio credentials to enable SMS and WhatsApp sending. Get these from twilio.com">
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          {[
-            { label:'Account SID',  key:'twilio_account_sid',  placeholder:'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' },
-            { label:'Auth Token',   key:'twilio_auth_token',   placeholder:'Your Twilio auth token', type:'password' },
-            { label:'Phone Number', key:'twilio_phone_number', placeholder:'+441234567890' },
-          ].map(f => (
-            <div key={f.key}>
-              <label style={{ fontSize:11, fontWeight:700, color:'#475569', letterSpacing:'0.5px', textTransform:'uppercase', display:'block', marginBottom:5 }}>{f.label}</label>
-              <input type={f.type||'text'} value={form[f.key]} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder} className="input"/>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Resend */}
-      <Section title="Resend (Email)" sub="Add your Resend API key to enable email reminders. Get one free at resend.com">
-        <div>
-          <label style={{ fontSize:11, fontWeight:700, color:'#475569', letterSpacing:'0.5px', textTransform:'uppercase', display:'block', marginBottom:5 }}>Resend API Key</label>
-          <input type="password" value={form.resend_api_key} onChange={e => set('resend_api_key', e.target.value)} placeholder="re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className="input"/>
-        </div>
-      </Section>
-
-      {/* Plan */}
-      <Section title="Plan & Billing">
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 16px', background:profile?.plan==='trial'?'#fef9c3':profile?.plan==='annual'?'#f0fdf4':'#fdf4ff', borderRadius:10, border:'1px solid #e9d5ff' }}>
-          <div>
-            <div style={{ fontSize:14, fontWeight:700, color:'#0f172a', textTransform:'capitalize' }}>{profile?.plan || 'Trial'} Plan</div>
-            <div style={{ fontSize:12, color:'#94a3b8', marginTop:2 }}>
-              {profile?.plan==='trial'
-                ? 'Trial active'
-                : profile?.plan==='pro' ? '20/month' : '180/year'}
-            </div>
-          </div>
-          {(!profile?.plan || profile?.plan === 'trial') && (
-            <a href="https://buy.stripe.com/placeholder" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:700, textDecoration:'none' }}>Upgrade</a>
-          )}
-        </div>
-      </Section>
-
-      <div style={{ display:'flex', justifyContent:'flex-end', marginTop:8 }}>
-        <button onClick={save} disabled={saving} className="btn-primary" style={{ padding:'13px 32px', fontSize:15 }}>
-          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save All Settings'}
-        </button>
-      </div>
     </div>
   )
 }
