@@ -26,7 +26,7 @@ export default function Settings() {
     business_name: '',
     phone: '',
     message_templates: DEFAULT_TEMPLATES,
-    reminder_schedule: [{ value:24, unit:'hours' }],
+    reminder_schedule: [{ value:24, unit:'hours', template_id:1 }],
   })
 
   useEffect(() => {
@@ -39,10 +39,9 @@ export default function Settings() {
           business_name:     data.business_name || '',
           phone:             data.phone || '',
           message_templates: data.message_templates || DEFAULT_TEMPLATES,
-          reminder_schedule: data.reminder_schedule || [{ value:24, unit:'hours' }],
+          reminder_schedule: data.reminder_schedule || [{ value:24, unit:'hours', template_id:1 }],
         })
       } else {
-        // First login — insert a fresh profile row
         const { data: { user: u } } = await supabase.auth.getUser()
         await supabase.from('profiles').insert({ id: u.id })
       }
@@ -77,11 +76,10 @@ export default function Settings() {
           <div style={{ fontSize:13, color:'#94a3b8' }}>Configure your account and reminders</div>
         </div>
         <button onClick={save} disabled={saving} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
+          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
         </button>
       </div>
 
-      {/* Business */}
       <Section title="Business Details" sub="Used in your reminder messages">
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
           <div>
@@ -95,8 +93,7 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Message Templates */}
-      <Section title="Message Templates" sub="3 customisable templates — pick one per appointment. Use {name}, {time}, {business_phone} as placeholders.">
+      <Section title="Message Templates" sub="3 customisable templates. Use {name}, {time}, {business_phone} as placeholders.">
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
           {form.message_templates.map((tpl, i) => {
             const preview = tpl.body
@@ -136,11 +133,10 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Reminder Schedule */}
-      <Section title="Reminder Schedule" sub="Send up to 5 reminders before each appointment.">
+      <Section title="Reminder Schedule" sub="Send up to 5 reminders before each appointment. Choose a template for each send.">
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {form.reminder_schedule.map((r, i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
               <span style={{ fontSize:13, color:'#94a3b8', minWidth:24, textAlign:'right' }}>#{i+1}</span>
               <input
                 type="number" min={1} max={999} value={r.value}
@@ -159,28 +155,42 @@ export default function Settings() {
                   s[i] = { ...s[i], unit: e.target.value }
                   set('reminder_schedule', s)
                 }}
-                style={{ border:'1.5px solid #e2e8f0', borderRadius:8, padding:'8px 12px', fontSize:14, fontFamily:'inherit', outline:'none', background:'#fff', cursor:'pointer', flex:1 }}
+                style={{ border:'1.5px solid #e2e8f0', borderRadius:8, padding:'8px 12px', fontSize:14, fontFamily:'inherit', outline:'none', background:'#fff', cursor:'pointer', flex:1, minWidth:120 }}
                 onFocus={e => e.target.style.borderColor='#a855f7'} onBlur={e => e.target.style.borderColor='#e2e8f0'}
               >
                 <option value="hours">hours before</option>
                 <option value="days">days before</option>
                 <option value="weeks">weeks before</option>
               </select>
+              <select
+                value={r.template_id || 1}
+                onChange={e => {
+                  const s = [...form.reminder_schedule]
+                  s[i] = { ...s[i], template_id: parseInt(e.target.value) }
+                  set('reminder_schedule', s)
+                }}
+                style={{ border:'1.5px solid #e2e8f0', borderRadius:8, padding:'8px 12px', fontSize:13, fontFamily:'inherit', outline:'none', background:'#fff', cursor:'pointer', minWidth:160 }}
+                onFocus={e => e.target.style.borderColor='#a855f7'} onBlur={e => e.target.style.borderColor='#e2e8f0'}
+              >
+                {form.message_templates.map(tpl => (
+                  <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>
+                ))}
+              </select>
               {form.reminder_schedule.length > 1 && (
                 <button onClick={() => set('reminder_schedule', form.reminder_schedule.filter((_, j) => j !== i))}
-                  style={{ width:30, height:30, borderRadius:'50%', border:'1px solid #fecdd3', background:'#fff5f5', color:'#ef4444', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>×</button>
+                  style={{ width:30, height:30, borderRadius:'50%', border:'1px solid #fecdd3', background:'#fff5f5', color:'#ef4444', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:'inherit' }}>x</button>
               )}
             </div>
           ))}
           {form.reminder_schedule.length < 5 && (
-            <button onClick={() => set('reminder_schedule', [...form.reminder_schedule, { value:24, unit:'hours' }])}
+            <button onClick={() => set('reminder_schedule', [...form.reminder_schedule, { value:24, unit:'hours', template_id:1 }])}
               style={{ alignSelf:'flex-start', marginTop:4, padding:'8px 16px', borderRadius:8, border:'1.5px dashed #e9d5ff', background:'#faf5ff', color:'#a855f7', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}
               onMouseEnter={e => e.target.style.borderColor='#a855f7'} onMouseLeave={e => e.target.style.borderColor='#e9d5ff'}>
               + Add another reminder
             </button>
           )}
           <div style={{ fontSize:12, color:'#94a3b8', marginTop:4 }}>
-            e.g. send one 24 hours before <em>and</em> one 2 hours before for a double reminder.
+            e.g. send template 1 at 24 hours before, then template 2 at 2 hours before.
           </div>
         </div>
       </Section>
