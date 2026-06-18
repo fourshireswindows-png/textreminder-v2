@@ -648,7 +648,7 @@ If you're tired of driving to empty houses, give it a go — the first 20 remind
 
 // ─── Blog Preview Section ─────────────────────────────────────────────────────
 function BlogPreviewSection({ onNavigate }) {
-  const posts = BLOG_POSTS.slice(0, 3)
+  const posts = BLOG_POSTS.slice(0, 4)
   if (posts.length === 0) return null
   return (
     <section style={{ padding: '80px 20px', borderTop: `1px solid ${C.border}` }}>
@@ -660,13 +660,12 @@ function BlogPreviewSection({ onNavigate }) {
           </div>
           <button className="btn-secondary" onClick={() => onNavigate && onNavigate('blog')} style={{ fontSize: 13 }}>View all posts <IC.ChevRight /></button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
           {posts.map(post => (
             <div key={post.slug} className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
               onClick={() => onNavigate && onNavigate('blog-post', post.slug)}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-              <div style={{ background: `linear-gradient(135deg, ${C.pink}18, ${C.purple}18)`, borderRadius: 8, height: 140, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>📝</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '3px 10px', borderRadius: 12 }}>{post.category}</span>
                 <span style={{ fontSize: 11, color: C.muted }}>{post.readTime}</span>
