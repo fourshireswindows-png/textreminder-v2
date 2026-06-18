@@ -8,6 +8,38 @@ const DEFAULT_TEMPLATES = [
   { id: 3, name: 'Quick Reminder' },
 ]
 
+function PhonesInput({ phones, onChange }) {
+  const purple = '#a855f7'
+  const inputStyle = {
+    width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: 14,
+    border: '1px solid #e9d5ff', borderRadius: 7, outline: 'none', fontFamily: 'inherit', color: '#1a1a2e',
+  }
+  return (
+    <div>
+      {phones.map((p, i) => (
+        <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+          <input
+            type="tel" inputMode="numeric" value={p}
+            onChange={e => { const next = [...phones]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); onChange(next) }}
+            placeholder={i === 0 ? '07700 900123' : 'Additional number'}
+            style={{ ...inputStyle, margin: 0 }}
+          />
+          {phones.length > 1 && (
+            <button onClick={() => onChange(phones.filter((_, j) => j !== i))}
+              style={{ flexShrink: 0, width: 30, height: 36, borderRadius: 7, border: '1px solid #fecdd3', background: '#fff5f5', color: '#ef4444', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>x</button>
+          )}
+        </div>
+      ))}
+      {phones.length < 5 && (
+        <button onClick={() => onChange([...phones, ''])}
+          style={{ background: 'none', border: 'none', color: purple, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+          + Add another number
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function Upcoming() {
   const [events, setEvents]         = useState([])
   const [profile, setProfile]       = useState(null)
@@ -370,33 +402,6 @@ export default function Upcoming() {
     border: `1px solid ${border}`, borderRadius: 7, outline: 'none', fontFamily: 'inherit', color: text,
   }
   const todayIso = new Date().toISOString().split('T')[0]
-
-  function PhonesInput({ phones, onChange }) {
-    return (
-      <div>
-        {phones.map((p, i) => (
-          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
-            <input
-              type="tel" inputMode="numeric" value={p}
-              onChange={e => { const next = [...phones]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); onChange(next) }}
-              placeholder={i === 0 ? '07700 900123' : 'Additional number'}
-              style={{ ...inputStyle, margin: 0 }}
-            />
-            {phones.length > 1 && (
-              <button onClick={() => onChange(phones.filter((_, j) => j !== i))}
-                style={{ flexShrink: 0, width: 30, height: 36, borderRadius: 7, border: '1px solid #fecdd3', background: '#fff5f5', color: '#ef4444', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>x</button>
-            )}
-          </div>
-        ))}
-        {phones.length < 5 && (
-          <button onClick={() => onChange([...phones, ''])}
-            style={{ background: 'none', border: 'none', color: purple, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-            + Add another number
-          </button>
-        )}
-      </div>
-    )
-  }
 
   const AppointmentBlock = ({ ev }) => {
     const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
