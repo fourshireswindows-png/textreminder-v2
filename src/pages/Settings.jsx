@@ -22,6 +22,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const [form, setForm]       = useState({
     business_name: '',
     phone: '',
@@ -54,11 +55,24 @@ export default function Settings() {
 
   async function save() {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('profiles').upsert({ id: user.id, ...form })
+    setSaveError(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const payload = {
+        id: user.id,
+        business_name: form.business_name,
+        phone: form.phone,
+        message_templates: form.message_templates,
+        reminder_schedule: form.reminder_schedule,
+      }
+      const { error } = await supabase.from('profiles').upsert(payload)
+      if (error) { setSaveError(error.message); console.error('Save error:', error) }
+      else { setSaved(true); setTimeout(() => setSaved(false), 2500) }
+    } catch (e) {
+      setSaveError(e.message)
+      console.error('Save exception:', e)
+    }
     setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   function updateTemplate(i, field, value) {
@@ -75,9 +89,12 @@ export default function Settings() {
           <h1 style={{ fontSize:'clamp(22px,3.5vw,32px)', fontWeight:800, color:'#0f172a', marginBottom:4, letterSpacing:'-0.6px' }}>Settings</h1>
           <div style={{ fontSize:13, color:'#94a3b8' }}>Configure your account and reminders</div>
         </div>
-        <button onClick={save} disabled={saving} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
-        </button>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
+          <button onClick={save} disabled={saving} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:8 }}>
+            {saving ? 'Saving...' : saved ? 'Saved! ✓' : 'Save Changes'}
+          </button>
+          {saveError && <div style={{ fontSize:11, color:'#ef4444', maxWidth:220, textAlign:'right' }}>{saveError}</div>}
+        </div>
       </div>
 
       <Section title="Business Details" sub="Used in your reminder messages">
