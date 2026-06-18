@@ -84,17 +84,9 @@ export default function Settings() {
 
   return (
     <div>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
-        <div>
-          <h1 style={{ fontSize:'clamp(22px,3.5vw,32px)', fontWeight:800, color:'#0f172a', marginBottom:4, letterSpacing:'-0.6px' }}>Settings</h1>
-          <div style={{ fontSize:13, color:'#94a3b8' }}>Configure your account and reminders</div>
-        </div>
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
-          <button onClick={save} disabled={saving} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:8 }}>
-            {saving ? 'Saving...' : saved ? 'Saved! ✓' : 'Save Changes'}
-          </button>
-          {saveError && <div style={{ fontSize:11, color:'#ef4444', maxWidth:220, textAlign:'right' }}>{saveError}</div>}
-        </div>
+      <div style={{ marginBottom:24 }}>
+        <h1 style={{ fontSize:'clamp(22px,3.5vw,32px)', fontWeight:800, color:'#0f172a', marginBottom:4, letterSpacing:'-0.6px' }}>Settings</h1>
+        <div style={{ fontSize:13, color:'#94a3b8' }}>Configure your account and reminders</div>
       </div>
 
       <Section title="Business Details" sub="Used in your reminder messages">
@@ -211,6 +203,13 @@ export default function Settings() {
           </div>
         </div>
       </Section>
+
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6, marginTop:8 }}>
+        <button onClick={save} disabled={saving} className="btn-primary" style={{ display:'flex', alignItems:'center', gap:8 }}>
+          {saving ? 'Saving...' : saved ? 'Saved! ✓' : 'Save Changes'}
+        </button>
+        {saveError && <div style={{ fontSize:11, color:'#ef4444', maxWidth:220, textAlign:'right' }}>{saveError}</div>}
+      </div>
 
     </div>
   )

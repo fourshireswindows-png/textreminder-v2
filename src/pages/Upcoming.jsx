@@ -15,40 +15,34 @@ export default function Upcoming() {
   const [loading, setLoading]       = useState(true)
   const [weekOffset, setWeekOffset] = useState(0)
   const [dayOffset, setDayOffset]   = useState(0)
-  const [editingPhone, setEditingPhone] = useState(null)
-  const [phoneVal, setPhoneVal]     = useState('')
+  const [editingPhones, setEditingPhones] = useState(null)
+  const [phonesVal, setPhonesVal]   = useState([''])
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [pendingTemplateIds, setPendingTemplateIds] = useState([])
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
 
-  // Add appointment modal
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm] = useState({
-    title: '', date: '', time: '09:00', phone: '', templateId: 1,
+    title: '', date: '', time: '09:00', phones: [''], templateId: 1,
     recurring: false, intervalNum: 1, intervalUnit: 'weeks',
     endType: 'date', endDate: '',
   })
   const [savingAdd, setSavingAdd] = useState(false)
   const [addError, setAddError]   = useState('')
 
-  // Edit appointment modal
   const [editTarget, setEditTarget] = useState(null)
   const [editForm, setEditForm] = useState({
-    title: '', date: '', time: '', phone: '', templateId: 1,
-    scope: 'one',
-    changeFreq: false,
+    title: '', date: '', time: '', phones: [''], templateId: 1,
+    scope: 'one', changeFreq: false,
     intervalNum: 1, intervalUnit: 'weeks',
     endType: 'date', endDate: '',
   })
   const [savingEdit, setSavingEdit] = useState(false)
   const [editError, setEditError]   = useState('')
 
-  // Delete confirm (recurring series)
   const [deleteTarget, setDeleteTarget] = useState(null)
-
-  // Calendar scroll ref — jumps to 9am on load
   const calendarRef = useRef(null)
 
   useEffect(() => {
@@ -94,7 +88,6 @@ export default function Upcoming() {
     return () => clearInterval(interval)
   }, [])
 
-  // Scroll calendar to 9am once loaded (each hour row = 56px)
   useEffect(() => {
     if (!loading && calendarRef.current) {
       calendarRef.current.scrollTop = 9 * 56
@@ -115,6 +108,26 @@ export default function Upcoming() {
     }
   }
 
+  function getEventPhones(ev) {
+    if (ev.phones && ev.phones.length > 0) return ev.phones
+    if (ev.phone) return [ev.phone]
+    return []
+  }
+
+  async function savePhones(eventId, phonesArr) {
+    const cleaned = phonesArr.map(p => (p || '').trim()).filter(Boolean)
+    const primaryPhone = cleaned[0] || null
+    const { error } = await supabase.from('calendar_events')
+      .update({ phones: cleaned, phone: primaryPhone })
+      .eq('id', eventId)
+    if (error) { console.error('Phone save error:', error); return }
+    setEvents(prev => prev.map(e => e.id === eventId
+      ? { ...e, phones: cleaned, phone: primaryPhone }
+      : e))
+    setEditingPhones(null)
+    setPhonesVal([''])
+  }
+
   async function saveManualAppointment() {
     setAddError('')
     if (!addForm.title.trim()) { setAddError('Please enter a title.'); return }
@@ -128,12 +141,15 @@ export default function Upcoming() {
     const { data: { user } } = await supabase.auth.getUser()
     const startDt = new Date(`${addForm.date}T${addForm.time}`)
     const endDt   = new Date(startDt.getTime() + 60 * 60 * 1000)
+    const cleanedPhones = addForm.phones.map(p => (p || '').trim()).filter(Boolean)
+    const primaryPhone  = cleanedPhones[0] || null
 
     if (!addForm.recurring) {
       const { error } = await supabase.from('calendar_events').insert({
         user_id: user.id, title: addForm.title.trim(),
         start_time: startDt.toISOString(), end_time: endDt.toISOString(),
-        phone: addForm.phone || null, is_manual: true, reminder_sent: false,
+        phone: primaryPhone, phones: cleanedPhones,
+        is_manual: true, reminder_sent: false,
         template_id: addForm.templateId || 1,
       })
       if (error) { setAddError('Failed to save. Try again.'); setSavingAdd(false); return }
@@ -151,7 +167,8 @@ export default function Upcoming() {
           user_id: user.id, title: addForm.title.trim(),
           start_time: new Date(cur).toISOString(),
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
-          phone: addForm.phone || null, is_manual: true, reminder_sent: false,
+          phone: primaryPhone, phones: cleanedPhones,
+          is_manual: true, reminder_sent: false,
           template_id: addForm.templateId || 1,
           recurring_group_id: groupId, recurring_interval_days: intervalDays,
           recurring_end_date: (addForm.endType === 'date' && addForm.endDate) ? addForm.endDate : null,
@@ -166,7 +183,7 @@ export default function Upcoming() {
     await loadEvents()
     setSavingAdd(false)
     setShowAddModal(false)
-    setAddForm({ title: '', date: '', time: '09:00', phone: '', templateId: 1, recurring: false, intervalNum: 1, intervalUnit: 'weeks', endType: 'date', endDate: '' })
+    setAddForm({ title: '', date: '', time: '09:00', phones: [''], templateId: 1, recurring: false, intervalNum: 1, intervalUnit: 'weeks', endType: 'date', endDate: '' })
   }
 
   function openEdit(ev) {
@@ -176,8 +193,10 @@ export default function Upcoming() {
     const dateStr = ev.start_time.slice(0, 10)
     const existingDays = ev.recurring_interval_days || 7
     const isWeeks = existingDays % 7 === 0
+    const existingPhones = getEventPhones(ev)
     setEditForm({
-      title: ev.title || '', date: dateStr, time: timeStr, phone: ev.phone || '',
+      title: ev.title || '', date: dateStr, time: timeStr,
+      phones: existingPhones.length ? existingPhones : [''],
       templateId: ev.template_id || 1,
       scope: 'one', changeFreq: false,
       intervalNum: isWeeks ? existingDays / 7 : existingDays,
@@ -201,12 +220,15 @@ export default function Upcoming() {
     const { data: { user } } = await supabase.auth.getUser()
     const newStart = new Date(`${editForm.date}T${editForm.time}`)
     const newEnd   = new Date(newStart.getTime() + 60 * 60 * 1000)
+    const cleanedPhones = editForm.phones.map(p => (p || '').trim()).filter(Boolean)
+    const primaryPhone  = cleanedPhones[0] || null
     const isRecurring = !!editTarget.recurring_group_id
 
     if (!isRecurring || editForm.scope === 'one') {
       await supabase.from('calendar_events').update({
         title: editForm.title.trim(), start_time: newStart.toISOString(),
-        end_time: newEnd.toISOString(), phone: editForm.phone || null,
+        end_time: newEnd.toISOString(),
+        phone: primaryPhone, phones: cleanedPhones,
         template_id: editForm.templateId || 1,
       }).eq('id', editTarget.id)
     } else {
@@ -236,7 +258,8 @@ export default function Upcoming() {
           user_id: user.id, title: editForm.title.trim(),
           start_time: new Date(cur).toISOString(),
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
-          phone: editForm.phone || null, is_manual: true, reminder_sent: false,
+          phone: primaryPhone, phones: cleanedPhones,
+          is_manual: true, reminder_sent: false,
           template_id: editForm.templateId || 1,
           recurring_group_id: editTarget.recurring_group_id,
           recurring_interval_days: intervalDays, recurring_end_date: endDate,
@@ -324,13 +347,6 @@ export default function Upcoming() {
       .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
   }
 
-  async function savePhone(eventId) {
-    await supabase.from('calendar_events').update({ phone: phoneVal }).eq('id', eventId)
-    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, phone: phoneVal } : e))
-    setEditingPhone(null)
-    setPhoneVal('')
-  }
-
   async function commitTemplates(eventId, templateIds) {
     if (!templateIds || !templateIds.length) return
     const ids = templateIds.map(Number)
@@ -355,39 +371,91 @@ export default function Upcoming() {
   }
   const todayIso = new Date().toISOString().split('T')[0]
 
+  function PhonesInput({ phones, onChange }) {
+    return (
+      <div>
+        {phones.map((p, i) => (
+          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+            <input
+              type="tel" inputMode="numeric" value={p}
+              onChange={e => { const next = [...phones]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); onChange(next) }}
+              placeholder={i === 0 ? '07700 900123' : 'Additional number'}
+              style={{ ...inputStyle, margin: 0 }}
+            />
+            {phones.length > 1 && (
+              <button onClick={() => onChange(phones.filter((_, j) => j !== i))}
+                style={{ flexShrink: 0, width: 30, height: 36, borderRadius: 7, border: '1px solid #fecdd3', background: '#fff5f5', color: '#ef4444', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>x</button>
+            )}
+          </div>
+        ))}
+        {phones.length < 5 && (
+          <button onClick={() => onChange([...phones, ''])}
+            style={{ background: 'none', border: 'none', color: purple, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+            + Add another number
+          </button>
+        )}
+      </div>
+    )
+  }
+
   const AppointmentBlock = ({ ev }) => {
     const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
     const activeTemplates = templates.filter(t => activeIds.includes(t.id))
+    const currentPhones = getEventPhones(ev)
+    const hasPhone = currentPhones.length > 0
+
     return (
     <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? pink : purple}`, position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span title={ev.reminder_sent ? "Reminder sent" : ev.phone ? "Reminder pending" : "No phone — reminder won't send"}
+        <span title={ev.reminder_sent ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
           style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-            background: ev.reminder_sent ? '#22c55e' : ev.phone ? '#f59e0b' : '#cbd5e1' }} />
+            background: ev.reminder_sent ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
         {new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {ev.title}
-        {ev.is_manual && ev.recurring_group_id && <span title="Recurring" style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>🔄</span>}
+        {ev.is_manual && ev.recurring_group_id && <span title="Recurring" style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>REC</span>}
       </div>
       {ev.is_manual && (
         <div style={{ position: 'absolute', top: 3, right: 3, display: 'flex', gap: 2 }}>
-          <button onClick={e => { e.stopPropagation(); openEdit(ev) }} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: '1px 3px', lineHeight: 1 }}>✏️</button>
-          <button onClick={e => { e.stopPropagation(); requestDelete(ev) }} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: '1px 3px', lineHeight: 1 }}>✕</button>
+          <button onClick={e => { e.stopPropagation(); openEdit(ev) }} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: '1px 3px', lineHeight: 1 }}>Edit</button>
+          <button onClick={e => { e.stopPropagation(); requestDelete(ev) }} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: '#94a3b8', padding: '1px 3px', lineHeight: 1 }}>X</button>
         </div>
       )}
-      {editingPhone === ev.id ? (
-        <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
-          <input value={phoneVal} onChange={e => setPhoneVal(e.target.value.replace(/[^0-9+]/g, ''))}
-            onKeyDown={e => { if (e.key === 'Enter') savePhone(ev.id); if (e.key === 'Escape') setEditingPhone(null) }}
-            placeholder="07700 900123" autoFocus type="tel" inputMode="numeric" pattern="[0-9+]*"
-            style={{ flex: 1, fontSize: 16, padding: '3px 6px', border: `1px solid ${purple}`, borderRadius: 4, outline: 'none', fontFamily: 'inherit' }} />
-          <button onClick={() => savePhone(ev.id)} style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
-          <button onClick={() => setEditingPhone(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '3px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+
+      {editingPhones === ev.id ? (
+        <div style={{ marginTop: 4, padding: '5px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Phone numbers:</div>
+          {phonesVal.map((p, i) => (
+            <div key={i} style={{ display: 'flex', gap: 3, marginBottom: 3, alignItems: 'center' }}>
+              <input value={p}
+                onChange={e => { const next = [...phonesVal]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); setPhonesVal(next) }}
+                onKeyDown={e => { if (e.key === 'Enter') savePhones(ev.id, phonesVal) }}
+                placeholder="07700 900123" autoFocus={i === 0} type="tel" inputMode="numeric"
+                style={{ flex: 1, fontSize: 11, padding: '3px 6px', border: `1px solid ${border}`, borderRadius: 4, outline: 'none', fontFamily: 'inherit' }} />
+              {phonesVal.length > 1 && (
+                <button onClick={() => setPhonesVal(phonesVal.filter((_, j) => j !== i))}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: '0 3px', lineHeight: 1 }}>x</button>
+              )}
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            {phonesVal.length < 5 ? (
+              <button onClick={() => setPhonesVal([...phonesVal, ''])}
+                style={{ background: 'none', border: 'none', color: purple, fontSize: 9, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>+ Add number</button>
+            ) : <span />}
+            <div style={{ display: 'flex', gap: 3 }}>
+              <button onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}
+                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '2px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={e => { e.stopPropagation(); savePhones(ev.id, phonesVal) }}
+                style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+            </div>
+          </div>
         </div>
       ) : (
-        <div onClick={() => { setEditingPhone(ev.id); setPhoneVal(ev.phone || '') }}
-          style={{ fontSize: 10, color: ev.phone ? green : '#94a3b8', marginTop: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-          📱 {ev.phone || 'Add phone'}
+        <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
+          style={{ fontSize: 10, color: hasPhone ? green : '#94a3b8', marginTop: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+          {hasPhone ? currentPhones.join(', ') : 'Add phone'}
         </div>
       )}
+
       {editingTemplate === ev.id ? (
         <div style={{ marginTop: 4, padding: '4px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Select templates:</div>
@@ -414,7 +482,7 @@ export default function Upcoming() {
         <div onClick={() => { setEditingTemplate(ev.id); setPendingTemplateIds((activeIds).map(Number)) }}
           style={{ fontSize: 9, color: purple, marginTop: 2, fontWeight: 600, opacity: 0.75, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
           title="Click to change templates">
-          📋 {activeTemplates.length ? activeTemplates.map(t => t.name).join(', ') : 'Template 1'} <span style={{ opacity: 0.5, fontSize: 8 }}>▾</span>
+          {activeTemplates.length ? activeTemplates.map(t => t.name).join(', ') : 'Template 1'} v
         </div>
       )}
     </div>
@@ -423,7 +491,6 @@ export default function Upcoming() {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 'clamp(22px,3.5vw,32px)', fontWeight: 800, color: text, marginBottom: 4, letterSpacing: '-0.6px' }}>Upcoming Appointments</h1>
@@ -431,12 +498,12 @@ export default function Upcoming() {
             {profile?.calendar_provider ? (
               <><span style={{ width: 6, height: 6, borderRadius: '50%', background: green, display: 'inline-block' }} /> Synced from {profile.calendar_provider} calendar</>
             ) : (
-              <><span style={{ color: '#f59e0b' }}>⚠</span> No calendar — <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
+              <><span style={{ color: '#f59e0b' }}>!</span> No calendar <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
             )}
             {profile?.calendar_provider && (
               <>
-                {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>· Last synced {lastSyncedText(events)}</span>}
-                <span style={{ fontSize: 11, color: muted }}>· Syncs every 10 minutes</span>
+                {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>Last synced {lastSyncedText(events)}</span>}
+                <span style={{ fontSize: 11, color: muted }}>Syncs every 10 minutes</span>
               </>
             )}
           </div>
@@ -447,26 +514,25 @@ export default function Upcoming() {
           </button>
           {isMobile ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button onClick={() => setDayOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>{'<'}</button>
+              <button onClick={() => setDayOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Prev</button>
               <div style={{ textAlign: 'center', minWidth: 120 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: singleDay.toDateString() === todayStr ? purple : text }}>
                   {singleDay.toDateString() === todayStr ? 'Today' : singleDay.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                 </div>
               </div>
               <button onClick={() => setDayOffset(0)} style={{ background: dayOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${dayOffset === 0 ? purple : border}`, borderRadius: 8, padding: '8px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: dayOffset === 0 ? purple : text, fontFamily: 'inherit' }}>Today</button>
-              <button onClick={() => setDayOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>{'>'}</button>
+              <button onClick={() => setDayOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Next</button>
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button onClick={() => setWeekOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>{'<'} Prev</button>
+              <button onClick={() => setWeekOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Prev</button>
               <button onClick={() => setWeekOffset(0)} style={{ background: weekOffset === 0 ? '#f3e8ff' : '#fff', border: `1px solid ${weekOffset === 0 ? purple : border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: weekOffset === 0 ? purple : text, fontFamily: 'inherit' }}>This Week</button>
-              <button onClick={() => setWeekOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Next {'>'}</button>
+              <button onClick={() => setWeekOffset(p => p + 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Next</button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Status legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, padding: '7px 12px', background: '#f8fafc', border: `1px solid ${border}`, borderRadius: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reminder status:</span>
         {[
@@ -481,7 +547,6 @@ export default function Upcoming() {
         ))}
       </div>
 
-      {/* Calendar grid */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: muted }}>Loading...</div>
       ) : isMobile ? (
@@ -539,14 +604,13 @@ export default function Upcoming() {
         </div>
       )}
 
-      {/* Add Appointment Modal */}
       {showAddModal && (
         <div onClick={e => { if (e.target === e.currentTarget) setShowAddModal(false) }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 800, color: text, fontFamily: 'Syne,sans-serif', margin: 0 }}>Add Appointment</h2>
-              <button onClick={() => { setShowAddModal(false); setAddError('') }} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: muted, padding: 0 }}>✕</button>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: text, margin: 0 }}>Add Appointment</h2>
+              <button onClick={() => { setShowAddModal(false); setAddError('') }} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: muted, padding: 0 }}>X</button>
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Customer / title</label>
@@ -563,15 +627,13 @@ export default function Upcoming() {
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number (optional)</label>
-              <input type="tel" inputMode="numeric" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value.replace(/[^0-9+]/g, '') }))} placeholder="07700 900123" style={inputStyle} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number(s) <span style={{ fontWeight: 400, color: muted }}>(optional)</span></label>
+              <PhonesInput phones={addForm.phones} onChange={phones => setAddForm(f => ({ ...f, phones }))} />
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Message template</label>
               <select value={addForm.templateId} onChange={e => setAddForm(f => ({ ...f, templateId: parseInt(e.target.value) }))} style={inputStyle}>
-                {templates.map(tpl => (
-                  <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>
-                ))}
+                {templates.map(tpl => <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 14 }}>
@@ -619,14 +681,13 @@ export default function Upcoming() {
         </div>
       )}
 
-      {/* Edit Appointment Modal */}
       {editTarget && (
         <div onClick={e => { if (e.target === e.currentTarget) setEditTarget(null) }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 800, color: text, fontFamily: 'Syne,sans-serif', margin: 0 }}>Edit Appointment</h2>
-              <button onClick={() => setEditTarget(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: muted, padding: 0 }}>✕</button>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: text, margin: 0 }}>Edit Appointment</h2>
+              <button onClick={() => setEditTarget(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: muted, padding: 0 }}>X</button>
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Customer / title</label>
@@ -643,15 +704,13 @@ export default function Upcoming() {
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number (optional)</label>
-              <input type="tel" inputMode="numeric" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value.replace(/[^0-9+]/g, '') }))} placeholder="07700 900123" style={inputStyle} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number(s) <span style={{ fontWeight: 400, color: muted }}>(optional)</span></label>
+              <PhonesInput phones={editForm.phones} onChange={phones => setEditForm(f => ({ ...f, phones }))} />
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Message template</label>
               <select value={editForm.templateId} onChange={e => setEditForm(f => ({ ...f, templateId: parseInt(e.target.value) }))} style={inputStyle}>
-                {templates.map(tpl => (
-                  <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>
-                ))}
+                {templates.map(tpl => <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>)}
               </select>
             </div>
             {editTarget.recurring_group_id && (
@@ -718,16 +777,15 @@ export default function Upcoming() {
         </div>
       )}
 
-      {/* Delete confirm modal */}
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 16px 50px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: text, fontFamily: 'Syne,sans-serif', marginBottom: 8 }}>Delete recurring appointment?</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: text, marginBottom: 8 }}>Delete recurring appointment?</div>
             <div style={{ fontSize: 13, color: muted, marginBottom: 20 }}><strong style={{ color: text }}>{deleteTarget.title}</strong> is part of a recurring series.</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={() => deleteManualEvent(deleteTarget, 'one')} style={{ background: '#f1f5f9', color: text, border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete just this occurrence</button>
               <button onClick={() => deleteManualEvent(deleteTarget, 'all')} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete all in this series</button>
-                 <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
+              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
             </div>
           </div>
         </div>
