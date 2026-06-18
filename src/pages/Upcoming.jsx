@@ -1,10 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
 import { Link } from 'react-router-dom'
+
+const DEFAULT_TEMPLATES = [
+  { id: 1, name: 'Appointment Reminder' },
+  { id: 2, name: 'Day-of Reminder' },
+  { id: 3, name: 'Quick Reminder' },
+]
 
 export default function Upcoming() {
   const [events, setEvents]         = useState([])
   const [profile, setProfile]       = useState(null)
+  const [templates, setTemplates]   = useState(DEFAULT_TEMPLATES)
   const [loading, setLoading]       = useState(true)
   const [weekOffset, setWeekOffset] = useState(0)
   const [dayOffset, setDayOffset]   = useState(0)
@@ -17,7 +24,7 @@ export default function Upcoming() {
   // Add appointment modal
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm] = useState({
-    title: '', date: '', time: '09:00', phone: '',
+    title: '', date: '', time: '09:00', phone: '', templateId: 1,
     recurring: false, intervalNum: 1, intervalUnit: 'weeks',
     endType: 'date', endDate: '',
   })
@@ -27,7 +34,7 @@ export default function Upcoming() {
   // Edit appointment modal
   const [editTarget, setEditTarget] = useState(null)
   const [editForm, setEditForm] = useState({
-    title: '', date: '', time: '', phone: '',
+    title: '', date: '', time: '', phone: '', templateId: 1,
     scope: 'one',
     changeFreq: false,
     intervalNum: 1, intervalUnit: 'weeks',
@@ -38,6 +45,9 @@ export default function Upcoming() {
 
   // Delete confirm (recurring series)
   const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // Calendar scroll ref — jumps to 9am on load
+  const calendarRef = useRef(null)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -53,6 +63,7 @@ export default function Upcoming() {
     ])
     setEvents(evs || [])
     setProfile(prof)
+    if (prof?.message_templates) setTemplates(prof.message_templates)
     return user.id
   }
 
@@ -80,6 +91,13 @@ export default function Upcoming() {
     const interval = setInterval(() => syncCalendar(), 10 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
+
+  // Scroll calendar to 9am once loaded (each hour row = 56px)
+  useEffect(() => {
+    if (!loading && calendarRef.current) {
+      calendarRef.current.scrollTop = 9 * 56
+    }
+  }, [loading])
 
   async function syncNow() {
     setSyncing(true)
@@ -114,6 +132,7 @@ export default function Upcoming() {
         user_id: user.id, title: addForm.title.trim(),
         start_time: startDt.toISOString(), end_time: endDt.toISOString(),
         phone: addForm.phone || null, is_manual: true, reminder_sent: false,
+        template_id: addForm.templateId || 1,
       })
       if (error) { setAddError('Failed to save. Try again.'); setSavingAdd(false); return }
     } else {
@@ -131,6 +150,7 @@ export default function Upcoming() {
           start_time: new Date(cur).toISOString(),
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
           phone: addForm.phone || null, is_manual: true, reminder_sent: false,
+          template_id: addForm.templateId || 1,
           recurring_group_id: groupId, recurring_interval_days: intervalDays,
           recurring_end_date: (addForm.endType === 'date' && addForm.endDate) ? addForm.endDate : null,
         })
@@ -144,7 +164,7 @@ export default function Upcoming() {
     await loadEvents()
     setSavingAdd(false)
     setShowAddModal(false)
-    setAddForm({ title: '', date: '', time: '09:00', phone: '', recurring: false, intervalNum: 1, intervalUnit: 'weeks', endType: 'date', endDate: '' })
+    setAddForm({ title: '', date: '', time: '09:00', phone: '', templateId: 1, recurring: false, intervalNum: 1, intervalUnit: 'weeks', endType: 'date', endDate: '' })
   }
 
   function openEdit(ev) {
@@ -156,6 +176,7 @@ export default function Upcoming() {
     const isWeeks = existingDays % 7 === 0
     setEditForm({
       title: ev.title || '', date: dateStr, time: timeStr, phone: ev.phone || '',
+      templateId: ev.template_id || 1,
       scope: 'one', changeFreq: false,
       intervalNum: isWeeks ? existingDays / 7 : existingDays,
       intervalUnit: isWeeks ? 'weeks' : 'days',
@@ -184,6 +205,7 @@ export default function Upcoming() {
       await supabase.from('calendar_events').update({
         title: editForm.title.trim(), start_time: newStart.toISOString(),
         end_time: newEnd.toISOString(), phone: editForm.phone || null,
+        template_id: editForm.templateId || 1,
       }).eq('id', editTarget.id)
     } else {
       const intervalDays = editForm.changeFreq
@@ -213,6 +235,7 @@ export default function Upcoming() {
           start_time: new Date(cur).toISOString(),
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
           phone: editForm.phone || null, is_manual: true, reminder_sent: false,
+          template_id: editForm.templateId || 1,
           recurring_group_id: editTarget.recurring_group_id,
           recurring_interval_days: intervalDays, recurring_end_date: endDate,
         })
@@ -320,7 +343,9 @@ export default function Upcoming() {
   }
   const todayIso = new Date().toISOString().split('T')[0]
 
-  const AppointmentBlock = ({ ev }) => (
+  const AppointmentBlock = ({ ev }) => {
+    const tpl = templates.find(t => t.id === (ev.template_id || 1))
+    return (
     <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? pink : purple}`, position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0 }}>
         {new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {ev.title}
@@ -347,8 +372,14 @@ export default function Upcoming() {
           📱 {ev.phone || 'Add phone'}
         </div>
       )}
+      {tpl && (
+        <div style={{ fontSize: 9, color: purple, marginTop: 2, fontWeight: 600, opacity: 0.75 }}>
+          📋 {tpl.name}
+        </div>
+      )}
     </div>
   )
+  }
 
   return (
     <div>
@@ -400,7 +431,7 @@ export default function Upcoming() {
         <div style={{ textAlign: 'center', padding: 60, color: muted }}>Loading...</div>
       ) : isMobile ? (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
+          <div ref={calendarRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
             {hours.map(hour => {
               const slotEvents = getEventsForSlot(singleDay, hour)
               if (slotEvents.length === 0) return (
@@ -421,7 +452,7 @@ export default function Upcoming() {
         </div>
       ) : (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ overflowY: 'auto', maxHeight: '70vh' }}>
+          <div ref={calendarRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '60px repeat(7,1fr)', borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
               <div style={{ padding: '10px 8px' }} />
               {weekDays.map((day, i) => {
@@ -479,6 +510,14 @@ export default function Upcoming() {
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number (optional)</label>
               <input type="tel" inputMode="numeric" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value.replace(/[^0-9+]/g, '') }))} placeholder="07700 900123" style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Message template</label>
+              <select value={addForm.templateId} onChange={e => setAddForm(f => ({ ...f, templateId: parseInt(e.target.value) }))} style={inputStyle}>
+                {templates.map(tpl => (
+                  <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>
+                ))}
+              </select>
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text }}>
@@ -551,6 +590,14 @@ export default function Upcoming() {
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Phone number (optional)</label>
               <input type="tel" inputMode="numeric" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value.replace(/[^0-9+]/g, '') }))} placeholder="07700 900123" style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Message template</label>
+              <select value={editForm.templateId} onChange={e => setEditForm(f => ({ ...f, templateId: parseInt(e.target.value) }))} style={inputStyle}>
+                {templates.map(tpl => (
+                  <option key={tpl.id} value={tpl.id}>{tpl.id}. {tpl.name}</option>
+                ))}
+              </select>
             </div>
             {editTarget.recurring_group_id && (
               <div style={{ background: '#fdf4ff', border: `1px solid ${border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
@@ -625,7 +672,7 @@ export default function Upcoming() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={() => deleteManualEvent(deleteTarget, 'one')} style={{ background: '#f1f5f9', color: text, border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete just this occurrence</button>
               <button onClick={() => deleteManualEvent(deleteTarget, 'all')} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete all in this series</button>
-              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
+                 <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
             </div>
           </div>
         </div>

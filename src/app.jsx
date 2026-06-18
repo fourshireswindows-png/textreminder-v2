@@ -89,7 +89,7 @@ const PLANS = [
 function GlobalStyles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Syne:wght@400;600;700;800&display=swap');
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html { scroll-behavior: smooth; }
       body { font-family: 'DM Sans', sans-serif; background: #f8fafc; color: #0f172a;
@@ -321,10 +321,9 @@ function PublicNav({ onLogin, onSignup, onNavigate }) {
 
 // ─── APP NAV (top bar with mobile hamburger) ──────────────────────────────────
 const NAV_ITEMS = [
-  { key: 'upcoming',    label: 'Upcoming',  Ic: IC.Calendar },
-  { key: 'message-log', label: 'Messages',  Ic: IC.Msg },
-  { key: 'settings',    label: 'Settings',  Ic: IC.Settings },
-  { key: 'upgrade',     label: 'Upgrade',   Ic: IC.Star, accent: true },
+  { key: 'upcoming',  label: 'Upcoming',  Ic: IC.Calendar },
+  { key: 'settings',  label: 'Settings',  Ic: IC.Settings },
+  { key: 'upgrade',   label: 'Upgrade',   Ic: IC.Star, accent: true },
 ]
 
 function AppNav({ page, setPage, user, onLogout }) {
@@ -347,7 +346,7 @@ function AppNav({ page, setPage, user, onLogout }) {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', height: 56 }}>
 
         {/* Logo */}
-        <button onClick={() => navigate('dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 8px 0 0', marginRight: 8, flexShrink: 0 }}>
+        <button onClick={() => navigate('upcoming')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 8px 0 0', marginRight: 8, flexShrink: 0 }}>
           <LogoMark />
         </button>
 
@@ -1216,7 +1215,7 @@ function AppShell({ user, onLogout, children }) {
   const page = raw === 'log' ? 'message-log' : raw
 
   function setPage(key) {
-    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
+    const map = { upcoming: '/upcoming', settings: '/settings', upgrade: '/pricing' }
     navigate(map[key] || '/upcoming')
   }
 
@@ -1306,6 +1305,10 @@ export default function App() {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
 
+  async function onLogout() {
+    await supabase.auth.signOut()
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -1319,7 +1322,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppRouter user={user} loading={loading} />
+      <AppRouter user={user} loading={loading} onLogout={onLogout} />
     </BrowserRouter>
   )
 }
