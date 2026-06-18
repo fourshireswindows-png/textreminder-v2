@@ -569,76 +569,55 @@ function PricingSection({ onSignup }) {
 // ─── Blog data ────────────────────────────────────────────────────────────────
 const BLOG_POSTS = [
   {
-    slug: 'how-to-reduce-no-shows-window-cleaner',
-    title: 'How to Reduce No-Shows as a Window Cleaner',
+    slug: 'why-window-cleaners-should-text-customers-before-every-job',
+    title: 'Why Window Cleaners Should Text Customers Before Every Job',
     category: 'Window Cleaning',
     date: '2026-05-29',
-    readTime: '5 min read',
-    metaDesc: 'Tired of customers forgetting their window cleaning appointment? Here\'s how UK window cleaners are cutting no-shows to almost zero.',
-    excerpt: 'No-shows cost UK window cleaners hundreds of pounds every month. Here\'s the simple fix that\'s working right now.',
+    readTime: '4 min read',
+    metaDesc: 'A simple text the day before a window clean makes customers feel valued, prevents complaints, and builds the kind of loyalty that keeps your round full.',
+    excerpt: 'A text the day before costs almost nothing — but it changes how customers feel about your service completely.',
     content: `
-Every window cleaner knows the feeling. You've loaded the van, driven across town, parked up — and there's nobody home.
+Window cleaners are different from most trades. You don't need the customer to be home. You don't need them to unlock a door or make a decision. You just need access to the outside of their house, and you can get on with the job.
 
-No answer at the door. No text. No warning.
+So why would you bother texting them in advance?
 
-It's not just frustrating. It's money out of your pocket. Fuel wasted. A slot you could have filled with a paying job.
+Because keeping customers informed isn't about logistics. It's about how they feel.
 
-**The no-show problem is bigger than you think**
+**The difference between a service and a relationship**
 
-Industry surveys suggest that up to 1 in 5 service appointments end in a no-show or late cancellation. For a window cleaner doing 6–8 jobs a day, that could mean losing 1–2 jobs daily. At even £25 a job, that's £50+ a day — over £1,000 a month — just walking out the door.
+There's a reason some window cleaners keep customers for 10, 15, 20 years — and others struggle to hold onto anyone past a few cleans. It's not always about the finish on the glass. It's about how the customer feels throughout the whole experience.
 
-And it's rarely intentional. Most customers simply forgot.
+A customer who gets a friendly heads-up the evening before thinks: *"They're organised. They're professional. They care enough to let me know."*
 
-**Why customers forget**
+A customer who doesn't get one thinks: *"Oh, they've been. I didn't even know they were coming."*
 
-People are busy. They book their window clean weeks in advance, life happens, and by the time you turn up they've got the kids to school, they're on a work call, or they've just genuinely forgotten you were coming.
+Both customers have clean windows. But only one feels like they're dealing with someone they can trust.
 
-This isn't a character flaw. It's human nature. The fix isn't to get better customers — it's to remind the ones you already have.
+**What the research says**
 
-**The simple solution: a text the day before**
+Studies into customer satisfaction — including work referenced in popular business books — consistently show that customers who feel kept informed rate their experience significantly higher, even when the actual quality of the work is identical. The act of communication is itself part of the service.
 
-Research consistently shows that a simple reminder message sent 24 hours before an appointment reduces no-shows by up to 40%.
+That's not a small thing. That's the difference between a customer who recommends you to a neighbour and one who switches to someone else without ever saying why.
 
-That's not a made-up figure. That's what happens when you give people a chance to remember.
+**The practical side: gates, dogs, and access**
 
-A text doesn't need to be fancy. Something like:
+There's a real-world benefit too. A text the day before gives customers a chance to unlock the side gate, put the dog inside, or move the car out of the way. It reduces the number of times you arrive to find access blocked — and it gives customers a chance to flag anything that's changed before you make the trip.
 
-*"Hi Sarah, just a reminder that your window clean is booked for tomorrow, Thursday 30th May at 10am. Reply STOP to cancel. — Dave, Crystal Clear Windows"*
+**What a good reminder text looks like**
 
-Simple. Friendly. Effective.
+Keep it short. Keep it friendly. Give them the key details:
 
-**But who's got time to send texts all day?**
+*"Hi Sarah, just a heads-up — your window clean is tomorrow, Thursday 30th May. No need to be in. Just wanted to let you know we're coming. — Dave, Crystal Clear Windows"*
 
-That's the problem. If you're a one-man band or running a small team, you're already juggling quotes, jobs, invoices, and everything else that comes with running a business. Sitting down every evening to send reminder texts to tomorrow's customers is another hour you don't have.
+That's it. No pressure, no hard sell. Just a professional, considerate message that makes the customer feel looked after.
 
-That's exactly why we built TextReminder.
+**How TextReminder handles it automatically**
 
-**How TextReminder works for window cleaners**
+If you're running a round of 20, 30, or 50 customers, texting them all individually the night before isn't realistic. TextReminder connects to your Google Calendar and sends those messages automatically — 24 hours before each job, personalised with the customer's name.
 
-1. You connect your Google Calendar (takes about 5 minutes)
-2. TextReminder reads your appointments automatically
-3. 24 hours before each job, your customer gets a personalised SMS reminder
-4. You get fewer no-shows, no extra admin
+You book the job in your calendar like you always do. The text goes out without you having to think about it.
 
-You don't have to log in every day. You don't have to do anything differently. Just book jobs in your calendar like you always do — the reminders go out automatically.
-
-**What about the customers who reply?**
-
-That's actually one of the best parts. When a customer replies to say they need to reschedule, you find out 24 hours in advance instead of when you're parked outside their house. You can fill that slot with another job.
-
-A cancellation with notice is worth money. A no-show costs you money.
-
-**The numbers stack up**
-
-TextReminder starts from free (20 texts/month) and goes up to £29/month for 200 texts. If you're doing 20 jobs a week, that's roughly 80 texts a month — the Starter plan at £15/month covers that.
-
-Compare that to the cost of even one no-show a month. Most window cleaners recover the cost of TextReminder in a single job saved.
-
-**Getting started**
-
-It takes about 5 minutes to set up. No contract. Just connect your calendar, customise your message, and let it run.
-
-If you're tired of driving to empty houses, give it a go — the first 20 reminders are completely free.
+It takes about 5 minutes to set up, and the first 20 reminders are free.
     `
   },
   {
