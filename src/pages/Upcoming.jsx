@@ -17,6 +17,7 @@ export default function Upcoming() {
   const [dayOffset, setDayOffset]   = useState(0)
   const [editingPhone, setEditingPhone] = useState(null)
   const [phoneVal, setPhoneVal]     = useState('')
+  const [editingTemplate, setEditingTemplate] = useState(null)
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
@@ -329,6 +330,12 @@ export default function Upcoming() {
     setPhoneVal('')
   }
 
+  async function saveTemplates(eventId, templateIds) {
+    await supabase.from('calendar_events').update({ template_ids: templateIds }).eq('id', eventId)
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, template_ids: templateIds } : e))
+    setEditingTemplate(null)
+  }
+
   const todayStr = new Date().toDateString()
   const purple = '#a855f7'
   const border = '#e9d5ff'
@@ -344,7 +351,8 @@ export default function Upcoming() {
   const todayIso = new Date().toISOString().split('T')[0]
 
   const AppointmentBlock = ({ ev }) => {
-    const tpl = templates.find(t => t.id === (ev.template_id || 1))
+    const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
+    const activeTemplates = templates.filter(t => activeIds.includes(t.id))
     return (
     <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? pink : purple}`, position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -375,9 +383,31 @@ export default function Upcoming() {
           📱 {ev.phone || 'Add phone'}
         </div>
       )}
-      {tpl && (
-        <div style={{ fontSize: 9, color: purple, marginTop: 2, fontWeight: 600, opacity: 0.75 }}>
-          📋 {tpl.name}
+      {editingTemplate === ev.id ? (
+        <div style={{ marginTop: 4, padding: '4px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Select templates:</div>
+          {templates.map(t => {
+            const checked = activeIds.includes(t.id)
+            const toggle = () => {
+              const next = checked ? activeIds.filter(id => id !== t.id) : [...activeIds, t.id]
+              if (next.length === 0) return
+              saveTemplates(ev.id, next)
+            }
+            return (
+              <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: text, cursor: 'pointer', marginBottom: 2 }}>
+                <input type="checkbox" checked={checked} onChange={toggle}
+                  style={{ accentColor: purple, width: 11, height: 11, cursor: 'pointer' }} />
+                {t.name}
+              </label>
+            )
+          })}
+          <button onClick={() => setEditingTemplate(null)} style={{ marginTop: 4, background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+        </div>
+      ) : (
+        <div onClick={() => setEditingTemplate(ev.id)}
+          style={{ fontSize: 9, color: purple, marginTop: 2, fontWeight: 600, opacity: 0.75, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+          title="Click to change templates">
+          📋 {activeTemplates.length ? activeTemplates.map(t => t.name).join(', ') : 'Template 1'} <span style={{ opacity: 0.5, fontSize: 8 }}>▾</span>
         </div>
       )}
     </div>
