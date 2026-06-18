@@ -1216,8 +1216,8 @@ function AppShell({ user, onLogout, children }) {
   const page = raw === 'log' ? 'message-log' : raw
 
   function setPage(key) {
-    const map = { dashboard: '/dashboard', upcoming: '/upcoming', 'message-log': '/log', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
-    navigate(map[key] || '/dashboard')
+    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
+    navigate(map[key] || '/upcoming')
   }
 
   return (
@@ -1251,7 +1251,7 @@ function AppRouter({ user, loading, onLogout }) {
   // After Google OAuth, user lands at '/' — redirect to dashboard
   useEffect(() => {
     if (!loading && user && ['/', '/login', '/signup'].includes(location.pathname)) {
-      navigate('/dashboard', { replace: true })
+      navigate('/upcoming', { replace: true })
     }
   }, [user, loading, location.pathname])
 
@@ -1260,8 +1260,8 @@ function AppRouter({ user, loading, onLogout }) {
       home: '/', pricing: '/pricing', 'roi-calculator': '/roi-calculator', blog: '/blog', compare: '/compare',
       'blog-post': `/blog/${slug || ''}`, resources: '/',
       'auth-login': '/login', 'auth-signup': '/signup',
-      dashboard: '/dashboard', upcoming: '/upcoming', settings: '/settings',
-      contacts: '/contacts', 'message-log': '/log', upgrade: '/pricing',
+      upcoming: '/upcoming', settings: '/settings',
+      contacts: '/contacts', upgrade: '/pricing',
       'window-cleaners': '/window-cleaners', plumbers: '/plumbers',
       electricians: '/electricians', gardeners: '/gardeners', hairdressers: '/hairdressers',
     }
@@ -1293,11 +1293,9 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/hairdressers"    element={<HomePage {...pub} />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
-      <Route path="/dashboard"       element={shell(<DashboardPage />)} />
       <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
       <Route path="/settings"        element={shell(<SettingsPage />)} />
       <Route path="/contacts"        element={shell(<ContactsPage />)} />
-      <Route path="/log"             element={shell(<MessageLogPage />)} />
       <Route path="*"                element={<Navigate to="/" replace />} />
     </Routes>
   )
@@ -1316,4 +1314,12 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
-    return () 
+    return ()=> subscription.unsubscribe()
+  }, [])
+
+  return (
+    <BrowserRouter>
+      <AppRouter user={user} loading={loading} />
+    </BrowserRouter>
+  )
+}

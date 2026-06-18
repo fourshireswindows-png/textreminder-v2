@@ -5,7 +5,6 @@ import Logo from './Logo.jsx'
 
 const NAV = [
   { to:'upcoming',  icon:'📅', label:'Upcoming'      },
-  { to:'log',       icon:'📋', label:'Message Log'   },
   { to:'settings',  icon:'⚙️', label:'Settings'      },
   { to:'upgrade',   icon:'⭐', label:'Upgrade'        },
 ]
