@@ -130,15 +130,15 @@ function GlobalStyles() {
       }
       .btn-ghost:hover { background: #f1f5f9; color: #0f172a; }
 
-      .inp {
+      .inp, .input {
         width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px;
         padding: 10px 14px; font-size: 14px; background: #fff; color: #0f172a; outline: none;
-        transition: border-color 0.15s, box-shadow 0.15s;
+        transition: border-color 0.15s, box-shadow 0.15s; font-family: 'DM Sans', sans-serif;
       }
-      .inp:focus { border-color: #ec4899; box-shadow: 0 0 0 3px rgba(236,72,153,0.08); }
-      .inp::placeholder { color: #94a3b8; }
-      textarea.inp { resize: vertical; }
-      select.inp {
+      .inp:focus, .input:focus { border-color: #ec4899; box-shadow: 0 0 0 3px rgba(236,72,153,0.08); }
+      .inp::placeholder, .input::placeholder { color: #94a3b8; }
+      textarea.inp, textarea.input { resize: vertical; }
+      select.inp, select.input {
         appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
         background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
@@ -146,6 +146,10 @@ function GlobalStyles() {
 
       .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; }
       .lbl { font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 6px; }
+
+      /* Page heading typography — matches homepage quality */
+      .page-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.2; }
+      .page-sub   { font-size: 14px; color: #64748b; margin-top: 3px; font-weight: 400; line-height: 1.5; }
 
       @keyframes fadeIn  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -1310,14 +1314,13 @@ export default function App() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+h.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null); setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
-    return ()=> subscription.unsubscribe()
+    return () => subscription.unsubscribe()
   }, [])
 
   return (
