@@ -347,7 +347,10 @@ export default function Upcoming() {
     const tpl = templates.find(t => t.id === (ev.template_id || 1))
     return (
     <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? pink : purple}`, position: 'relative' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span title={ev.reminder_sent ? "Reminder sent" : ev.phone ? "Reminder pending" : "No phone — reminder won't send"}
+          style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+            background: ev.reminder_sent ? '#22c55e' : ev.phone ? '#f59e0b' : '#cbd5e1' }} />
         {new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {ev.title}
         {ev.is_manual && ev.recurring_group_id && <span title="Recurring" style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>🔄</span>}
       </div>
@@ -424,6 +427,21 @@ export default function Upcoming() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Status legend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, padding: '7px 12px', background: '#f8fafc', border: `1px solid ${border}`, borderRadius: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reminder status:</span>
+        {[
+          { color: '#22c55e', label: 'Sent' },
+          { color: '#f59e0b', label: 'Pending' },
+          { color: '#cbd5e1', label: 'No phone' },
+        ].map(({ color, label }) => (
+          <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: text }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+            {label}
+          </span>
+        ))}
       </div>
 
       {/* Calendar grid */}
