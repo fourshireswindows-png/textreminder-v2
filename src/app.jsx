@@ -438,14 +438,11 @@ function HomePage({ onLogin, onSignup, onNavigate }) {
             <span style={{ color: C.pink, fontSize: 13, fontWeight: 600 }}>Built by tradespeople, for tradespeople.</span>
           </div>
           <h1 style={{ fontSize: 'clamp(34px, 5.5vw, 58px)', fontWeight: 800, color: '#fff', lineHeight: 1.13, letterSpacing: '-1.5px', marginBottom: 22 }}>
-            Stop Losing Jobs{' '}
-            <span style={{ color: C.pink }}>to No-Shows</span>
+            Customers Who Feel Informed{' '}
+            <span style={{ color: C.pink }}>Come Back for More</span>
           </h1>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.62)', lineHeight: 1.75, maxWidth: 580, margin: '0 auto 16px' }}>
-            TextReminder automatically texts your customers the day before their appointment. Set it up once, never chase a no-show again.
-          </p>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', fontStyle: 'italic', marginBottom: 36, maxWidth: 480, margin: '0 auto 36px' }}>
-            "I was paying £28.80 a month for 100 texts with my old provider. So I built something better."
+            Research shows that customers who receive timely updates feel more valued — and are far more likely to rebook. TextReminder sends automatic SMS reminders before every appointment, so your customers always feel looked after.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-primary" onClick={onSignup} style={{ padding: '14px 30px', fontSize: 16 }}>Start Free — No Card Needed</button>
@@ -465,7 +462,7 @@ function HomePage({ onLogin, onSignup, onNavigate }) {
       {/* Stats strip */}
       <section style={{ background: '#faf5ff', borderBottom: '1px solid #e9d5ff', padding: '32px 20px' }}>
         <div style={{ maxWidth: 880, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 24, textAlign: 'center' }}>
-          {[['98%','SMS open rate'],['42%','Fewer no-shows'],['2 min','Setup time'],['0','Manual work']].map(([n, l]) => (
+          {[['98%','SMS open rate'],['40%','Happier customers'],['2 min','Setup time'],['0','Manual work']].map(([n, l]) => (
             <div key={l}>
               <div style={{ fontSize: 34, fontWeight: 800, color: C.purple, letterSpacing: '-1px' }}>{n}</div>
               <div style={{ fontSize: 13, color: C.muted, marginTop: 4, fontWeight: 500 }}>{l}</div>
@@ -478,8 +475,8 @@ function HomePage({ onLogin, onSignup, onNavigate }) {
       <section id="how-it-works" style={{ padding: '88px 20px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 60 }}>
-            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Everything you need to reduce no-shows</h2>
-            <p style={{ color: C.muted, fontSize: 16, marginTop: 12 }}>Built for trades, salons, clinics, and any appointment-based business.</p>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Keep customers informed. Build a business they trust.</h2>
+            <p style={{ color: C.muted, fontSize: 16, marginTop: 12 }}>A simple text before every appointment makes customers feel valued — and keeps your diary full.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 22 }}>
             {[
