@@ -331,10 +331,12 @@ export default function Upcoming() {
     setPhoneVal('')
   }
 
-  async function commitTemplates(eventId) {
-    if (!pendingTemplateIds.length) return
-    await supabase.from('calendar_events').update({ template_ids: pendingTemplateIds }).eq('id', eventId)
-    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, template_ids: pendingTemplateIds } : e))
+  async function commitTemplates(eventId, templateIds) {
+    if (!templateIds || !templateIds.length) return
+    const ids = templateIds.map(Number)
+    const { error } = await supabase.from('calendar_events').update({ template_ids: ids }).eq('id', eventId)
+    if (error) { console.error('Template save error:', error); return }
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, template_ids: ids } : e))
     setEditingTemplate(null)
     setPendingTemplateIds([])
   }
@@ -390,11 +392,11 @@ export default function Upcoming() {
         <div style={{ marginTop: 4, padding: '4px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Select templates:</div>
           {templates.map(t => {
-            const checked = pendingTemplateIds.includes(t.id)
+            const checked = pendingTemplateIds.includes(Number(t.id))
             const toggle = () => {
               const next = checked
-                ? pendingTemplateIds.filter(id => id !== t.id)
-                : [...pendingTemplateIds, t.id]
+                ? pendingTemplateIds.filter(id => id !== Number(t.id))
+                : [...pendingTemplateIds, Number(t.id)]
               if (next.length === 0) return
               setPendingTemplateIds(next)
             }
@@ -406,10 +408,10 @@ export default function Upcoming() {
               </label>
             )
           })}
-          <button onClick={() => commitTemplates(ev.id)} style={{ marginTop: 4, background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+          <button onClick={e => { e.stopPropagation(); commitTemplates(ev.id, pendingTemplateIds) }} style={{ marginTop: 4, background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
         </div>
       ) : (
-        <div onClick={() => { setEditingTemplate(ev.id); setPendingTemplateIds(activeIds) }}
+        <div onClick={() => { setEditingTemplate(ev.id); setPendingTemplateIds((activeIds).map(Number)) }}
           style={{ fontSize: 9, color: purple, marginTop: 2, fontWeight: 600, opacity: 0.75, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
           title="Click to change templates">
           📋 {activeTemplates.length ? activeTemplates.map(t => t.name).join(', ') : 'Template 1'} <span style={{ opacity: 0.5, fontSize: 8 }}>▾</span>
