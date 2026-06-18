@@ -301,7 +301,7 @@ For time-sensitive messages like appointment reminders, SMS is simply more effec
 Switching from email to SMS reminders typically reduces no-shows immediately. Customers read the reminder, remember the appointment, and turn up.
 
 TextReminder handles this automatically — connecting to your Google Calendar and sending SMS reminders without you having to think about it.
-`}]slug:"how-to-stop-customers-forgetting-appointments",title:"Why Customers Forget Appointments (And How to Stop It)",category:"Business Tips",date:"2026-06-01",readTime:"4 min read",metaDesc:"Customer no-shows are usually down to one simple thing: they forgot. Here's the psychology behind it and how SMS reminders fix it.",excerpt:"Most no-shows aren't deliberate — your customers simply forgot. Here's the one thing that fixes it almost every time.",content:`Most appointment no-shows happen for the simplest reason: life got busy and your customer forgot.
+`},{slug:"how-to-stop-customers-forgetting-appointments",title:"Why Customers Forget Appointments (And How to Stop It)",category:"Business Tips",date:"2026-06-01",readTime:"4 min read",metaDesc:"Customer no-shows are usually down to one simple thing: they forgot. Here's the psychology behind it and how SMS reminders fix it.",excerpt:"Most no-shows aren't deliberate — your customers simply forgot. Here's the one thing that fixes it almost every time.",content:`Most appointment no-shows happen for the simplest reason: life got busy and your customer forgot.
 
 They meant to turn up. They just needed a nudge.
 
