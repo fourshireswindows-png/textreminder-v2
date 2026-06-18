@@ -644,6 +644,33 @@ It takes about 5 minutes to set up. No contract. Just connect your calendar, cus
 If you're tired of driving to empty houses, give it a go — the first 20 reminders are completely free.
     `
   },
+  {
+    slug: 'how-to-write-the-perfect-appointment-reminder-text',
+    title: 'How to Write the Perfect Appointment Reminder Text',
+    category: 'SMS Tips',
+    date: '2026-06-05',
+    readTime: '4 min read',
+    excerpt: "A good reminder text is short, friendly, and gives the customer everything they need. Here's the formula that gets results.",
+    content: `The best reminder texts are ones customers actually read — and act on. Keep it short, personal, and include the key details: name, time, and how to reschedule.`
+  },
+  {
+    slug: 'gdpr-and-sms-reminders-what-uk-tradespeople-need-to-know',
+    title: 'GDPR and SMS Reminders: What UK Tradespeople Need to Know',
+    category: 'Legal & Compliance',
+    date: '2026-06-10',
+    readTime: '3 min read',
+    excerpt: "Sending reminder texts to customers is legal — but there are a few simple rules to follow. Here's the plain-English guide.",
+    content: `GDPR sounds scary, but for small trades businesses sending appointment reminders, the rules are straightforward. If a customer gave you their number to book a job, you can text them about that job.`
+  },
+  {
+    slug: '5-ways-tradespeople-lose-money-without-realising',
+    title: '5 Ways Tradespeople Lose Money Without Realising',
+    category: 'Business Tips',
+    date: '2026-06-15',
+    readTime: '5 min read',
+    excerpt: "No-shows, last-minute cancellations, chasing invoices — these silent money drains add up fast. Here's how to plug the leaks.",
+    content: `Running a trade business means wearing a lot of hats. Here are the five biggest hidden costs eating into your margins — and simple fixes for each one.`
+  },
 ]
 
 // ─── Blog Preview Section ─────────────────────────────────────────────────────
