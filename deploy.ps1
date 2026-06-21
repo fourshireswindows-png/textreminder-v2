@@ -3,7 +3,21 @@ Set-Location $PSScriptRoot
 
 Write-Host "=== TextReminder Deploy ===" -ForegroundColor Cyan
 
-# Find git.exe even if not on system PATH
+# ── 1. Build ──────────────────────────────────────────────────────────────────
+Write-Host "`nBuilding..." -ForegroundColor Yellow
+$npm = Get-Command npm -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+if (-not $npm) {
+    Write-Host "ERROR: npm not found. Make sure Node.js is installed." -ForegroundColor Red
+    exit 1
+}
+& $npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Build failed. Fix the errors above before deploying." -ForegroundColor Red
+    exit 1
+}
+Write-Host "Build complete." -ForegroundColor Green
+
+# ── 2. Find git ───────────────────────────────────────────────────────────────
 $git = Get-Command git -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 if (-not $git) {
     $candidates = @(
@@ -16,13 +30,9 @@ if (-not $git) {
     }
 }
 if (-not $git) {
-    Write-Host "ERROR: Cannot find git.exe. Open Git Bash and run:" -ForegroundColor Red
-    Write-Host "  git add -A" -ForegroundColor Yellow
-    Write-Host "  git commit -m 'Deploy: new App.jsx'" -ForegroundColor Yellow
-    Write-Host "  git push" -ForegroundColor Yellow
+    Write-Host "ERROR: Cannot find git.exe." -ForegroundColor Red
     exit 1
 }
-Write-Host "Found git: $git" -ForegroundColor Gray
 
 # Clear stale lock if present
 $lock = Join-Path $PSScriptRoot ".git\index.lock"
@@ -31,24 +41,17 @@ if (Test-Path $lock) {
     Write-Host "Cleared stale index.lock" -ForegroundColor Green
 }
 
-# Remove old hashed asset if still present
-$oldAsset = Join-Path $PSScriptRoot "assets\index-wv0yovCd.js"
-if (Test-Path $oldAsset) {
-    Remove-Item $oldAsset -Force
-    Write-Host "Removed old assets/index-wv0yovCd.js" -ForegroundColor Green
-}
-
-# Stage, commit, push
+# ── 3. Commit & push ──────────────────────────────────────────────────────────
 & $git add -A
-Write-Host "Staged all changes" -ForegroundColor Green
 
 Write-Host "`nFiles in this commit:" -ForegroundColor Yellow
 & $git diff --cached --name-status
 
-& $git commit -m "Deploy: rebuild with new App.jsx (no sidebar, top nav)"
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+& $git commit -m "Deploy: $timestamp"
 Write-Host "Committed" -ForegroundColor Green
 
 Write-Host "`nPushing to GitHub..." -ForegroundColor Yellow
 & $git push
 
-Write-Host "`n=== Done! GitHub Pages will update in ~1 minute ===" -ForegroundColor Cyan
+Write-Host "`n=== Done! Site will update in ~1 minute ===" -ForegroundColor Cyan
