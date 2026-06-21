@@ -6,6 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PLAN_LIMITS: Record<string, number> = {
+  trial:        20,
+  starter:      100,
+  professional: 200,
+  business:     400,
+  enterprise:   2000,
+};
+
 const DEFAULT_TEMPLATE_BODY =
   "Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.";
 
@@ -76,6 +84,62 @@ serve(async (req) => {
 
     const businessName  = settingsRow?.business_name ?? profile.business_name ?? "";
     const businessPhone = settingsRow?.phone_number  ?? profile.phone          ?? "";
+
+    // Check monthly SMS limit
+    const planLimit = PLAN_LIMITS[profile.plan ?? "trial"] ?? PLAN_LIMITS["trial"];
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count: sentThisMonth } = await supabase
+      .from("reminders")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .eq("status", "sent")
+      .gte("sent_at", monthStart);
+
+    let remaining = planLimit - (sentThisMonth ?? 0);
+
+    // Send warning email at 80% and 100% usage (once per threshold per month)
+    const usedPct = ((sentThisMonth ?? 0) / planLimit) * 100;
+    const userEmail = profile.email ?? null;
+    const planLabel = profile.plan ?? "trial";
+    const renewsDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+      .toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+    if (userEmail && usedPct >= 100 && !profile.limit_email_sent_full) {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "TextReminder <hello@textreminder.co.uk>",
+          to: userEmail,
+          subject: "You've reached your SMS limit for this month",
+          html: `<p>Hi,</p><p>You've used all <strong>${planLimit} SMS reminders</strong> on your ${planLabel} plan this month.</p><p>No further reminders will be sent until your allowance resets on <strong>${renewsDate}</strong>.</p><p>To keep reminders going, <a href="https://textreminder.co.uk/settings">upgrade your plan</a>.</p><p>— TextReminder</p>`,
+        }),
+      }).catch(() => {/* don't block on email failure */});
+      await supabase.from("profiles").update({ limit_email_sent_full: true }).eq("id", profile.id);
+    } else if (userEmail && usedPct >= 80 && !profile.limit_email_sent_80) {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "TextReminder <hello@textreminder.co.uk>",
+          to: userEmail,
+          subject: "You're nearly at your SMS limit",
+          html: `<p>Hi,</p><p>You've used <strong>${sentThisMonth} of your ${planLimit} SMS reminders</strong> this month on your ${planLabel} plan — that's ${Math.round(usedPct)}%.</p><p>Your allowance resets on <strong>${renewsDate}</strong>. If you're running low, <a href="https://textreminder.co.uk/settings">upgrade your plan</a> to avoid reminders stopping.</p><p>— TextReminder</p>`,
+        }),
+      }).catch(() => {/* don't block on email failure */});
+      await supabase.from("profiles").update({ limit_email_sent_80: true }).eq("id", profile.id);
+    }
+
+    if (remaining <= 0) {
+      errors.push(`User ${profile.id} has reached their monthly limit of ${planLimit} SMS.`);
+      continue;
+    }
 
     // Loop every schedule slot
     for (let schedIdx = 0; schedIdx < schedule.length; schedIdx++) {
@@ -148,10 +212,14 @@ serve(async (req) => {
           .replace("{business}",       businessName)
           .replace("{phone}",          businessPhone);
 
-        // Send to every phone number on the event
+        // Send to every phone number on the event (respect remaining quota)
         const phoneList = phonesArray;
 
         for (const phone of phoneList) {
+          if (remaining <= 0) {
+            errors.push(`User ${profile.id} hit monthly limit mid-batch — stopping.`);
+            break;
+          }
           const toNumber = phone.startsWith("+") ? phone : phone.replace(/^0/, "+44");
 
           let status        = "sent";
@@ -182,6 +250,7 @@ serve(async (req) => {
             } else {
               messageSid = smsData.messageid ?? smsData.messageId ?? null;
               results.push({ event: event.id, slot: schedIdx, phone: toNumber, messageid: messageSid });
+              remaining--;
             }
           } catch (e) {
             status       = "failed";

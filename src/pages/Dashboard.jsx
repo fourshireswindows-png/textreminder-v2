@@ -2,13 +2,28 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase.js'
 import { Link } from 'react-router-dom'
 
-function StatCard({ icon, label, value, sub, color }) {
+const PLAN_LIMITS = {
+  trial:        20,
+  starter:      100,
+  professional: 200,
+  business:     400,
+  enterprise:   2000,
+}
+
+const PLAN_LABELS = {
+  trial:        'Free Trial',
+  starter:      'Starter',
+  professional: 'Professional',
+  business:     'Business',
+  enterprise:   'Enterprise',
+}
+
+function StatCard({ label, value, sub, color }) {
   return (
     <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:14, padding:'20px 22px' }}>
-      <div style={{ fontSize:22, marginBottom:10 }}>{icon}</div>
-      <div style={{ fontSize:28, fontWeight:800, color:'#0f172a', lineHeight:1, marginBottom:4 }}>{value}</div>
+      <div style={{ fontSize:28, fontWeight:800, color: color || '#0f172a', lineHeight:1, marginBottom:4 }}>{value}</div>
       <div style={{ fontSize:13, fontWeight:600, color:'#475569', marginBottom:2 }}>{label}</div>
-      <div style={{ fontSize:11, color:'#94a3b8' }}>{sub}</div>
+      {sub && <div style={{ fontSize:11, color:'#94a3b8' }}>{sub}</div>}
     </div>
   )
 }
@@ -28,28 +43,55 @@ function SendBtn({ onClick, sent, sending }) {
 }
 
 export default function Dashboard() {
-  const [profile, setProfile]     = useState(null)
-  const [reminders, setReminders] = useState([])
-  const [contacts, setContacts]   = useState([])
-  const [upcoming, setUpcoming]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [sending, setSending]     = useState(null)
-  const [sent, setSent]           = useState(new Set())
+  const [profile, setProfile]           = useState(null)
+  const [reminders, setReminders]       = useState([])
+  const [contacts, setContacts]         = useState([])
+  const [upcoming, setUpcoming]         = useState([])
+  const [sentThisMonth, setSentThisMonth] = useState(0)
+  const [scheduledCount, setScheduledCount] = useState(0)
+  const [loading, setLoading]           = useState(true)
+  const [sending, setSending]           = useState(null)
+  const [sent, setSent]                 = useState(new Set())
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const [{ data: prof }, { data: rems }, { data: conts }, { data: events }] = await Promise.all([
+
+      const now        = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+
+      const [
+        { data: prof },
+        { data: rems },
+        { data: conts },
+        { data: events },
+        { count: sentCount },
+        { data: scheduledEvents },
+      ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('reminders').select('*').eq('user_id', user.id).order('created_at', { ascending:false }).limit(50),
         supabase.from('contacts').select('*').eq('user_id', user.id).eq('active', true),
-        supabase.from('calendar_events').select('*').eq('user_id', user.id).eq('reminder_sent', false).gte('start_time', new Date().toISOString()).order('start_time').limit(10),
+        supabase.from('calendar_events').select('*').eq('user_id', user.id).eq('reminder_sent', false).gte('start_time', now.toISOString()).order('start_time').limit(10),
+        // Accurate sent count: status=sent, sent this calendar month
+        supabase.from('reminders').select('id', { count:'exact', head:true })
+          .eq('user_id', user.id).eq('status', 'sent').gte('sent_at', monthStart),
+        // Scheduled: events this month with a phone number, reminder not fully sent
+        supabase.from('calendar_events').select('id')
+          .eq('user_id', user.id)
+          .eq('reminder_sent', false)
+          .not('phone', 'is', null)
+          .gte('start_time', now.toISOString())
+          .lte('start_time', monthEnd),
       ])
+
       setProfile(prof)
       setReminders(rems || [])
       setContacts(conts || [])
       setUpcoming(events || [])
+      setSentThisMonth(sentCount ?? 0)
+      setScheduledCount(scheduledEvents?.length ?? 0)
       setLoading(false)
     }
     load()
@@ -77,15 +119,25 @@ export default function Dashboard() {
     setSending(null)
   }
 
-  const sentCount   = reminders.filter(r => r.status === 'sent' || r.status === 'delivered').length
-  const thisMonth   = reminders.filter(r => new Date(r.created_at).getMonth() === new Date().getMonth()).length
-  const dueToday    = upcoming.filter(e => new Date(e.start_time).toDateString() === new Date().toDateString())
-
   if (loading) return <div style={{ textAlign:'center', padding:60, color:'#94a3b8' }}>Loading dashboard...</div>
 
-  const trialEnds = profile?.trial_ends_at ? new Date(profile.trial_ends_at) : null
-  const trialDaysLeft = trialEnds ? Math.max(0, Math.ceil((trialEnds - new Date()) / (1000*60*60*24))) : 0
-  const onTrial = profile?.plan === 'trial'
+  const plan        = profile?.plan ?? 'trial'
+  const planLimit   = PLAN_LIMITS[plan] ?? 20
+  const planLabel   = PLAN_LABELS[plan] ?? 'Free Trial'
+  const remaining   = Math.max(0, planLimit - sentThisMonth)
+  const usedPct     = Math.min(100, Math.round((sentThisMonth / planLimit) * 100))
+  const barColor    = usedPct >= 90 ? '#ef4444' : usedPct >= 70 ? '#f59e0b' : '#a855f7'
+
+  const now         = new Date()
+  const renewsOn    = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const renewsStr   = renewsOn.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })
+  const daysToRenew = Math.ceil((renewsOn - now) / (1000 * 60 * 60 * 24))
+
+  const trialEnds     = profile?.trial_ends_at ? new Date(profile.trial_ends_at) : null
+  const trialDaysLeft = trialEnds ? Math.max(0, Math.ceil((trialEnds - now) / (1000*60*60*24))) : 0
+  const onTrial       = plan === 'trial'
+
+  const dueToday = upcoming.filter(e => new Date(e.start_time).toDateString() === now.toDateString())
 
   return (
     <div>
@@ -93,24 +145,65 @@ export default function Dashboard() {
       {onTrial && trialDaysLeft > 0 && (
         <div style={{ background:'linear-gradient(135deg,#fdf4ff,#faf5ff)', border:'1px solid #e9d5ff', borderRadius:12, padding:'12px 18px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
           <div style={{ fontSize:13, color:'#7c3aed' }}>
-            <strong>{trialDaysLeft} days</strong> left on your free plan
+            <strong>{trialDaysLeft} days</strong> left on your free trial
           </div>
-          <Link to="/settings" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:700, textDecoration:'none' }}>Upgrade — £20/month</Link>
+          <Link to="/settings" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:700, textDecoration:'none' }}>Upgrade now</Link>
         </div>
       )}
 
       {/* Page header */}
       <div style={{ marginBottom:24 }}>
         <h1 style={{ fontSize:22, fontWeight:800, color:'#0f172a', marginBottom:4, fontFamily:'Syne,sans-serif' }}>Dashboard</h1>
-        <div style={{ fontSize:13, color:'#94a3b8' }}>{new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</div>
+        <div style={{ fontSize:13, color:'#94a3b8' }}>{now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:28 }}>
-        <StatCard icon="📤" label="Reminders sent" value={sentCount} sub="All time"/>
-        <StatCard icon="📅" label="This month" value={thisMonth} sub="Reminders sent"/>
-        <StatCard icon="👥" label="Contacts" value={contacts.length} sub="Active customers"/>
-        <StatCard icon="⏰" label="Due today" value={dueToday.length} sub="Need reminders"/>
+      {/* SMS Allowance card */}
+      <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:14, padding:'22px 24px', marginBottom:24 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18, flexWrap:'wrap', gap:12 }}>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700, color:'#0f172a', marginBottom:2 }}>SMS Allowance</div>
+            <div style={{ fontSize:12, color:'#94a3b8' }}>{planLabel} plan · renews {renewsStr} ({daysToRenew} days)</div>
+          </div>
+          {remaining === 0 && (
+            <div style={{ background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:8, padding:'6px 12px', fontSize:12, color:'#dc2626', fontWeight:600 }}>
+              Limit reached — upgrade to send more
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ marginBottom:18 }}>
+          <div style={{ height:10, background:'#f1f5f9', borderRadius:99, overflow:'hidden', marginBottom:6 }}>
+            <div style={{ height:'100%', width:`${usedPct}%`, background: barColor, borderRadius:99, transition:'width 0.4s' }} />
+          </div>
+          <div style={{ fontSize:11, color:'#94a3b8', textAlign:'right' }}>{usedPct}% used</div>
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+          <StatCard
+            label="Monthly allowance"
+            value={planLimit.toLocaleString()}
+            sub={`${planLabel} plan`}
+          />
+          <StatCard
+            label="Sent this month"
+            value={sentThisMonth.toLocaleString()}
+            sub="Delivered successfully"
+            color={sentThisMonth >= planLimit ? '#ef4444' : '#0f172a'}
+          />
+          <StatCard
+            label="Scheduled this month"
+            value={scheduledCount.toLocaleString()}
+            sub="Pending appointments"
+          />
+          <StatCard
+            label="Remaining"
+            value={remaining.toLocaleString()}
+            sub={`Resets ${renewsStr}`}
+            color={remaining === 0 ? '#ef4444' : remaining < planLimit * 0.1 ? '#f59e0b' : '#22c55e'}
+          />
+        </div>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'1.3fr 1fr', gap:20 }}>

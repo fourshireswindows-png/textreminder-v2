@@ -321,6 +321,7 @@ function PublicNav({ onLogin, onSignup, onNavigate }) {
 
 // ─── APP NAV (top bar with mobile hamburger) ──────────────────────────────────
 const NAV_ITEMS = [
+  { key: 'dashboard',   label: 'Dashboard', Ic: IC.Grid },
   { key: 'upcoming',    label: 'Upcoming',  Ic: IC.Calendar },
   { key: 'settings',    label: 'Settings',  Ic: IC.Settings },
   { key: 'upgrade',     label: 'Upgrade',   Ic: IC.Star, accent: true },
@@ -1217,8 +1218,8 @@ function AppShell({ user, onLogout, children }) {
   const page = raw === 'log' ? 'message-log' : raw
 
   function setPage(key) {
-    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
-    navigate(map[key] || '/upcoming')
+    const map = { dashboard: '/dashboard', upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
+    navigate(map[key] || '/dashboard')
   }
 
   return (
@@ -1294,6 +1295,7 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/hairdressers"    element={<HomePage {...pub} />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
+      <Route path="/dashboard"       element={shell(<DashboardPage />)} />
       <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
       <Route path="/settings"        element={shell(<SettingsPage />)} />
       <Route path="/contacts"        element={shell(<ContactsPage />)} />
