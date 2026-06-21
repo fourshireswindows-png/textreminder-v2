@@ -85,25 +85,40 @@ serve(async (req) => {
     // Get existing events to preserve phone numbers and reminder_sent status
     const { data: existing } = await supabase
       .from("calendar_events")
-      .select("external_id, start_time, reminder_sent, phone")
+      .select("external_id, start_time, reminder_sent, phone, phones, recurring_event_id")
       .eq("user_id", user_id);
 
     const existingMap = new Map((existing ?? []).map((e: any) => [e.external_id, e]));
 
+    // Build a map of recurringEventId -> { phone, phones } so instances inherit from siblings
+    const recurringPhoneMap = new Map<string, { phone: string | null; phones: string[] }>();
+    for (const ev of existing ?? []) {
+      if (ev.recurring_event_id && (ev.phone || ev.phones?.length)) {
+        recurringPhoneMap.set(ev.recurring_event_id, {
+          phone:  ev.phone  ?? null,
+          phones: ev.phones ?? [],
+        });
+      }
+    }
+
     // Build rows to upsert
     const rows = events.map((e: any) => {
-      const startTime = e.start.dateTime ?? e.start.date;
-      const prev      = existingMap.get(e.id);
+      const startTime        = e.start.dateTime ?? e.start.date;
+      const prev             = existingMap.get(e.id);
+      const recurringEventId = e.recurringEventId ?? null;
+      const inherited        = recurringEventId ? recurringPhoneMap.get(recurringEventId) : null;
       return {
         user_id,
-        external_id:   e.id,
-        title:         e.summary ?? "Appointment",
-        start_time:    startTime,
-        end_time:      e.end?.dateTime ?? e.end?.date ?? startTime,
-        location:      e.location ?? null,
-        reminder_sent: prev ? (new Date(prev.start_time).getTime() === new Date(startTime).getTime() ? prev.reminder_sent : false) : false,
-        phone:         prev?.phone ?? null,
-        last_synced:   now.toISOString(),
+        external_id:        e.id,
+        title:              e.summary ?? "Appointment",
+        start_time:         startTime,
+        end_time:           e.end?.dateTime ?? e.end?.date ?? startTime,
+        location:           e.location ?? null,
+        reminder_sent:      prev ? (new Date(prev.start_time).getTime() === new Date(startTime).getTime() ? prev.reminder_sent : false) : false,
+        phone:              prev?.phone  ?? inherited?.phone  ?? null,
+        phones:             prev?.phones ?? inherited?.phones ?? [],
+        recurring_event_id: recurringEventId,
+        last_synced:        now.toISOString(),
       };
     });
 

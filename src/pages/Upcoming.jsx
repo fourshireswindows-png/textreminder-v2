@@ -150,13 +150,38 @@ export default function Upcoming() {
   async function savePhones(eventId, phonesArr) {
     const cleaned = phonesArr.map(p => (p || '').trim()).filter(Boolean)
     const primaryPhone = cleaned[0] || null
-    const { error } = await supabase.from('calendar_events')
-      .update({ phones: cleaned, phone: primaryPhone })
-      .eq('id', eventId)
-    if (error) { console.error('Phone save error:', error); return }
-    setEvents(prev => prev.map(e => e.id === eventId
-      ? { ...e, phones: cleaned, phone: primaryPhone }
-      : e))
+    const ev = events.find(e => e.id === eventId)
+    const groupId = ev?.recurring_group_id
+    const recurringEventId = ev?.recurring_event_id
+
+    if (groupId) {
+      // Manually created recurring series
+      const { error } = await supabase.from('calendar_events')
+        .update({ phones: cleaned, phone: primaryPhone })
+        .eq('recurring_group_id', groupId)
+      if (error) { console.error('Phone save error:', error); return }
+      setEvents(prev => prev.map(e => e.recurring_group_id === groupId
+        ? { ...e, phones: cleaned, phone: primaryPhone }
+        : e))
+    } else if (recurringEventId) {
+      // Google Calendar recurring series
+      const { error } = await supabase.from('calendar_events')
+        .update({ phones: cleaned, phone: primaryPhone })
+        .eq('recurring_event_id', recurringEventId)
+      if (error) { console.error('Phone save error:', error); return }
+      setEvents(prev => prev.map(e => e.recurring_event_id === recurringEventId
+        ? { ...e, phones: cleaned, phone: primaryPhone }
+        : e))
+    } else {
+      // Single event
+      const { error } = await supabase.from('calendar_events')
+        .update({ phones: cleaned, phone: primaryPhone })
+        .eq('id', eventId)
+      if (error) { console.error('Phone save error:', error); return }
+      setEvents(prev => prev.map(e => e.id === eventId
+        ? { ...e, phones: cleaned, phone: primaryPhone }
+        : e))
+    }
     setEditingPhones(null)
     setPhonesVal([''])
   }

@@ -76,13 +76,13 @@ const PLANS = [
   { id: 'free',         name: 'Free',         price: 0,   annualPrice: 0,    reminders: 20,   popular: false,
     features: ['20 SMS reminders/month','Google Calendar sync','Up to 20 contacts','Basic templates','Message log'] },
   { id: 'starter',      name: 'Starter',      price: 15,  annualPrice: 150,  reminders: 100,  popular: false,
-    features: ['100 SMS reminders/month','Google Calendar sync','Unlimited contacts','Custom templates','Message log','Email support'] },
+    features: ['100 SMS reminders/month','Google Calendar sync','Up to 5 reminder schedules per appointment','3 customisable message templates','Multiple phone numbers per appointment','Unlimited contacts','Full message log','Manual & recurring appointments'] },
   { id: 'professional', name: 'Professional', price: 29,  annualPrice: 290,  reminders: 200,  popular: true,
-    features: ['200 SMS reminders/month','Google Calendar sync','Unlimited contacts','Custom templates','Priority delivery','Delivery reports','Priority support'] },
+    features: ['200 SMS reminders/month','Google Calendar sync','Up to 5 reminder schedules per appointment','3 customisable message templates','Multiple phone numbers per appointment','Unlimited contacts','Full message log','Manual & recurring appointments'] },
   { id: 'business',     name: 'Business',     price: 55,  annualPrice: 550,  reminders: 400,  popular: false,
-    features: ['400 SMS reminders/month','Everything in Pro','Multiple calendars','API access','Dedicated account manager','Custom sender ID'] },
+    features: ['400 SMS reminders/month','Google Calendar sync','Up to 5 reminder schedules per appointment','3 customisable message templates','Multiple phone numbers per appointment','Unlimited contacts','Full message log','Manual & recurring appointments'] },
   { id: 'enterprise',   name: 'Enterprise',   price: 249, annualPrice: 2490, reminders: 2000, popular: false,
-    features: ['2,000 SMS reminders/month','Everything in Business','Dedicated account manager','Custom integrations','SLA guarantee','Custom sender ID'] },
+    features: ['2,000 SMS reminders/month','Google Calendar sync','Up to 5 reminder schedules per appointment','3 customisable message templates','Multiple phone numbers per appointment','Unlimited contacts','Full message log','Manual & recurring appointments'] },
 ]
 
 // ─── Global styles ────────────────────────────────────────────────────────────

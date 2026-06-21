@@ -6,6 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const DEFAULT_TEMPLATE_BODY =
+  "Hi {name}, just a reminder your appointment is tomorrow at {time}. Any questions call {business_phone}. Reply STOP to opt out.";
+
+const DEFAULT_TEMPLATES = [
+  { id: 1, name: "Appointment Reminder", body: DEFAULT_TEMPLATE_BODY },
+  { id: 2, name: "Day-of Reminder",      body: "Hi {name}, your appointment is today at {time}. See you then! Call {business_phone} if needed. Reply STOP to opt out." },
+  { id: 3, name: "Quick Reminder",       body: "Hi {name}, reminder: appointment at {time}. Call {business_phone} to reschedule. Reply STOP to opt out." },
+];
+
+function offsetToMs(value: number, unit: string): number {
+  if (unit === "weeks") return value * 7 * 24 * 60 * 60 * 1000;
+  if (unit === "days")  return value * 24 * 60 * 60 * 1000;
+  return value * 60 * 60 * 1000; // hours (default)
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -16,7 +31,7 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const SMS_WORKS_JWT = Deno.env.get("SMS_WORKS_JWT");
+  const SMS_WORKS_JWT    = Deno.env.get("SMS_WORKS_JWT");
   const SMS_WORKS_SENDER = Deno.env.get("SMS_WORKS_SENDER") ?? "TextRemind";
 
   if (!SMS_WORKS_JWT) {
@@ -28,9 +43,9 @@ serve(async (req) => {
 
   const now = new Date();
   const results: object[] = [];
-  const errors: string[] = [];
+  const errors: string[]  = [];
 
-  // Get all profiles
+  // Fetch all profiles
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("*");
@@ -43,125 +58,152 @@ serve(async (req) => {
   }
 
   for (const profile of profiles ?? []) {
+    // Read reminder schedule — fall back to single 24hr entry
+    const schedule: { value: number; unit: string; template_id: number }[] =
+      profile.reminder_schedule?.length
+        ? profile.reminder_schedule
+        : [{ value: 24, unit: "hours", template_id: 1 }];
 
-    // Get settings for this user's message template
+    const templates: { id: number; name: string; body: string }[] =
+      profile.message_templates?.length ? profile.message_templates : DEFAULT_TEMPLATES;
+
+    // Fetch business details from settings
     const { data: settingsRow } = await supabase
       .from("settings")
-      .select("message_template, business_name, phone_number")
+      .select("business_name, phone_number")
       .eq("user_id", profile.id)
       .maybeSingle();
 
-    // 24 hours ahead, ±1 hour window to catch cron drift
-    const offsetMs = 24 * 60 * 60 * 1000;
-    const windowStart = new Date(now.getTime() + offsetMs - 60 * 60 * 1000);
-    const windowEnd   = new Date(now.getTime() + offsetMs + 60 * 60 * 1000);
+    const businessName  = settingsRow?.business_name ?? profile.business_name ?? "";
+    const businessPhone = settingsRow?.phone_number  ?? profile.phone          ?? "";
 
-    const { data: events } = await supabase
-      .from("calendar_events")
-      .select("*")
-      .eq("user_id", profile.id)
-      .eq("reminder_sent", false)
-      .not("external_id", "like", "manual-%")
-      .gte("start_time", windowStart.toISOString())
-      .lte("start_time", windowEnd.toISOString());
+    // Loop every schedule slot
+    for (let schedIdx = 0; schedIdx < schedule.length; schedIdx++) {
+      const sched    = schedule[schedIdx];
+      const offsetMs = offsetToMs(sched.value, sched.unit);
 
-    for (const event of events ?? []) {
+      // ±30-min window around the exact offset to catch cron drift without double-firing
+      const windowStart = new Date(now.getTime() + offsetMs - 30 * 60 * 1000);
+      const windowEnd   = new Date(now.getTime() + offsetMs + 30 * 60 * 1000);
 
-      // Get phone numbers (supports comma-separated multiple numbers)
-      const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
-      const attendees: { name?: string; phone?: string }[] = event.attendees ?? [];
-      const rawPhone = event.phone
-        ?? (attendees.length > 0 ? attendees[0].phone : null)
-        ?? phoneFromTitle;
-
-      if (!rawPhone) continue;
-
-      // Mark as reminder_sent now that we have a phone number (prevents duplicate sends)
-      await supabase
+      // Fetch events in this time window (no reminder_sent filter — we track per-slot below)
+      const { data: events } = await supabase
         .from("calendar_events")
-        .update({ reminder_sent: true })
-        .eq("id", event.id);
+        .select("*")
+        .eq("user_id", profile.id)
+        .gte("start_time", windowStart.toISOString())
+        .lte("start_time", windowEnd.toISOString());
 
-      // Split comma-separated phones and send to each
-      const phoneList = rawPhone.split(",").map((p: string) => p.trim()).filter(Boolean);
+      for (const event of events ?? []) {
+        // Has this specific schedule slot already fired for this event?
+        const sentIndices: number[] = event.reminder_sent_indices ?? [];
+        if (sentIndices.includes(schedIdx)) continue;
 
-      for (const phone of phoneList) {
+        // Resolve phone list — prefer the phones array, fall back to phone field, then title extraction
+        const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
+        const attendees: { name?: string; phone?: string }[] = event.attendees ?? [];
+        const phonesArray: string[] = Array.isArray(event.phones) && event.phones.length
+          ? event.phones
+          : null
+          ?? (event.phone
+              ? event.phone.split(",").map((p: string) => p.trim()).filter(Boolean)
+              : null)
+          ?? (attendees.length > 0 && attendees[0].phone ? [attendees[0].phone] : null)
+          ?? (phoneFromTitle ? [phoneFromTitle] : []);
 
-      const attendee = attendees[0] ?? {};
-      const appointmentTime = new Date(event.start_time);
-      const timeStr = appointmentTime.toLocaleTimeString("en-GB", {
-        hour: "2-digit", minute: "2-digit", timeZone: "Europe/London",
-      });
-      const dateStr = appointmentTime.toLocaleDateString("en-GB", {
-        weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London",
-      });
+        if (!phonesArray.length) continue;
 
-      const template = settingsRow?.message_template
-        ?? "Hi {name}, just a reminder your appointment is on {date} at {time}. Any questions call {business_phone}. Reply STOP to opt out.";
+        // Mark this slot as sent before we attempt the SMS (prevents dupes on retry)
+        const newSentIndices = [...sentIndices, schedIdx];
+        const allSlotsDone   = newSentIndices.length >= schedule.length;
+        await supabase
+          .from("calendar_events")
+          .update({
+            reminder_sent_indices: newSentIndices,
+            reminder_sent: allSlotsDone,
+          })
+          .eq("id", event.id);
 
-      const businessName = settingsRow?.business_name ?? profile.business_name ?? "";
-      const businessPhone = settingsRow?.phone_number ?? profile.phone ?? "";
-      const message = template
-        .replace("{name}",           attendee.name ?? "there")
-        .replace("{time}",           timeStr)
-        .replace("{date}",           dateStr)
-        .replace("{business_phone}", businessPhone)
-        .replace("{business_name}",  businessName)
-        .replace("{business}",       businessName)
-        .replace("{phone}",          businessPhone);
+        // Resolve template for this slot
+        const templateId   = sched.template_id || 1;
+        const templateDef  = templates.find((t) => t.id === templateId) ?? templates[0];
+        const templateBody = templateDef?.body ?? DEFAULT_TEMPLATE_BODY;
 
-      const toNumber = phone.startsWith("+") ? phone : phone.replace(/^0/, "+44");
-
-      let status = "sent";
-      let messageSid: string | null = null;
-      let errorMessage: string | null = null;
-
-      try {
-        const smsRes = await fetch("https://api.thesmsworks.co.uk/v1/message/send", {
-          method: "POST",
-          headers: {
-            "Authorization": `JWT ${SMS_WORKS_JWT}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sender: SMS_WORKS_SENDER,
-            destination: toNumber,
-            content: message,
-            schedule: "",
-          }),
+        // Build message
+        const attendee = attendees[0] ?? {};
+        const appointmentTime = new Date(event.start_time);
+        const timeStr = appointmentTime.toLocaleTimeString("en-GB", {
+          hour: "2-digit", minute: "2-digit", timeZone: "Europe/London",
+        });
+        const dateStr = appointmentTime.toLocaleDateString("en-GB", {
+          weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London",
         });
 
-        const smsData = await smsRes.json();
+        const message = templateBody
+          .replace("{name}",           attendee.name ?? "there")
+          .replace("{time}",           timeStr)
+          .replace("{date}",           dateStr)
+          .replace("{business_phone}", businessPhone)
+          .replace("{business_name}",  businessName)
+          .replace("{business}",       businessName)
+          .replace("{phone}",          businessPhone);
 
-        if (!smsRes.ok || smsData.status === "REJECTED" || smsData.status === "FAILED") {
-          status = "failed";
-          errorMessage = smsData.message ?? smsData.error ?? "SMS Works error";
-          errors.push(`Event ${event.id}: ${errorMessage}`);
-        } else {
-          messageSid = smsData.messageid ?? smsData.messageId ?? null;
-          results.push({ event: event.id, phone: toNumber, messageid: messageSid });
+        // Send to every phone number on the event
+        const phoneList = phonesArray;
+
+        for (const phone of phoneList) {
+          const toNumber = phone.startsWith("+") ? phone : phone.replace(/^0/, "+44");
+
+          let status        = "sent";
+          let messageSid: string | null    = null;
+          let errorMessage: string | null  = null;
+
+          try {
+            const smsRes = await fetch("https://api.thesmsworks.co.uk/v1/message/send", {
+              method: "POST",
+              headers: {
+                "Authorization": `JWT ${SMS_WORKS_JWT}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                sender: SMS_WORKS_SENDER,
+                destination: toNumber,
+                content: message,
+                schedule: "",
+              }),
+            });
+
+            const smsData = await smsRes.json();
+
+            if (!smsRes.ok || smsData.status === "REJECTED" || smsData.status === "FAILED") {
+              status       = "failed";
+              errorMessage = smsData.message ?? smsData.error ?? "SMS Works error";
+              errors.push(`Event ${event.id} slot ${schedIdx}: ${errorMessage}`);
+            } else {
+              messageSid = smsData.messageid ?? smsData.messageId ?? null;
+              results.push({ event: event.id, slot: schedIdx, phone: toNumber, messageid: messageSid });
+            }
+          } catch (e) {
+            status       = "failed";
+            errorMessage = String(e);
+            errors.push(`Event ${event.id} slot ${schedIdx}: ${errorMessage}`);
+          }
+
+          // Log to reminders table
+          await supabase.from("reminders").insert({
+            user_id:           profile.id,
+            contact_name:      attendee.name ?? event.title ?? "Unknown",
+            contact_phone:     toNumber,
+            channel:           "sms",
+            message,
+            status,
+            sent_at:           status === "sent" ? now.toISOString() : null,
+            calendar_event_id: event.external_id,
+            twilio_sid:        messageSid,
+            error_message:     errorMessage,
+          });
         }
-      } catch (e) {
-        status = "failed";
-        errorMessage = String(e);
-        errors.push(`Event ${event.id}: ${errorMessage}`);
       }
-
-      // Log to reminders table
-      await supabase.from("reminders").insert({
-        user_id:           profile.id,
-        contact_name:      attendee.name ?? event.title ?? "Unknown",
-        contact_phone:     toNumber,
-        channel:           "sms",
-        message,
-        status,
-        sent_at:           status === "sent" ? now.toISOString() : null,
-        calendar_event_id: event.external_id,
-        twilio_sid:        messageSid,
-        error_message:     errorMessage,
-      });
-
-      } // end for phoneList
     }
   }
 
