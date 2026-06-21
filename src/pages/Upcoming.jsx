@@ -54,6 +54,7 @@ export default function Upcoming() {
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
+  const [viewMode, setViewMode]     = useState('calendar')
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm] = useState({
@@ -494,6 +495,94 @@ export default function Upcoming() {
   )
   }
 
+  const ListCard = ({ ev }) => {
+    const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
+    const activeTemplates = templates.filter(t => activeIds.includes(t.id))
+    const currentPhones = getEventPhones(ev)
+    const hasPhone = currentPhones.length > 0
+    const timeStr = new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    return (
+      <div style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 10, padding: '12px 14px', borderLeft: `4px solid ${ev.is_manual ? pink : purple}`, display: 'flex', alignItems: 'flex-start', gap: 12, position: 'relative' }}>
+        <div style={{ minWidth: 50, textAlign: 'center', paddingTop: 2, flexShrink: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: purple }}>{timeStr}</div>
+        </div>
+        <div style={{ width: 1, background: border, alignSelf: 'stretch', flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+            <span title={ev.reminder_sent ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
+              style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: ev.reminder_sent ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
+            <span style={{ fontSize: 14, fontWeight: 700, color: text }}>{ev.title}</span>
+            {ev.is_manual && ev.recurring_group_id && <span style={{ fontSize: 9, opacity: 0.6, color: muted }}>REC</span>}
+          </div>
+          {editingPhones === ev.id ? (
+            <div style={{ marginTop: 4, padding: '5px 8px', background: '#f8fafc', border: `1px solid ${border}`, borderRadius: 5 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Phone numbers:</div>
+              {phonesVal.map((p, i) => (
+                <div key={i} style={{ display: 'flex', gap: 3, marginBottom: 3, alignItems: 'center' }}>
+                  <input value={p} onChange={e => { const next = [...phonesVal]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); setPhonesVal(next) }}
+                    onKeyDown={e => { if (e.key === 'Enter') savePhones(ev.id, phonesVal) }}
+                    placeholder="07700 900123" autoFocus={i === 0} type="tel" inputMode="numeric"
+                    style={{ flex: 1, fontSize: 12, padding: '4px 8px', border: `1px solid ${border}`, borderRadius: 5, outline: 'none', fontFamily: 'inherit' }} />
+                  {phonesVal.length > 1 && (
+                    <button onClick={() => setPhonesVal(phonesVal.filter((_, j) => j !== i))}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: '0 3px' }}>x</button>
+                  )}
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                {phonesVal.length < 5 ? (
+                  <button onClick={() => setPhonesVal([...phonesVal, ''])}
+                    style={{ background: 'none', border: 'none', color: purple, fontSize: 10, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>+ Add number</button>
+                ) : <span />}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}
+                    style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                  <button onClick={e => { e.stopPropagation(); savePhones(ev.id, phonesVal) }}
+                    style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
+              style={{ fontSize: 12, color: hasPhone ? green : '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {hasPhone ? currentPhones.join(', ') : '+ Add phone'}
+            </div>
+          )}
+          {editingTemplate === ev.id ? (
+            <div style={{ marginTop: 6, padding: '4px 8px', background: '#fdf4ff', border: `1px solid ${border}`, borderRadius: 5 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Select templates:</div>
+              {templates.map(t => {
+                const checked = pendingTemplateIds.includes(Number(t.id))
+                const toggle = () => { const next = checked ? pendingTemplateIds.filter(id => id !== Number(t.id)) : [...pendingTemplateIds, Number(t.id)]; if (next.length === 0) return; setPendingTemplateIds(next) }
+                return (
+                  <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: text, cursor: 'pointer', marginBottom: 2 }}>
+                    <input type="checkbox" checked={checked} onChange={toggle} style={{ accentColor: purple, width: 11, height: 11, cursor: 'pointer' }} />
+                    {t.name}
+                  </label>
+                )
+              })}
+              <button onClick={e => { e.stopPropagation(); commitTemplates(ev.id, pendingTemplateIds) }}
+                style={{ marginTop: 4, background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+            </div>
+          ) : (
+            <div onClick={() => { setEditingTemplate(ev.id); setPendingTemplateIds((activeIds).map(Number)) }}
+              style={{ fontSize: 10, color: purple, marginTop: 4, fontWeight: 600, opacity: 0.75, cursor: 'pointer' }}>
+              {activeTemplates.length ? activeTemplates.map(t => t.name).join(', ') : 'Template 1'} v
+            </div>
+          )}
+        </div>
+        {ev.is_manual && (
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button onClick={e => { e.stopPropagation(); openEdit(ev) }}
+              style={{ background: '#f1f5f9', border: 'none', borderRadius: 6, padding: '4px 9px', fontSize: 11, color: muted, cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button>
+            <button onClick={e => { e.stopPropagation(); requestDelete(ev) }}
+              style={{ background: '#fef2f2', border: 'none', borderRadius: 6, padding: '4px 9px', fontSize: 11, color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit' }}>X</button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 20 }}>
@@ -517,6 +606,14 @@ export default function Upcoming() {
           <button onClick={() => setShowAddModal(true)} style={{ background: `linear-gradient(135deg,${pink},${purple})`, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
             + Add Appointment
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: 8, padding: 3, gap: 2 }}>
+            {[['calendar', 'Calendar'], ['list', 'List']].map(([mode, label]) => (
+              <button key={mode} onClick={() => setViewMode(mode)}
+                style={{ background: viewMode === mode ? '#fff' : 'transparent', color: viewMode === mode ? purple : muted, border: 'none', borderRadius: 6, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: viewMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                {label}
+              </button>
+            ))}
+          </div>
           {isMobile ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={() => setDayOffset(p => p - 1)} style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text, fontFamily: 'inherit' }}>Prev</button>
@@ -554,6 +651,36 @@ export default function Upcoming() {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: muted }}>Loading...</div>
+      ) : viewMode === 'list' ? (
+        <div>
+          {(isMobile ? [singleDay] : weekDays).map((day, i) => {
+            const dayEvents = getEventsForDay(day)
+            const isToday = day.toDateString() === todayStr
+            if (!isMobile && dayEvents.length === 0) return null
+            return (
+              <div key={i} style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: isToday ? purple : text, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                    {day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+                  </div>
+                  {isToday && <span style={{ fontSize: 10, background: purple, color: '#fff', borderRadius: 20, padding: '2px 8px', fontWeight: 700, flexShrink: 0 }}>Today</span>}
+                  {dayEvents.length > 0 && <span style={{ fontSize: 11, color: muted, flexShrink: 0 }}>{dayEvents.length} appointment{dayEvents.length !== 1 ? 's' : ''}</span>}
+                  <div style={{ flex: 1, height: 1, background: border }} />
+                </div>
+                {dayEvents.length === 0 ? (
+                  <div style={{ color: '#cbd5e1', fontSize: 13 }}>No appointments</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {dayEvents.map(ev => <ListCard key={ev.id} ev={ev} />)}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {!isMobile && weekDays.every(d => getEventsForDay(d).length === 0) && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: muted, fontSize: 13 }}>No appointments this week</div>
+          )}
+        </div>
       ) : isMobile ? (
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
           <div ref={calendarRef} style={{ overflowY: 'auto', maxHeight: '70vh' }}>
