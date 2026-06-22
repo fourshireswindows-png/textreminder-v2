@@ -8,6 +8,30 @@ const DEFAULT_TEMPLATES = [
   { id: 3, name: 'Quick Reminder' },
 ]
 
+// Self-contained modal — owns its own phonesVal state so typing never re-renders Upcoming
+function PhoneEditModal({ initialPhones, onSave, onClose }) {
+  const purple = '#a855f7'
+  const pink   = '#ec4899'
+  const text   = '#1a1a2e'
+  const [phones, setPhones] = useState(initialPhones)
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+      onClick={onClose}>
+      <div style={{ background:'#fff', borderRadius:14, padding:24, width:'100%', maxWidth:360, boxShadow:'0 16px 50px rgba(0,0,0,0.18)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize:15, fontWeight:700, color:text, marginBottom:16 }}>Phone Numbers</div>
+        <PhonesInput phones={phones} onChange={setPhones} />
+        <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:18 }}>
+          <button onClick={onClose}
+            style={{ background:'#f1f5f9', color:'#64748b', border:'none', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+          <button onClick={() => onSave(phones)}
+            style={{ background:`linear-gradient(135deg,${pink},${purple})`, color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Save</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PhonesInput({ phones, onChange }) {
   const purple = '#a855f7'
   const inputStyle = {
@@ -47,8 +71,7 @@ export default function Upcoming() {
   const [loading, setLoading]       = useState(true)
   const [weekOffset, setWeekOffset] = useState(0)
   const [dayOffset, setDayOffset]   = useState(0)
-  const [editingPhones, setEditingPhones] = useState(null)
-  const [phonesVal, setPhonesVal]   = useState([''])
+  const [editingPhones, setEditingPhones] = useState(null) // { id, phones }
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [pendingTemplateIds, setPendingTemplateIds] = useState([])
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
@@ -188,7 +211,6 @@ export default function Upcoming() {
         : e))
     }
     setEditingPhones(null)
-    setPhonesVal([''])
   }
 
   async function saveManualAppointment() {
@@ -456,7 +478,7 @@ export default function Upcoming() {
         </div>
       )}
 
-      <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
+      <div onClick={() => setEditingPhones({ id: ev.id, phones: currentPhones.length ? [...currentPhones] : [''] })}
         style={{ fontSize: 10, color: hasPhone ? green : '#94a3b8', marginTop: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
         {hasPhone ? currentPhones.join(', ') : 'Add phone'}
       </div>
@@ -513,7 +535,7 @@ export default function Upcoming() {
             <span style={{ fontSize: 14, fontWeight: 700, color: text }}>{ev.title}</span>
             {ev.is_manual && ev.recurring_group_id && <span style={{ fontSize: 9, opacity: 0.6, color: muted }}>REC</span>}
           </div>
-          <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
+          <div onClick={() => setEditingPhones({ id: ev.id, phones: currentPhones.length ? [...currentPhones] : [''] })}
             style={{ fontSize: 12, color: hasPhone ? green : '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
             {hasPhone ? currentPhones.join(', ') : '+ Add phone'}
           </div>
@@ -920,22 +942,12 @@ export default function Upcoming() {
         </div>
       )}
 
-      {/* Phone editing overlay — rendered here so typing doesn't remount the calendar */}
       {editingPhones && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-          onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 16px 50px rgba(0,0,0,0.18)' }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: text, marginBottom: 16 }}>Phone Numbers</div>
-            <PhonesInput phones={phonesVal} onChange={setPhonesVal} />
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
-              <button onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}
-                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-              <button onClick={() => savePhones(editingPhones, phonesVal)}
-                style={{ background: `linear-gradient(135deg,${pink},${purple})`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
-            </div>
-          </div>
-        </div>
+        <PhoneEditModal
+          initialPhones={editingPhones.phones}
+          onClose={() => setEditingPhones(null)}
+          onSave={phones => savePhones(editingPhones.id, phones)}
+        />
       )}
 
       {deleteTarget && (
