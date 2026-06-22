@@ -1207,6 +1207,7 @@ import ContactsPage   from './pages/Contacts.jsx'
 import MessageLogPage from './pages/MessageLog.jsx'
 import LoginPage      from './pages/Login.jsx'
 import SignupPage     from './pages/Signup.jsx'
+import AuthCallback   from './pages/AuthCallback.jsx'
 
 // ─── App shell (logged-in layout with AppNav) ─────────────────────────────────
 function AppShell({ user, onLogout, children }) {
@@ -1293,6 +1294,7 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/hairdressers"    element={<HomePage {...pub} />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
+      <Route path="/auth/callback"   element={<AuthCallback />} />
       <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
       <Route path="/settings"        element={shell(<SettingsPage />)} />
       <Route path="/contacts"        element={shell(<ContactsPage />)} />
@@ -1320,7 +1322,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <GlobalStyles />
-      <AppRouter user={user} loading={loading} onLogout={async () => { await supabase.auth.signOut(); setUser(null) }} />
+        <AppRouter user={user} loading={loading} onLogout={async () => { await supabase.auth.signOut(); setUser(null) }} />
     </BrowserRouter>
   )
 }
