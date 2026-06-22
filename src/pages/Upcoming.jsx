@@ -434,7 +434,7 @@ export default function Upcoming() {
   }
   const todayIso = new Date().toISOString().split('T')[0]
 
-  const AppointmentBlock = ({ ev }) => {
+  function renderAppointmentBlock(ev) {
     const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
     const activeTemplates = templates.filter(t => activeIds.includes(t.id))
     const currentPhones = getEventPhones(ev)
@@ -456,41 +456,10 @@ export default function Upcoming() {
         </div>
       )}
 
-      {editingPhones === ev.id ? (
-        <div style={{ marginTop: 4, padding: '5px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Phone numbers:</div>
-          {phonesVal.map((p, i) => (
-            <div key={i} style={{ display: 'flex', gap: 3, marginBottom: 3, alignItems: 'center' }}>
-              <input value={p}
-                onChange={e => { const next = [...phonesVal]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); setPhonesVal(next) }}
-                onKeyDown={e => { if (e.key === 'Enter') savePhones(ev.id, phonesVal) }}
-                placeholder="07700 900123" autoFocus={i === 0} type="tel" inputMode="numeric"
-                style={{ flex: 1, fontSize: 11, padding: '3px 6px', border: `1px solid ${border}`, borderRadius: 4, outline: 'none', fontFamily: 'inherit' }} />
-              {phonesVal.length > 1 && (
-                <button onClick={() => setPhonesVal(phonesVal.filter((_, j) => j !== i))}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: '0 3px', lineHeight: 1 }}>x</button>
-              )}
-            </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-            {phonesVal.length < 5 ? (
-              <button onClick={() => setPhonesVal([...phonesVal, ''])}
-                style={{ background: 'none', border: 'none', color: purple, fontSize: 9, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>+ Add number</button>
-            ) : <span />}
-            <div style={{ display: 'flex', gap: 3 }}>
-              <button onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}
-                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '2px 7px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-              <button onClick={e => { e.stopPropagation(); savePhones(ev.id, phonesVal) }}
-                style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
-          style={{ fontSize: 10, color: hasPhone ? green : '#94a3b8', marginTop: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-          {hasPhone ? currentPhones.join(', ') : 'Add phone'}
-        </div>
-      )}
+      <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
+        style={{ fontSize: 10, color: hasPhone ? green : '#94a3b8', marginTop: 3, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+        {hasPhone ? currentPhones.join(', ') : 'Add phone'}
+      </div>
 
       {editingTemplate === ev.id ? (
         <div style={{ marginTop: 4, padding: '4px 6px', background: '#fff', border: `1px solid ${purple}`, borderRadius: 5 }}>
@@ -525,7 +494,7 @@ export default function Upcoming() {
   )
   }
 
-  const ListCard = ({ ev }) => {
+  function renderListCard(ev) {
     const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
     const activeTemplates = templates.filter(t => activeIds.includes(t.id))
     const currentPhones = getEventPhones(ev)
@@ -544,40 +513,10 @@ export default function Upcoming() {
             <span style={{ fontSize: 14, fontWeight: 700, color: text }}>{ev.title}</span>
             {ev.is_manual && ev.recurring_group_id && <span style={{ fontSize: 9, opacity: 0.6, color: muted }}>REC</span>}
           </div>
-          {editingPhones === ev.id ? (
-            <div style={{ marginTop: 4, padding: '5px 8px', background: '#f8fafc', border: `1px solid ${border}`, borderRadius: 5 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Phone numbers:</div>
-              {phonesVal.map((p, i) => (
-                <div key={i} style={{ display: 'flex', gap: 3, marginBottom: 3, alignItems: 'center' }}>
-                  <input value={p} onChange={e => { const next = [...phonesVal]; next[i] = e.target.value.replace(/[^0-9+\s]/g, ''); setPhonesVal(next) }}
-                    onKeyDown={e => { if (e.key === 'Enter') savePhones(ev.id, phonesVal) }}
-                    placeholder="07700 900123" autoFocus={i === 0} type="tel" inputMode="numeric"
-                    style={{ flex: 1, fontSize: 12, padding: '4px 8px', border: `1px solid ${border}`, borderRadius: 5, outline: 'none', fontFamily: 'inherit' }} />
-                  {phonesVal.length > 1 && (
-                    <button onClick={() => setPhonesVal(phonesVal.filter((_, j) => j !== i))}
-                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 13, padding: '0 3px' }}>x</button>
-                  )}
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                {phonesVal.length < 5 ? (
-                  <button onClick={() => setPhonesVal([...phonesVal, ''])}
-                    style={{ background: 'none', border: 'none', color: purple, fontSize: 10, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>+ Add number</button>
-                ) : <span />}
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <button onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}
-                    style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-                  <button onClick={e => { e.stopPropagation(); savePhones(ev.id, phonesVal) }}
-                    style={{ background: purple, color: '#fff', border: 'none', borderRadius: 4, padding: '3px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
-              style={{ fontSize: 12, color: hasPhone ? green : '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              {hasPhone ? currentPhones.join(', ') : '+ Add phone'}
-            </div>
-          )}
+          <div onClick={() => { setEditingPhones(ev.id); setPhonesVal(currentPhones.length ? [...currentPhones] : ['']) }}
+            style={{ fontSize: 12, color: hasPhone ? green : '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {hasPhone ? currentPhones.join(', ') : '+ Add phone'}
+          </div>
           {editingTemplate === ev.id ? (
             <div style={{ marginTop: 6, padding: '4px 8px', background: '#fdf4ff', border: `1px solid ${border}`, borderRadius: 5 }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: purple, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Select templates:</div>
@@ -743,7 +682,7 @@ export default function Upcoming() {
                   <div style={{ color: '#cbd5e1', fontSize: 13 }}>No appointments</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {dayEvents.map(ev => <ListCard key={ev.id} ev={ev} />)}
+                    {dayEvents.map(ev => <div key={ev.id}>{renderListCard(ev)}</div>)}
                   </div>
                 )}
               </div>
@@ -767,7 +706,7 @@ export default function Upcoming() {
               return (
                 <div key={hour} style={{ display: 'flex', borderBottom: '1px solid #f8fafc' }}>
                   <div style={{ width: 56, padding: '10px 8px 0', fontSize: 11, color: '#94a3b8', fontWeight: 600, borderRight: '1px solid #f1f5f9', flexShrink: 0 }}>{hour.toString().padStart(2, '0')}:00</div>
-                  <div style={{ flex: 1, padding: '4px 8px' }}>{slotEvents.map(ev => <AppointmentBlock key={ev.id} ev={ev} />)}</div>
+                  <div style={{ flex: 1, padding: '4px 8px' }}>{slotEvents.map(ev => <div key={ev.id}>{renderAppointmentBlock(ev)}</div>)}</div>
                 </div>
               )
             })}
@@ -798,7 +737,7 @@ export default function Upcoming() {
                   const isToday = day.toDateString() === todayStr
                   return (
                     <div key={di} style={{ borderLeft: '1px solid #f1f5f9', padding: '3px 4px', background: isToday ? '#fefcff' : '#fff', minHeight: 56 }}>
-                      {slotEvents.map(ev => <AppointmentBlock key={ev.id} ev={ev} />)}
+                      {slotEvents.map(ev => <div key={ev.id}>{renderAppointmentBlock(ev)}</div>)}
                     </div>
                   )
                 })}
@@ -976,6 +915,24 @@ export default function Upcoming() {
               <button onClick={saveEdit} disabled={savingEdit} style={{ background: savingEdit ? '#e9d5ff' : `linear-gradient(135deg,${pink},${purple})`, color: savingEdit ? purple : '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: savingEdit ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                 {savingEdit ? 'Saving...' : 'Save Changes'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phone editing overlay — rendered here so typing doesn't remount the calendar */}
+      {editingPhones && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 16px 50px rgba(0,0,0,0.18)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: text, marginBottom: 16 }}>Phone Numbers</div>
+            <PhonesInput phones={phonesVal} onChange={setPhonesVal} />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button onClick={() => { setEditingPhones(null); setPhonesVal(['']) }}
+                style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => savePhones(editingPhones, phonesVal)}
+                style={{ background: `linear-gradient(135deg,${pink},${purple})`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
             </div>
           </div>
         </div>
