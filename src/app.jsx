@@ -1317,6 +1317,27 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return (
+    <BrowserRouter>
+      <GlobalStyles />
+      <AppRouter user={user} loading={loading} onLogout={async () => { await supabase.auth.signOut(); setUser(null) }} />
+    </BrowserRouter>
+  )
+}
+ull)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
     return ()=> subscription.unsubscribe()
   }, [])
 
