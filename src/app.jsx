@@ -321,7 +321,6 @@ function PublicNav({ onLogin, onSignup, onNavigate }) {
 
 // ─── APP NAV (top bar with mobile hamburger) ──────────────────────────────────
 const NAV_ITEMS = [
-  { key: 'dashboard',   label: 'Dashboard', Ic: IC.Grid },
   { key: 'upcoming',    label: 'Upcoming',  Ic: IC.Calendar },
   { key: 'settings',    label: 'Settings',  Ic: IC.Settings },
   { key: 'upgrade',     label: 'Upgrade',   Ic: IC.Star, accent: true },
@@ -347,7 +346,7 @@ function AppNav({ page, setPage, user, onLogout }) {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', height: 56 }}>
 
         {/* Logo */}
-        <button onClick={() => navigate('dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 8px 0 0', marginRight: 8, flexShrink: 0 }}>
+        <button onClick={() => navigate('upcoming')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 8px 0 0', marginRight: 8, flexShrink: 0 }}>
           <LogoMark />
         </button>
 
@@ -1202,7 +1201,6 @@ function BlogPostPage({ slug, onSignup, onNavigate }) {
 
 // ─── Page component imports ───────────────────────────────────────────────────
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
-import DashboardPage  from './pages/Dashboard.jsx'
 import UpcomingPage   from './pages/Upcoming.jsx'
 import SettingsPage   from './pages/Settings.jsx'
 import ContactsPage   from './pages/Contacts.jsx'
@@ -1214,12 +1212,12 @@ import SignupPage     from './pages/Signup.jsx'
 function AppShell({ user, onLogout, children }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const raw = location.pathname.replace(/^\//, '') || 'dashboard'
+  const raw = location.pathname.replace(/^\//, '') || 'upcoming'
   const page = raw === 'log' ? 'message-log' : raw
 
   function setPage(key) {
-    const map = { dashboard: '/dashboard', upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
-    navigate(map[key] || '/dashboard')
+    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
+    navigate(map[key] || '/upcoming')
   }
 
   return (
@@ -1250,7 +1248,7 @@ function AppRouter({ user, loading, onLogout }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // After Google OAuth, user lands at '/' — redirect to dashboard
+  // After Google OAuth, user lands at '/' — redirect to upcoming
   useEffect(() => {
     if (!loading && user && ['/', '/login', '/signup'].includes(location.pathname)) {
       navigate('/upcoming', { replace: true })
@@ -1295,7 +1293,6 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/hairdressers"    element={<HomePage {...pub} />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
-      <Route path="/dashboard"       element={shell(<DashboardPage />)} />
       <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
       <Route path="/settings"        element={shell(<SettingsPage />)} />
       <Route path="/contacts"        element={shell(<ContactsPage />)} />
@@ -1324,29 +1321,6 @@ export default function App() {
     <BrowserRouter>
       <GlobalStyles />
       <AppRouter user={user} loading={loading} onLogout={async () => { await supabase.auth.signOut(); setUser(null) }} />
-    </BrowserRouter>
-  )
-}
-ull)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-    })
-    return ()=> subscription.unsubscribe()
-  }, [])
-
-  async function onLogout() { await supabase.auth.signOut() }
-
-  return (
-    <BrowserRouter>
-      <GlobalStyles />
-      <AppRouter user={user} loading={loading} onLogout={onLogout} />
     </BrowserRouter>
   )
 }

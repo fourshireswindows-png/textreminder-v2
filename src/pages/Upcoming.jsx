@@ -55,6 +55,7 @@ export default function Upcoming() {
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
   const [viewMode, setViewMode]     = useState('calendar')
+  const [sentThisMonth, setSentThisMonth] = useState(0)
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm] = useState({
@@ -90,6 +91,10 @@ export default function Upcoming() {
       supabase.from('calendar_events').select('*').eq('user_id', user.id).order('start_time').limit(200),
       supabase.from('profiles').select('*').eq('id', user.id).single(),
     ])
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const { count: sentCount } = await supabase.from('reminders').select('id', { count:'exact', head:true })
+      .eq('user_id', user.id).eq('status', 'sent').gte('sent_at', monthStart)
+    setSentThisMonth(sentCount ?? 0)
     setEvents(evs || [])
     setProfile(prof)
     if (prof?.message_templates) setTemplates(prof.message_templates)
@@ -608,8 +613,50 @@ export default function Upcoming() {
     )
   }
 
+  const PLAN_LIMITS = { trial:20, starter:100, professional:200, business:400, enterprise:2000 }
+  const PLAN_LABELS = { trial:'Free Trial', starter:'Starter', professional:'Professional', business:'Business', enterprise:'Enterprise' }
+  const plan       = profile?.plan ?? 'trial'
+  const planLimit  = PLAN_LIMITS[plan] ?? 20
+  const planLabel  = PLAN_LABELS[plan] ?? 'Free Trial'
+  const smsUsed    = sentThisMonth
+  const smsLeft    = Math.max(0, planLimit - smsUsed)
+  const usedPct    = Math.min(100, Math.round((smsUsed / planLimit) * 100))
+  const barColor   = usedPct >= 90 ? '#ef4444' : usedPct >= 70 ? '#f59e0b' : '#a855f7'
+  const renewsOn   = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
+  const renewsStr  = renewsOn.toLocaleDateString('en-GB', { day:'numeric', month:'short' })
+
   return (
     <div>
+      {/* SMS Allowance bar */}
+      <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12, padding:'14px 18px', marginBottom:20, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+        <div style={{ flex:1, minWidth:160 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+            <span style={{ fontSize:12, fontWeight:700, color:'#0f172a' }}>SMS this month</span>
+            <span style={{ fontSize:12, color:'#94a3b8' }}>{planLabel} · resets {renewsStr}</span>
+          </div>
+          <div style={{ height:8, background:'#f1f5f9', borderRadius:99, overflow:'hidden' }}>
+            <div style={{ height:'100%', width:`${usedPct}%`, background:barColor, borderRadius:99, transition:'width 0.4s' }} />
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:16, flexShrink:0 }}>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:18, fontWeight:800, color:'#0f172a', lineHeight:1 }}>{smsUsed}</div>
+            <div style={{ fontSize:10, color:'#94a3b8', marginTop:2 }}>sent</div>
+          </div>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:18, fontWeight:800, color: smsLeft === 0 ? '#ef4444' : '#a855f7', lineHeight:1 }}>{smsLeft}</div>
+            <div style={{ fontSize:10, color:'#94a3b8', marginTop:2 }}>remaining</div>
+          </div>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:18, fontWeight:800, color:'#0f172a', lineHeight:1 }}>{planLimit}</div>
+            <div style={{ fontSize:10, color:'#94a3b8', marginTop:2 }}>allowance</div>
+          </div>
+        </div>
+        {smsLeft === 0 && (
+          <Link to="/settings" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap' }}>Upgrade</Link>
+        )}
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 'clamp(22px,3.5vw,32px)', fontWeight: 800, color: text, marginBottom: 4, letterSpacing: '-0.6px' }}>Upcoming Appointments</h1>
