@@ -25,7 +25,7 @@ serve(async (req) => {
   // Find all recurring groups — get the latest occurrence per group
   const { data: events, error } = await supabase
     .from("calendar_events")
-    .select("recurring_group_id, recurring_interval_days, recurring_end_type, start_time, end_time, title, phone, user_id, location")
+    .select("recurring_group_id, recurring_interval_days, recurring_end_type, start_time, end_time, title, phone, phones, attendees, user_id, location")
     .not("recurring_group_id", "is", null)
     .not("recurring_interval_days", "is", null)
     .order("start_time", { ascending: false });
@@ -87,6 +87,8 @@ serve(async (req) => {
         start_time: cur.toISOString(),
         end_time: cEnd.toISOString(),
         phone: latest.phone ?? null,
+        phones: latest.phones ?? null,
+        attendees: latest.attendees ?? null,
         location: latest.location ?? "",
         reminder_sent: false,
         recurring_group_id: groupId,
