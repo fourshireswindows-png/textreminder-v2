@@ -259,7 +259,7 @@ serve(async (req) => {
           }
 
           // Log to reminders table
-          await supabase.from("reminders").insert({
+          const { error: insertError } = await supabase.from("reminders").insert({
             user_id:           profile.id,
             contact_name:      attendee.name ?? event.title ?? "Unknown",
             contact_phone:     toNumber,
@@ -271,6 +271,10 @@ serve(async (req) => {
             twilio_sid:        messageSid,
             error_message:     errorMessage,
           });
+          if (insertError) {
+            errors.push(`reminders insert failed for event ${event.id}: ${insertError.message}`);
+            console.error("reminders insert error:", insertError.message);
+          }
         }
       }
     }

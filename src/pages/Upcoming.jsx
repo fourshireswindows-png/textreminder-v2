@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase.js'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 const DEFAULT_TEMPLATES = [
   { id: 1, name: 'Appointment Reminder' },
@@ -65,6 +65,7 @@ function PhonesInput({ phones, onChange }) {
 }
 
 export default function Upcoming() {
+  const location = useLocation()
   const [events, setEvents]         = useState([])
   const [profile, setProfile]       = useState(null)
   const [templates, setTemplates]   = useState(DEFAULT_TEMPLATES)
@@ -147,7 +148,7 @@ export default function Upcoming() {
     load()
     const interval = setInterval(() => syncCalendar(), 10 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [location.key])
 
   useEffect(() => {
     if (!loading && calendarRef.current) {
@@ -960,6 +961,7 @@ export default function Upcoming() {
               <button onClick={() => deleteManualEvent(deleteTarget, 'all')} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete all in this series</button>
               <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
             </div>
+
           </div>
         </div>
       )}
