@@ -20,20 +20,21 @@ const B = {
 
 function Nav({ onSignup }) {
   return (
-    <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${B.border}` }}>
+    <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: B.navy, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
       <div style={{ maxWidth: 1140, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 62 }}>
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 9 }}>
           <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
             <defs><linearGradient id="lgtp" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#ec4899"/><stop offset="100%" stopColor="#a855f7"/></linearGradient></defs>
-            <rect width="48" height="48" rx="11" fill="url(#lgtp)" />
-            <path d="M10 14C10 11.8 11.8 10 14 10H34C36.2 10 38 11.8 38 14V28C38 30.2 36.2 32 34 32H27L21 38V32H14C11.8 32 10 30.2 10 28V14Z" fill="white" opacity="0.95"/>
-            <rect x="15" y="18" width="18" height="2.5" rx="1.25" fill="#ec4899"/>
-            <rect x="15" y="23" width="12" height="2.5" rx="1.25" fill="#ec4899"/>
+            <path d="M6 8C6 5.79 7.79 4 10 4H38C40.21 4 42 5.79 42 8V30C42 32.21 40.21 34 38 34H26L18 42V34H10C7.79 34 6 32.21 6 30V8Z" fill="url(#lgtp)"/>
+            <rect x="14" y="14" width="20" height="3" rx="1.5" fill="white" opacity="0.9"/>
+            <rect x="14" y="21" width="14" height="3" rx="1.5" fill="white" opacity="0.9"/>
+            <circle cx="37" cy="11" r="8" fill="#22c55e"/>
+            <path d="M33 11L36 14L41 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span style={{ fontWeight: 800, fontSize: 16, color: B.navy }}>text<span style={{ color: B.pink }}>reminder</span></span>
+          <span style={{ fontWeight: 800, fontSize: 16, color: '#fff' }}>text<span style={{ color: B.pink }}>reminder</span></span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link to="/login" style={{ fontSize: 14, fontWeight: 500, color: B.muted, textDecoration: 'none', padding: '8px 12px' }}>Log in</Link>
+          <Link to="/login" style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.6)', textDecoration: 'none', padding: '8px 12px' }}>Log in</Link>
           <button onClick={onSignup} style={{ background: `linear-gradient(135deg,${B.pink},${B.purple})`, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             Start free
           </button>

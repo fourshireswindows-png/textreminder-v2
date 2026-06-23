@@ -36,20 +36,19 @@ const FAQS = [
     a:'Yes. No contracts, no minimum terms, no phone calls needed. Cancel from your account settings and your plan ends at the next billing date. The free plan is available indefinitely.' },
 ]
 
-function LogoMark({ light = false }) {
-  const textCol = light ? '#fff' : B.navy
-  const accentCol = light ? '#f9a8d4' : B.pink
+function LogoMark() {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:9 }}>
       <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
         <defs><linearGradient id="lgm" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#ec4899"/><stop offset="100%" stopColor="#a855f7"/></linearGradient></defs>
-        <rect width="48" height="48" rx="11" fill="url(#lgm)"/>
-        <path d="M10 14C10 11.8 11.8 10 14 10H34C36.2 10 38 11.8 38 14V28C38 30.2 36.2 32 34 32H27L21 38V32H14C11.8 32 10 30.2 10 28V14Z" fill="white" opacity="0.95"/>
-        <rect x="15" y="18" width="18" height="2.5" rx="1.25" fill="#ec4899"/>
-        <rect x="15" y="23" width="12" height="2.5" rx="1.25" fill="#ec4899"/>
+        <path d="M6 8C6 5.79 7.79 4 10 4H38C40.21 4 42 5.79 42 8V30C42 32.21 40.21 34 38 34H26L18 42V34H10C7.79 34 6 32.21 6 30V8Z" fill="url(#lgm)"/>
+        <rect x="14" y="14" width="20" height="3" rx="1.5" fill="white" opacity="0.9"/>
+        <rect x="14" y="21" width="14" height="3" rx="1.5" fill="white" opacity="0.9"/>
+        <circle cx="37" cy="11" r="8" fill="#22c55e"/>
+        <path d="M33 11L36 14L41 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       <span style={{ fontWeight:800, fontSize:17, letterSpacing:'-0.3px', fontFamily:'DM Sans, sans-serif' }}>
-        <span style={{ color:textCol }}>text</span><span style={{ color:accentCol }}>reminder</span>
+        <span style={{ color:'#fff' }}>text</span><span style={{ color:B.pink }}>reminder</span>
       </span>
     </div>
   )
@@ -57,14 +56,14 @@ function LogoMark({ light = false }) {
 
 function Nav({ onSignup }) {
   return (
-    <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', borderBottom:`1px solid ${B.border}` }}>
+    <nav style={{ position:'sticky', top:0, zIndex:100, background:B.navy, borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
       <div style={{ maxWidth:1140, margin:'0 auto', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between', height:62 }}>
         <Link to="/" style={{ textDecoration:'none' }}><LogoMark/></Link>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           {[['#how','How it works'],['#pricing','Pricing'],['#faq','FAQ']].map(([href,label])=>(
-            <a key={href} href={href} style={{ fontSize:14, fontWeight:500, color:B.muted, textDecoration:'none', padding:'8px 12px', borderRadius:7 }}>{label}</a>
+            <a key={href} href={href} style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.6)', textDecoration:'none', padding:'8px 12px', borderRadius:7 }}>{label}</a>
           ))}
-          <Link to="/login" style={{ fontSize:14, fontWeight:500, color:B.muted, textDecoration:'none', padding:'8px 12px' }}>Log in</Link>
+          <Link to="/login" style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.6)', textDecoration:'none', padding:'8px 12px' }}>Log in</Link>
           <Link to="/signup" style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', borderRadius:8, padding:'9px 20px', fontSize:14, fontWeight:700, textDecoration:'none', marginLeft:4 }}>Start free</Link>
         </div>
       </div>
@@ -336,7 +335,7 @@ export default function HomePage({ onSignup }) {
       {/* FINAL CTA */}
       <section style={{ padding:'88px 20px', background:B.navy }}>
         <div style={{ maxWidth:600, margin:'0 auto', textAlign:'center' }}>
-          <LogoMark light/>
+          <LogoMark/>
           <h2 style={{ fontSize:'clamp(26px,4vw,42px)', fontWeight:800, color:'#fff', letterSpacing:'-1px', margin:'24px 0 14px', lineHeight:1.15 }}>Ready to stop texting tomorrow's customers manually?</h2>
           <p style={{ fontSize:16, color:'rgba(255,255,255,0.5)', marginBottom:32, lineHeight:1.7 }}>Start with 20 free SMS credits. No credit card required. Set up takes minutes.</p>
           <button onClick={go} style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', border:'none', borderRadius:9, padding:'16px 40px', fontSize:17, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(236,72,153,0.4)' }}>Start free today</button>
@@ -349,7 +348,7 @@ export default function HomePage({ onSignup }) {
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div className="g2" style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:40, marginBottom:36 }}>
             <div>
-              <LogoMark light/>
+              <LogoMark/>
               <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', marginTop:14, lineHeight:1.7, maxWidth:260 }}>Automatic customer notifications for exterior cleaning businesses. Stop spending your evenings texting tomorrow's customers.</p>
             </div>
             <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24 }}>
