@@ -450,7 +450,7 @@ function AiChat() {
   useEffect(() => {
     if (open && !started) {
       setStarted(true)
-      setMsgs([{ role: 'assistant', content: "Hi! I'm Ellie 👋 I help tradespeople stop losing jobs to no-shows. What can I help you with today?", quickReplies: true }])
+      setMsgs([{ role: 'assistant', content: "Hi, I'm Ellie! 👋 I'm the TextReminder assistant. I help tradespeople stop losing jobs to no-shows. What can I help you with today?", quickReplies: true }])
     }
   }, [open, started])
 
@@ -562,8 +562,10 @@ function AiChat() {
         </div>
       )}
       {/* Bubble */}
+      <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        {!open && <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#ec4899,#a855f7)', borderRadius: 20, padding: '3px 10px', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(168,85,247,0.35)' }}>AI Assistant</span>}
       <button onClick={() => setOpen(p => !p)}
-        style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000, width: 56, height: 56, borderRadius: '50%',
+        style={{ width: 56, height: 56, borderRadius: '50%',
           background: grad, border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(168,85,247,0.45)',
           padding: 0, overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s' }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(168,85,247,0.55)' }}
@@ -575,6 +577,7 @@ function AiChat() {
               onError={e => { e.target.style.display='none' }} />
         }
       </button>
+      </div>
       <style>{`
         @keyframes ellieSlideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
         @keyframes ellieTyping { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
@@ -1017,6 +1020,7 @@ export default function App() {
     <BrowserRouter>
       <GlobalStyles />
         <AppRouter user={user} loading={loading} onLogout={async () => { await supabase.auth.signOut(); setUser(null) }} />
+        <AiChat />
     </BrowserRouter>
   )
 }
