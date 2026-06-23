@@ -234,7 +234,7 @@ export default function Upcoming() {
       const { error } = await supabase.from('calendar_events').insert({
         user_id: user.id, title: addForm.title.trim(),
         start_time: startDt.toISOString(), end_time: endDt.toISOString(),
-        phone: primaryPhone, phones: cleanedPhones,
+        external_id: crypto.randomUUID(), phone: primaryPhone, phones: cleanedPhones,
         is_manual: true, reminder_sent: false,
       })
       if (error) { console.error('Save error:', error); setAddError('Failed to save: ' + (error.message || error.details || 'unknown error')); setSavingAdd(false); return }
@@ -252,7 +252,7 @@ export default function Upcoming() {
           user_id: user.id, title: addForm.title.trim(),
           start_time: new Date(cur).toISOString(),
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
-          phone: primaryPhone, phones: cleanedPhones,
+          external_id: crypto.randomUUID(), phone: primaryPhone, phones: cleanedPhones,
           is_manual: true, reminder_sent: false,
           recurring_group_id: groupId, recurring_interval_days: intervalDays,
           recurring_end_date: (addForm.endType === 'date' && addForm.endDate) ? addForm.endDate : null,
@@ -342,7 +342,7 @@ export default function Upcoming() {
           user_id: user.id, title: editForm.title.trim(),
           start_time: new Date(cur).toISOString(),
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
-          phone: primaryPhone, phones: cleanedPhones,
+          external_id: crypto.randomUUID(), phone: primaryPhone, phones: cleanedPhones,
           is_manual: true, reminder_sent: false,
           template_id: editForm.templateId || 1,
           recurring_group_id: editTarget.recurring_group_id,
