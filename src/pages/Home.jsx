@@ -9,14 +9,16 @@ const B = {
 }
 
 const PLANS = [
-  { name:'Free', price:0, unit:'', desc:'Try it out.', sms:20, cta:'Start free', popular:false,
-    features:['20 SMS credits','Manual job entry','Basic message templates','Message history'] },
-  { name:'Solo', price:19, unit:'/mo', desc:'One-person businesses.', sms:150, cta:'Get started', popular:false,
-    features:['150 SMS per month','Google Calendar sync','All message templates','Weather-delay tool','CSV import'] },
-  { name:'Pro', price:29, unit:'/mo', desc:'The most popular choice.', sms:300, cta:'Get started', popular:true,
-    features:['300 SMS per month','Everything in Solo','Unlimited contacts','Custom sending times','Priority support'] },
-  { name:'Team', price:49, unit:'/mo', desc:'Multiple vans or staff.', sms:600, cta:'Get started', popular:false,
-    features:['600 SMS per month','Everything in Pro','Multiple users','Usage reports','Dedicated setup call'] },
+  { name:'Free', price:0, annualPrice:0, unit:'', desc:'Try it out.', sms:20, cta:'Start free', popular:false,
+    features:['20 SMS reminders/month','Google Calendar sync','Up to 20 contacts','Basic templates','Message log'] },
+  { name:'Starter', price:15, annualPrice:150, unit:'/mo', desc:'Perfect for getting started.', sms:100, cta:'Get started', popular:false,
+    features:['100 SMS reminders/month','Google Calendar sync','Unlimited contacts','3 message templates','Multiple phones per job','Full message log'] },
+  { name:'Professional', price:29, annualPrice:290, unit:'/mo', desc:'The most popular choice.', sms:200, cta:'Get started', popular:true,
+    features:['200 SMS reminders/month','Google Calendar sync','Unlimited contacts','3 message templates','Multiple phones per job','Full message log'] },
+  { name:'Business', price:55, annualPrice:550, unit:'/mo', desc:'For busy operations.', sms:400, cta:'Get started', popular:false,
+    features:['400 SMS reminders/month','Google Calendar sync','Unlimited contacts','3 message templates','Multiple phones per job','Full message log'] },
+  { name:'Enterprise', price:249, annualPrice:2490, unit:'/mo', desc:'High-volume operations.', sms:2000, cta:'Get started', popular:false,
+    features:['2,000 SMS reminders/month','Google Calendar sync','Unlimited contacts','3 message templates','Multiple phones per job','Full message log'] },
 ]
 
 const FAQS = [
@@ -29,9 +31,9 @@ const FAQS = [
   { q:'Can I send weather-delay messages to customers?',
     a:'Yes. The weather-delay tool lets you select affected jobs, choose or edit a delay message, and send it to all those customers at once. It takes a fraction of the time it would take to message each person individually.' },
   { q:'Can I use it as a one-person business?',
-    a:'TextReminder is built for sole traders first. The free plan gives you 20 SMS to try it, and the Solo plan at £19/month covers up to 150 messages — enough for most single-operator exterior cleaners.' },
+    a:'TextReminder is built for sole traders first. The free plan gives you 20 SMS to try it, and the Starter plan at £15/month covers up to 100 messages — enough for most single-operator exterior cleaners.' },
   { q:'How are SMS charges handled?',
-    a:'Each plan includes a monthly SMS allowance. Free: 20. Solo: 150. Pro: 300. Team: 600. Your allowance resets each month. Upgrade any time if you need more.' },
+    a:'Each plan includes a monthly SMS allowance. Free: 20. Starter: 100. Professional: 200. Business: 400. Your allowance resets each month. Upgrade any time if you need more.' },
   { q:'Can I cancel at any time?',
     a:'Yes. No contracts, no minimum terms, no phone calls needed. Cancel from your account settings and your plan ends at the next billing date. The free plan is available indefinitely.' },
 ]
@@ -94,6 +96,7 @@ export default function HomePage({ onSignup }) {
   },[])
 
   const go = onSignup || (()=>{ window.location.href='/signup' })
+  const [billing, setBilling] = useState('monthly')
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif", color:B.text, background:B.white, overflowX:'hidden' }}>
@@ -255,7 +258,7 @@ export default function HomePage({ onSignup }) {
             <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:'#fff', letterSpacing:'-0.8px', marginBottom:12 }}>Built for exterior cleaning businesses</h2>
             <p style={{ fontSize:16, color:'rgba(255,255,255,0.5)', maxWidth:480, margin:'0 auto' }}>Whether you clean windows, gutters, driveways or solar panels — TextReminder is built around how exterior cleaners actually work.</p>
           </div>
-          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
+          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:14 }}>
             {[
               { label:'Window cleaning', href:'/window-cleaners', desc:'Rounds, one-offs, access requests' },
               { label:'Gutter cleaning', href:'/gutter-cleaners', desc:'Seasonal jobs, access notices' },
@@ -288,21 +291,33 @@ export default function HomePage({ onSignup }) {
       {/* PRICING */}
       <section id="pricing" style={{ padding:'88px 20px', background:B.white }}>
         <div style={{ maxWidth:1080, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:56 }}>
+          <div style={{ textAlign:'center', marginBottom:40 }}>
             <div style={{ display:'inline-block', background:'#fce7f3', color:B.pink, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>Pricing</div>
             <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>Simple pricing. No surprises.</h2>
-            <p style={{ fontSize:16, color:B.muted, maxWidth:460, margin:'0 auto' }}>Start free with 20 SMS credits. Upgrade when you need more.</p>
+            <p style={{ fontSize:16, color:B.muted, maxWidth:460, margin:'0 auto 28px' }}>Start free with 20 SMS credits. Upgrade when you need more.</p>
+            <div style={{ display:'inline-flex', alignItems:'center', background:B.light, border:`1px solid ${B.border}`, borderRadius:30, padding:4 }}>
+              <button onClick={()=>setBilling('monthly')} style={{ padding:'8px 22px', borderRadius:26, border:'none', fontSize:14, fontWeight:600, cursor:'pointer', background:billing==='monthly'?'#fff':'transparent', color:billing==='monthly'?B.navy:B.muted, boxShadow:billing==='monthly'?'0 1px 4px rgba(0,0,0,0.1)':'none', transition:'all 0.15s' }}>Monthly</button>
+              <button onClick={()=>setBilling('annual')} style={{ padding:'8px 22px', borderRadius:26, border:'none', fontSize:14, fontWeight:600, cursor:'pointer', background:billing==='annual'?'#fff':'transparent', color:billing==='annual'?B.navy:B.muted, boxShadow:billing==='annual'?'0 1px 4px rgba(0,0,0,0.1)':'none', transition:'all 0.15s', display:'flex', alignItems:'center', gap:8 }}>
+                Annual <span style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10 }}>Save 2 months</span>
+              </button>
+            </div>
           </div>
           <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, alignItems:'start' }}>
-            {PLANS.map(plan=>(
+            {PLANS.map(plan=>{
+              const isAnnual = billing === 'annual' && plan.price > 0
+              const displayPrice = isAnnual ? Math.round(plan.annualPrice/12) : plan.price
+              const annualTotal = plan.annualPrice
+              return (
               <div key={plan.name} style={{ border:plan.popular?`2px solid ${B.pink}`:`1px solid ${B.border}`, borderRadius:16, padding:'28px 22px', position:'relative', background:plan.popular?B.sky:B.white, boxShadow:plan.popular?'0 4px 24px rgba(236,72,153,0.12)':'none' }}>
                 {plan.popular && <div style={{ position:'absolute', top:-13, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', fontSize:11, fontWeight:700, padding:'3px 14px', borderRadius:20, whiteSpace:'nowrap' }}>Most popular</div>}
                 <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:4 }}>{plan.name}</div>
                 <div style={{ fontSize:13, color:B.muted, marginBottom:16 }}>{plan.desc}</div>
-                <div style={{ display:'flex', alignItems:'baseline', gap:3, marginBottom:6 }}>
-                  <span style={{ fontSize:38, fontWeight:900, color:B.navy, letterSpacing:'-1px' }}>{plan.price===0?'Free':`£${plan.price}`}</span>
-                  {plan.price>0 && <span style={{ fontSize:14, color:B.muted }}>/month</span>}
+                <div style={{ display:'flex', alignItems:'baseline', gap:3, marginBottom:4 }}>
+                  <span style={{ fontSize:38, fontWeight:900, color:B.navy, letterSpacing:'-1px' }}>{plan.price===0?'Free':`£${displayPrice}`}</span>
+                  {plan.price>0 && <span style={{ fontSize:14, color:B.muted }}>/mo</span>}
                 </div>
+                {isAnnual && plan.price>0 && <div style={{ fontSize:12, color:B.muted, marginBottom:4 }}>£{annualTotal}/year</div>}
+                {!isAnnual && plan.price>0 && <div style={{ fontSize:12, color:'transparent', marginBottom:4 }}>-</div>}
                 <div style={{ fontSize:13, color:B.pink, fontWeight:600, marginBottom:20 }}>{plan.sms} SMS per month</div>
                 <div style={{ marginBottom:22 }}>
                   {plan.features.map(f=>(
@@ -316,7 +331,7 @@ export default function HomePage({ onSignup }) {
                   {plan.cta}
                 </button>
               </div>
-            ))}
+            )})}
           </div>
           <p style={{ textAlign:'center', fontSize:13, color:B.muted, marginTop:24 }}>All plans include automatic SMS opt-out handling. No contracts. Cancel any time.</p>
         </div>
