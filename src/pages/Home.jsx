@@ -1,138 +1,169 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import Logo from '../components/Logo.jsx'
 
-const TRADES = ["Window Cleaners","Plumbers","Electricians","Hairdressers","Gardeners","Plasterers","Roofers","Cleaners","Decorators","Physios"]
+const B = {
+  navy:   '#0f172a', navy2:  '#1e293b', blue:   '#2563eb',
+  sky:    '#eff6ff', text:   '#1e293b', muted:  '#64748b',
+  light:  '#f8fafc', border: '#e2e8f0', green:  '#16a34a',
+  amber:  '#b45309', white:  '#ffffff',
+}
 
-const FEATURES = [
-  { icon:"📅", title:"Google, Apple & Outlook", desc:"Connect any calendar in minutes. TextReminder reads your appointments automatically — no manual input." },
-  { icon:"📱", title:"SMS, Email & WhatsApp", desc:"Send reminders via whichever channel your customers prefer. All three included in every plan." },
-  { icon:"🤖", title:"Fully Automatic", desc:"Reminders fire 24 hours before every appointment. Set it up once and never think about it again." },
-  { icon:"✏️", title:"Your Brand, Your Message", desc:"Customise the template with your business name and number. Every reminder feels personal." },
-  { icon:"📋", title:"Full Message Log", desc:"See every reminder sent, delivered and confirmed. Know exactly who's been reminded." },
-  { icon:"💷", title:"Pay Less Than You Do Now", desc:"Most reminder services charge £25–£50/month. TextReminder is £20/month. More features, lower cost." },
+const PLANS = [
+  { name:'Free', price:0, unit:'', desc:'Try it out.', sms:20, cta:'Start free', popular:false,
+    features:['20 SMS credits','Manual job entry','Basic message templates','Message history'] },
+  { name:'Solo', price:19, unit:'/mo', desc:'One-person businesses.', sms:150, cta:'Get started', popular:false,
+    features:['150 SMS per month','Google Calendar sync','All message templates','Weather-delay tool','CSV import'] },
+  { name:'Pro', price:29, unit:'/mo', desc:'The most popular choice.', sms:300, cta:'Get started', popular:true,
+    features:['300 SMS per month','Everything in Solo','Unlimited contacts','Custom sending times','Priority support'] },
+  { name:'Team', price:49, unit:'/mo', desc:'Multiple vans or staff.', sms:600, cta:'Get started', popular:false,
+    features:['600 SMS per month','Everything in Pro','Multiple users','Usage reports','Dedicated setup call'] },
 ]
 
-const TESTIMONIALS = [
-  { name:"Dave K.", trade:"Window Cleaning, Oxfordshire", quote:"Dropped from 3–4 no-shows a week to almost none. Pays for itself the first missed job." },
-  { name:"Sarah M.", trade:"Mobile Hairdresser, Hampshire", quote:"Used to spend 20 minutes every evening chasing confirmations. Now I just get on with my evening." },
-  { name:"Tom R.", trade:"Plumbing, Yorkshire", quote:"Simple, does exactly what it says, costs nothing compared to what I was paying before." },
+const FAQS = [
+  { q:'Does it work for regular window-cleaning rounds?',
+    a:'Yes. You can add recurring jobs and TextReminder sends customers a message the evening before or the morning of their clean. It works alongside your existing round management — you do not need to change how you organise your work.' },
+  { q:'Can I use it for one-off jobs like gutter clearing or pressure washing?',
+    a:'Absolutely. Add any job — one-off pressure wash, seasonal gutter clear, or scheduled driveway clean — and choose when the message should go out. One-off jobs work exactly the same as recurring ones.' },
+  { q:'Do I need to replace my existing diary or round software?',
+    a:'No. TextReminder works alongside whatever you already use — a paper diary, Google Calendar, Cleaner Planner, Squeegee, a spreadsheet or anything else. It is the communication layer, not a replacement for your existing process.' },
+  { q:'Can I send weather-delay messages to customers?',
+    a:'Yes. The weather-delay tool lets you select affected jobs, choose or edit a delay message, and send it to all those customers at once. It takes a fraction of the time it would take to message each person individually.' },
+  { q:'Can I use it as a one-person business?',
+    a:'TextReminder is built for sole traders first. The free plan gives you 20 SMS to try it, and the Solo plan at £19/month covers up to 150 messages — enough for most single-operator exterior cleaners.' },
+  { q:'How are SMS charges handled?',
+    a:'Each plan includes a monthly SMS allowance. Free: 20. Solo: 150. Pro: 300. Team: 600. Your allowance resets each month. Upgrade any time if you need more.' },
+  { q:'Can I cancel at any time?',
+    a:'Yes. No contracts, no minimum terms, no phone calls needed. Cancel from your account settings and your plan ends at the next billing date. The free plan is available indefinitely.' },
 ]
 
-function LogoMark() {
+function LogoMark({ light = false }) {
+  const textCol = light ? '#fff' : B.navy
+  const accentCol = light ? '#93c5fd' : B.blue
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-      <Logo size={34}/>
-      <div>
-        <div style={{ fontSize:15, fontWeight:800, color:'#0f172a', lineHeight:1, fontFamily:'Syne,sans-serif' }}>
-          text<span style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>reminder</span>
-        </div>
-        <div style={{ fontSize:9, color:'#9ca3af', letterSpacing:'1px', textTransform:'uppercase' }}>textreminder.co.uk</div>
-      </div>
+    <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+      <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx="11" fill={B.blue}/>
+        <path d="M10 14C10 11.8 11.8 10 14 10H34C36.2 10 38 11.8 38 14V28C38 30.2 36.2 32 34 32H27L21 38V32H14C11.8 32 10 30.2 10 28V14Z" fill="white" opacity="0.95"/>
+        <rect x="15" y="18" width="18" height="2.5" rx="1.25" fill={B.blue}/>
+        <rect x="15" y="23" width="12" height="2.5" rx="1.25" fill={B.blue}/>
+      </svg>
+      <span style={{ fontWeight:800, fontSize:17, letterSpacing:'-0.3px', fontFamily:'DM Sans, sans-serif' }}>
+        <span style={{ color:textCol }}>text</span><span style={{ color:accentCol }}>reminder</span>
+      </span>
     </div>
   )
 }
 
-export default function Home() {
-  const [tradeIdx, setTradeIdx] = useState(0)
-  const [fade, setFade]         = useState(true)
-  const [email, setEmail]       = useState('')
+function Nav({ onSignup }) {
+  return (
+    <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', borderBottom:`1px solid ${B.border}` }}>
+      <div style={{ maxWidth:1140, margin:'0 auto', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between', height:62 }}>
+        <Link to="/" style={{ textDecoration:'none' }}><LogoMark/></Link>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          {[['#how','How it works'],['#pricing','Pricing'],['#faq','FAQ']].map(([href,label])=>(
+            <a key={href} href={href} style={{ fontSize:14, fontWeight:500, color:B.muted, textDecoration:'none', padding:'8px 12px', borderRadius:7 }}>{label}</a>
+          ))}
+          <Link to="/login" style={{ fontSize:14, fontWeight:500, color:B.muted, textDecoration:'none', padding:'8px 12px' }}>Log in</Link>
+          <Link to="/signup" style={{ background:B.blue, color:'#fff', borderRadius:8, padding:'9px 20px', fontSize:14, fontWeight:700, textDecoration:'none', marginLeft:4 }}>Start free</Link>
+        </div>
+      </div>
+    </nav>
+  )
+}
 
-  // Per-page SEO
-  useEffect(() => {
-    document.title = 'TextReminder — Automatic SMS Appointment Reminders for UK Tradespeople'
-    const desc = document.querySelector('meta[name="description"]')
-    if (desc) desc.setAttribute('content', 'TextReminder automatically sends SMS reminders to your customers before every appointment. Cut no-shows by up to 80%. Built for UK tradespeople. Free plan, no card needed.')
-    const ogTitle = document.querySelector('meta[property="og:title"]')
-    if (ogTitle) ogTitle.setAttribute('content', 'TextReminder — Automatic SMS Appointment Reminders for UK Tradespeople')
-    const ogDesc = document.querySelector('meta[property="og:description"]')
-    if (ogDesc) ogDesc.setAttribute('content', 'Automatically text your customers before every appointment. Cut no-shows by up to 80%. Built for UK tradespeople. Free plan, no card needed.')
-  }, [])
+function FAQItem({ q, a }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ borderBottom:`1px solid ${B.border}`, padding:'20px 0' }}>
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{ width:'100%', background:'none', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', gap:16, padding:0, textAlign:'left' }}>
+        <span style={{ fontSize:16, fontWeight:600, color:B.text, lineHeight:1.4 }}>{q}</span>
+        <span style={{ fontSize:22, color:B.blue, flexShrink:0, transition:'transform 0.2s', transform:open?'rotate(45deg)':'none', lineHeight:1 }}>+</span>
+      </button>
+      {open && <p style={{ marginTop:14, fontSize:15, color:B.muted, lineHeight:1.75 }}>{a}</p>}
+    </div>
+  )
+}
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setFade(false)
-      setTimeout(() => { setTradeIdx(i=>(i+1)%TRADES.length); setFade(true) }, 300)
-    }, 2200)
-    return () => clearInterval(t)
-  }, [])
+export default function HomePage({ onSignup }) {
+  useEffect(()=>{
+    document.title = 'TextReminder — Customer Notifications for Exterior Cleaning Businesses'
+    const s=(sel,val)=>{const el=document.querySelector(sel);if(el)el.setAttribute('content',val)}
+    s('meta[name="description"]',"Stop spending your evenings texting customers about tomorrow's jobs. TextReminder automatically sends job reminders, access requests and weather-delay updates for exterior cleaning businesses.")
+    s('meta[property="og:title"]','TextReminder — Customer Notifications for Exterior Cleaning Businesses')
+  },[])
+
+  const go = onSignup || (()=>{ window.location.href='/signup' })
 
   return (
-    <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", color:'#0f172a', background:'#fff', overflowX:'hidden' }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", color:B.text, background:B.white, overflowX:'hidden' }}>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
-        .hov-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(168,85,247,0.1);border-color:#d8b4fe!important;}
-        .hov-card{transition:all 0.2s;}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-        .fade-up{animation:fadeUp 0.6s ease forwards;}
-        .fade-up-2{animation:fadeUp 0.6s ease 0.15s forwards;opacity:0;}
-        .fade-up-3{animation:fadeUp 0.6s ease 0.3s forwards;opacity:0;}
-        .float{animation:float 4s ease-in-out infinite;}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+        .fu{animation:fadeUp 0.55s ease forwards;}
+        .fu2{animation:fadeUp 0.55s ease 0.12s forwards;opacity:0;}
+        .fu3{animation:fadeUp 0.55s ease 0.24s forwards;opacity:0;}
+        @media(max-width:768px){.hm{display:none!important}.g2{grid-template-columns:1fr!important}.g3{grid-template-columns:1fr!important}.g4{grid-template-columns:repeat(2,1fr)!important}}
       `}</style>
 
-      {/* Nav */}
-      <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.93)', backdropFilter:'blur(14px)', borderBottom:'1px solid #f3e8ff', padding:'0 24px' }}>
-        <div style={{ maxWidth:1100, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', height:64 }}>
-          <LogoMark/>
-          <div style={{ display:'flex', alignItems:'center', gap:24 }}>
-            {[['#features','Features'],['#how','How it works'],['#pricing','Pricing']].map(([href,label])=>(
-              <a key={href} href={href} style={{ fontSize:13, fontWeight:500, color:'#4b5563', textDecoration:'none' }}>{label}</a>
-            ))}
-            <Link to="/login" style={{ fontSize:13, fontWeight:600, color:'#a855f7', textDecoration:'none' }}>Sign in</Link>
-            <Link to="/signup" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:9, padding:'9px 20px', fontSize:13, fontWeight:700, textDecoration:'none', boxShadow:'0 3px 12px rgba(168,85,247,0.3)' }}>Start Free Trial</Link>
-          </div>
-        </div>
-      </nav>
+      <Nav onSignup={go}/>
 
-      {/* Hero */}
-      <section style={{ background:'linear-gradient(160deg,#fdf4ff 0%,#faf5ff 50%,#f0fdf4 100%)', padding:'80px 24px 64px', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:'-100px', right:'-100px', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle,rgba(168,85,247,0.1),transparent 70%)', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', bottom:'-60px', left:'-60px', width:320, height:320, borderRadius:'50%', background:'radial-gradient(circle,rgba(236,72,153,0.08),transparent 70%)', pointerEvents:'none' }}/>
-        <div style={{ maxWidth:880, margin:'0 auto', textAlign:'center', position:'relative' }}>
-          <div className="fade-up" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'#fff', border:'1px solid #e9d5ff', borderRadius:30, padding:'6px 16px', fontSize:12, fontWeight:600, color:'#7c3aed', marginBottom:28, boxShadow:'0 2px 12px rgba(168,85,247,0.1)' }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', display:'inline-block' }}/>
-            Simple · Automatic · Affordable
+      {/* HERO */}
+      <section style={{ background:B.navy, padding:'90px 20px 100px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:0, right:0, width:600, height:600, background:'radial-gradient(circle at 80% 20%,rgba(37,99,235,0.18),transparent 60%)', pointerEvents:'none' }}/>
+        <div style={{ maxWidth:860, margin:'0 auto', textAlign:'center', position:'relative' }}>
+          <div className="fu" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(37,99,235,0.15)', border:'1px solid rgba(37,99,235,0.3)', borderRadius:24, padding:'6px 16px', marginBottom:28 }}>
+            <span style={{ width:7, height:7, borderRadius:'50%', background:'#4ade80', display:'inline-block' }}/>
+            <span style={{ color:'#93c5fd', fontSize:13, fontWeight:600 }}>Built for exterior cleaning businesses</span>
           </div>
-          <h1 className="fade-up-2" style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(34px,6vw,60px)', fontWeight:800, lineHeight:1.1, color:'#0f172a', marginBottom:14 }}>
-            Never lose a job to<br/>
-            <span style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>a forgotten appointment</span>
+          <h1 className="fu2" style={{ fontSize:'clamp(32px,5.5vw,58px)', fontWeight:800, color:'#fff', lineHeight:1.1, letterSpacing:'-1.5px', marginBottom:24 }}>
+            Stop spending your evenings<br/>
+            <span style={{ color:'#60a5fa' }}>texting tomorrow's customers</span>
           </h1>
-          <div className="fade-up-3" style={{ fontSize:18, color:'#6b7280', marginBottom:10 }}>
-            Built for{' '}
-            <span style={{ fontWeight:700, color:'#7c3aed', transition:'opacity 0.3s', opacity:fade?1:0 }}>{TRADES[tradeIdx]}</span>
-          </div>
-          <p className="fade-up-3" style={{ fontSize:16, color:'#6b7280', lineHeight:1.75, maxWidth:520, margin:'0 auto 36px' }}>
-            Connect your calendar. TextReminder sends automatic SMS, email and WhatsApp reminders 24 hours before every appointment. No-shows, eliminated.
+          <p className="fu3" style={{ fontSize:'clamp(16px,2vw,19px)', color:'rgba(255,255,255,0.62)', lineHeight:1.75, maxWidth:580, margin:'0 auto 14px' }}>
+            TextReminder automatically sends job reminders, access requests and weather-delay updates to your customers — so you finish the day and switch off.
           </p>
-          <div className="fade-up-3" style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', marginBottom:14 }}>
-            <Link to="/signup" style={{ background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:10, padding:'15px 32px', fontSize:16, fontWeight:700, textDecoration:'none', boxShadow:'0 6px 20px rgba(168,85,247,0.35)' }}>Start Free Trial</Link>
-            <a href="#how" style={{ background:'transparent', color:'#a855f7', border:'2px solid #a855f7', borderRadius:10, padding:'14px 30px', fontSize:16, fontWeight:700, textDecoration:'none' }}>See How It Works</a>
+          <p className="fu3" style={{ fontSize:14, color:'rgba(255,255,255,0.38)', marginBottom:36, fontStyle:'italic' }}>
+            Built by an exterior cleaner, for exterior cleaning businesses.
+          </p>
+          <div className="fu3" style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+            <button onClick={go} style={{ background:B.blue, color:'#fff', border:'none', borderRadius:9, padding:'15px 34px', fontSize:16, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(37,99,235,0.4)' }}>Start free</button>
+            <a href="#how" style={{ background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.8)', border:'1.5px solid rgba(255,255,255,0.15)', borderRadius:9, padding:'14px 30px', fontSize:16, fontWeight:600, textDecoration:'none' }}>See how it works</a>
           </div>
-          <div style={{ fontSize:12, color:'#9ca3af' }}>No credit card required · Free plan available · Set up in 5 minutes</div>
+          <div className="fu3" style={{ display:'flex', gap:20, justifyContent:'center', flexWrap:'wrap', marginTop:28 }}>
+            {['No contracts','Cancel any time','Free plan available','UK-based'].map(t=>(
+              <span key={t} style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'flex', alignItems:'center', gap:5 }}>
+                <span style={{ color:'#4ade80' }}>✓</span> {t}
+              </span>
+            ))}
+          </div>
         </div>
 
-        {/* SMS preview card */}
-        <div style={{ maxWidth:460, margin:'52px auto 0' }}>
-          <div className="float" style={{ background:'#fff', borderRadius:20, padding:22, boxShadow:'0 20px 60px rgba(168,85,247,0.14)', border:'1px solid #f3e8ff' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, paddingBottom:14, borderBottom:'1px solid #f9f0ff' }}>
-              <div style={{ width:38, height:38, borderRadius:'50%', background:'linear-gradient(135deg,#ec4899,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center' }}><Logo size={22}/></div>
-              <div>
-                <div style={{ fontSize:13, fontWeight:700, color:'#0f172a' }}>TextReminder</div>
-                <div style={{ fontSize:10, color:'#94a3b8' }}>Automated · Just now</div>
+        {/* SMS mockup */}
+        <div style={{ maxWidth:420, margin:'60px auto 0' }}>
+          <div style={{ background:'#1e293b', border:'1px solid rgba(255,255,255,0.1)', borderRadius:16, padding:24, boxShadow:'0 24px 64px rgba(0,0,0,0.5)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, paddingBottom:14, borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ width:36, height:36, borderRadius:9, background:B.blue, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M3 5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H7l-4 4V5z"/></svg>
               </div>
-              <div style={{ marginLeft:'auto', fontSize:11, color:'#22c55e', fontWeight:700 }}>✓ Delivered</div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>TextReminder</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)' }}>Sent automatically</div>
+              </div>
+              <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, background:'rgba(74,222,128,0.12)', borderRadius:20, padding:'3px 10px' }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:'#4ade80', display:'inline-block' }}/>
+                <span style={{ fontSize:11, fontWeight:600, color:'#4ade80' }}>Delivered</span>
+              </div>
             </div>
-            <div style={{ background:'linear-gradient(135deg,#fdf4ff,#faf5ff)', borderRadius:12, padding:'13px 15px', marginBottom:14, borderLeft:'3px solid #a855f7' }}>
-              <div style={{ fontSize:11, color:'#9ca3af', marginBottom:5, fontWeight:600 }}>SMS to: Sarah Mitchell · 07712 345 678</div>
-              <div style={{ fontSize:14, color:'#0f172a', lineHeight:1.7 }}>Hi Sarah, just a reminder your window clean is <strong>tomorrow at 9am</strong>. Any questions call 07700 900123. Reply STOP to opt out.</div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', marginBottom:8 }}>To: Mrs. Helen Booth · 07712 *** ***</div>
+            <div style={{ background:'rgba(37,99,235,0.12)', border:'1px solid rgba(37,99,235,0.2)', borderRadius:10, padding:'12px 14px', fontSize:14, color:'rgba(255,255,255,0.85)', lineHeight:1.7 }}>
+              Hi Helen, just to let you know we'll be cleaning your windows <strong style={{ color:'#fff' }}>tomorrow (Tuesday)</strong>. We'll be with you between <strong style={{ color:'#fff' }}>9–11am</strong>. Please leave the side gate unlocked if you can. Thanks — Dave, Crystal Clear Windows. Reply STOP to opt out.
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
-              {[['247','Sent this month'],['98%','Open rate'],['£0','No-shows']].map(([v,l],i)=>(
-                <div key={i} style={{ textAlign:'center', background:'#f8fafc', borderRadius:10, padding:'10px 6px' }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:i===2?'#22c55e':'#7c3aed' }}>{v}</div>
-                  <div style={{ fontSize:10, color:'#94a3b8', marginTop:2, lineHeight:1.3 }}>{l}</div>
+            <div style={{ display:'flex', gap:8, marginTop:14 }}>
+              {[['0','Manual messages sent'],['8','Sent automatically'],['5 min','Time saved tonight']].map(([val,label])=>(
+                <div key={label} style={{ flex:1, background:'rgba(255,255,255,0.04)', borderRadius:8, padding:'9px 6px', textAlign:'center' }}>
+                  <div style={{ fontSize:16, fontWeight:800, color:'#60a5fa' }}>{val}</div>
+                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', lineHeight:1.4, marginTop:2 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -140,145 +171,220 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust bar */}
-      <div style={{ background:'#fff', borderTop:'1px solid #f3e8ff', borderBottom:'1px solid #f3e8ff', padding:'16px 24px' }}>
-        <div style={{ maxWidth:900, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center', gap:28, flexWrap:'wrap' }}>
-          {['Stop paying £25/month for the same thing','Works with Google, Apple & Outlook','SMS, email & WhatsApp','5-minute setup'].map((t,i)=>(
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:7, fontSize:13, fontWeight:600, color:'#374151' }}>
-              <span style={{ color:'#22c55e', fontSize:15 }}>✓</span>{t}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Features */}
-      <section id="features" style={{ padding:'80px 24px', background:'#f8fafc' }}>
+      {/* THE PROBLEM */}
+      <section style={{ padding:'88px 20px', background:B.white }}>
         <div style={{ maxWidth:1080, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:52 }}>
-            <div style={{ display:'inline-block', background:'#f3e8ff', color:'#7c3aed', fontSize:11, fontWeight:700, letterSpacing:'2px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:14 }}>Features</div>
-            <h2 style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(26px,4vw,38px)', fontWeight:800, color:'#0f172a', marginBottom:10 }}>Everything you need. Nothing you don't.</h2>
-            <p style={{ fontSize:15, color:'#6b7280', maxWidth:480, margin:'0 auto' }}>Built for tradespeople who want to stop chasing confirmations.</p>
+          <div style={{ textAlign:'center', marginBottom:56 }}>
+            <div style={{ display:'inline-block', background:'#fef3c7', color:B.amber, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>The problem</div>
+            <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>The job doesn't end when the cleaning does</h2>
+            <p style={{ fontSize:16, color:B.muted, maxWidth:520, margin:'0 auto', lineHeight:1.7 }}>Most exterior cleaners still handle customer communication manually — one text at a time, every evening.</p>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
-            {FEATURES.map((f,i)=>(
-              <div key={i} className="hov-card" style={{ background:'#fff', border:'1px solid #e9d5ff', borderRadius:14, padding:'24px 22px' }}>
-                <div style={{ fontSize:26, marginBottom:12 }}>{f.icon}</div>
-                <div style={{ fontSize:15, fontWeight:700, color:'#0f172a', marginBottom:8 }}>{f.title}</div>
-                <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.75 }}>{f.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section id="how" style={{ padding:'80px 24px', background:'#fff' }}>
-        <div style={{ maxWidth:860, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:52 }}>
-            <div style={{ display:'inline-block', background:'#f0fdf4', color:'#166534', fontSize:11, fontWeight:700, letterSpacing:'2px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:14 }}>How it works</div>
-            <h2 style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(26px,4vw,38px)', fontWeight:800, color:'#0f172a' }}>Up and running in minutes</h2>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
+          <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
             {[
-              {n:'1',icon:'📅',title:'Connect Calendar',desc:'Link Google, Apple or Outlook in 60 seconds.'},
-              {n:'2',icon:'👥',title:'Add Contacts',desc:'Build your customer list with names and numbers.'},
-              {n:'3',icon:'✏️',title:'Set Template',desc:'Customise your reminder message once.'},
-              {n:'4',icon:'✅',title:'Relax',desc:'Reminders fire automatically, every time.'},
-            ].map((s,i)=>(
-              <div key={i} style={{ textAlign:'center', padding:'20px 12px' }}>
-                <div style={{ width:50, height:50, borderRadius:'50%', background:'linear-gradient(135deg,#fdf4ff,#f3e8ff)', border:'2px solid #e9d5ff', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', fontSize:20 }}>{s.icon}</div>
-                <div style={{ display:'inline-block', background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', fontSize:10, fontWeight:800, width:20, height:20, borderRadius:'50%', lineHeight:'20px', textAlign:'center', marginBottom:10 }}>{s.n}</div>
-                <div style={{ fontSize:14, fontWeight:700, color:'#0f172a', marginBottom:6 }}>{s.title}</div>
-                <div style={{ fontSize:12, color:'#6b7280', lineHeight:1.7 }}>{s.desc}</div>
+              { icon:'😤', title:"Customers don't know you're coming", desc:"They go out, leave the gate locked, or call to cancel because no one told them they were due today." },
+              { icon:'🚧', title:'Gates and access are blocked', desc:"You turn up, can't get in, and lose the job. A simple heads-up the night before would have fixed it." },
+              { icon:'🌧️', title:'Weather disrupts your schedule', desc:"Rescheduling a full day's work means messaging every affected customer individually — while already stressed." },
+              { icon:'🌙', title:'Evenings spent texting', desc:"You finish a full physical day and then spend your evening manually texting tomorrow's customers. It shouldn't be that way." },
+              { icon:'📞', title:'Customers chase you for updates', desc:"Customers who aren't kept informed call asking where you are. It takes up time you don't have." },
+              { icon:'❌', title:'Access issues cost you money', desc:"Each failed visit is lost revenue and a wasted journey. Most are avoidable with a single message." },
+            ].map(({icon,title,desc})=>(
+              <div key={title} style={{ background:B.light, border:`1px solid ${B.border}`, borderRadius:13, padding:'24px 22px' }}>
+                <div style={{ fontSize:28, marginBottom:12 }}>{icon}</div>
+                <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:8 }}>{title}</div>
+                <div style={{ fontSize:14, color:B.muted, lineHeight:1.7 }}>{desc}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Trade links */}
-      <section style={{ padding:'48px 24px', background:'#f8fafc' }}>
-        <div style={{ maxWidth:860, margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontSize:13, fontWeight:600, color:'#94a3b8', marginBottom:16 }}>Specific guides for your trade:</div>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:10, justifyContent:'center' }}>
-            {[['Window Cleaners','/window-cleaners'],['Plumbers','/plumbers'],['Electricians','/electricians'],['Hairdressers','/hairdressers'],['Gardeners','/gardeners']].map(([label,to])=>(
-              <Link key={to} to={to} style={{ background:'#fff', border:'1px solid #e9d5ff', borderRadius:20, padding:'7px 16px', fontSize:13, fontWeight:600, color:'#7c3aed', textDecoration:'none' }}>{label} →</Link>
+      {/* THE SOLUTION */}
+      <section style={{ padding:'88px 20px', background:B.sky }}>
+        <div style={{ maxWidth:1080, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:56 }}>
+            <div style={{ display:'inline-block', background:'#dbeafe', color:B.blue, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>The solution</div>
+            <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>TextReminder handles the communication. You just do the cleaning.</h2>
+            <p style={{ fontSize:16, color:B.muted, maxWidth:520, margin:'0 auto', lineHeight:1.7 }}>Set up your messages once. TextReminder sends them automatically — before every job, every time.</p>
+          </div>
+          <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
+            {[
+              { icon:'📅', title:'Job reminders', desc:"Customers automatically receive a message the evening before or the morning of their clean. No more surprises on their doorstep." },
+              { icon:'🔑', title:'Access requests', desc:"Include a line asking them to leave the gate unlocked, have someone home, or move a car. Sent automatically with every reminder." },
+              { icon:'🌧️', title:'Weather-delay notices', desc:"Select affected jobs, choose your delay message, send to all customers at once. Takes 30 seconds instead of 30 minutes." },
+              { icon:'🔄', title:'Rescheduling messages', desc:"Move a job and notify the customer in one step. They'll always know when to expect you." },
+              { icon:'🚐', title:'"We\'re on our way" updates', desc:"Send a quick heads-up when you're nearby or running to time. Reduces calls and keeps customers happy." },
+              { icon:'📋', title:'Full message history', desc:"See exactly what was sent, when, and whether it was delivered. No guessing, no missed customers." },
+            ].map(({icon,title,desc})=>(
+              <div key={title} style={{ background:B.white, border:`1px solid ${B.border}`, borderRadius:13, padding:'24px 22px', boxShadow:'0 2px 8px rgba(0,0,0,0.04)' }}>
+                <div style={{ fontSize:28, marginBottom:12 }}>{icon}</div>
+                <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:8 }}>{title}</div>
+                <div style={{ fontSize:14, color:B.muted, lineHeight:1.7 }}>{desc}</div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section style={{ padding:'80px 24px', background:'linear-gradient(135deg,#fdf4ff,#faf5ff)' }}>
-        <div style={{ maxWidth:980, margin:'0 auto' }}>
-          <h2 style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(24px,3.5vw,36px)', fontWeight:800, textAlign:'center', marginBottom:44, color:'#0f172a' }}>Tradespeople love it</h2>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
-            {TESTIMONIALS.map((t,i)=>(
-              <div key={i} style={{ background:'#fff', borderRadius:16, padding:24, boxShadow:'0 4px 20px rgba(168,85,247,0.07)', border:'1px solid #f3e8ff' }}>
-                <div style={{ fontSize:22, color:'#a855f7', marginBottom:10 }}>❝</div>
-                <p style={{ fontSize:14, color:'#374151', lineHeight:1.8, marginBottom:16, fontStyle:'italic' }}>{t.quote}</p>
-                <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:14, borderTop:'1px solid #f9f0ff' }}>
-                  <div style={{ width:36, height:36, borderRadius:'50%', background:'linear-gradient(135deg,#ec4899,#a855f7)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:700, fontSize:14 }}>{t.name[0]}</div>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#0f172a' }}>{t.name}</div>
-                    <div style={{ fontSize:11, color:'#94a3b8' }}>{t.trade}</div>
-                  </div>
+      {/* HOW IT WORKS */}
+      <section id="how" style={{ padding:'88px 20px', background:B.white }}>
+        <div style={{ maxWidth:900, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:56 }}>
+            <div style={{ display:'inline-block', background:'#dcfce7', color:'#166534', fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>How it works</div>
+            <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px' }}>Add jobs. Choose your message. Done.</h2>
+          </div>
+          <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24 }}>
+            {[
+              { n:'1', title:'Add your jobs', desc:"Connect Google Calendar, import a CSV, or add jobs manually. TextReminder works with whatever process you already use.", detail:'Google Calendar, CSV, or manual entry' },
+              { n:'2', title:'Choose when customers hear from you', desc:"Pick the timing — the evening before, the morning of, or both. Set message templates once for your business.", detail:'Evening before, morning of, or custom' },
+              { n:'3', title:'TextReminder sends everything automatically', desc:"Customers receive their message at the right time, every time. You finish work and switch off.", detail:'SMS delivered. You do nothing.' },
+            ].map(({n,title,desc,detail})=>(
+              <div key={n} style={{ textAlign:'center', padding:'8px 12px' }}>
+                <div style={{ width:52, height:52, borderRadius:'50%', background:B.blue, color:'#fff', fontWeight:800, fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>{n}</div>
+                <h3 style={{ fontSize:17, fontWeight:700, color:B.navy, marginBottom:10 }}>{title}</h3>
+                <p style={{ fontSize:14, color:B.muted, lineHeight:1.75, marginBottom:12 }}>{desc}</p>
+                <div style={{ display:'inline-block', background:B.sky, color:B.blue, fontSize:12, fontWeight:600, padding:'5px 12px', borderRadius:20 }}>{detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BUILT FOR */}
+      <section style={{ padding:'88px 20px', background:B.navy }}>
+        <div style={{ maxWidth:1080, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:56 }}>
+            <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:'#fff', letterSpacing:'-0.8px', marginBottom:12 }}>Built for exterior cleaning businesses</h2>
+            <p style={{ fontSize:16, color:'rgba(255,255,255,0.5)', maxWidth:480, margin:'0 auto' }}>Whether you clean windows, gutters, driveways or solar panels — TextReminder is built around how exterior cleaners actually work.</p>
+          </div>
+          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
+            {[
+              { emoji:'🪟', label:'Window cleaning', href:'/window-cleaners', desc:'Rounds, one-offs, access requests' },
+              { emoji:'🍂', label:'Gutter cleaning', href:'/gutter-cleaners', desc:'Seasonal jobs, access notices' },
+              { emoji:'💦', label:'Pressure washing', href:'/pressure-washing', desc:'Driveways, patios, one-off jobs' },
+              { emoji:'🏠', label:'Roof & softwash', href:'/roof-cleaning', desc:'Soft wash, moss treatment, roof cleans' },
+              { emoji:'☀️', label:'Solar panel cleaning', href:'/solar-panel-cleaning', desc:'Access, timing, seasonal cleans' },
+              { emoji:'🏢', label:'Commercial exterior', href:'/commercial-exterior-cleaning', desc:'Multi-site, regular schedules' },
+              { emoji:'🏡', label:'Fascia & soffit', href:'/', desc:'UPVC, cladding, conservatories' },
+              { emoji:'🧹', label:'Other exterior cleaning', href:'/', desc:'Any scheduled outdoor cleaning job' },
+            ].map(({emoji,label,href,desc})=>(
+              <Link key={label} to={href} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, padding:'20px 16px', textDecoration:'none', display:'block' }}>
+                <div style={{ fontSize:26, marginBottom:8 }}>{emoji}</div>
+                <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:4 }}>{label}</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', lineHeight:1.5 }}>{desc}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FOUNDER */}
+      <section style={{ padding:'80px 20px', background:B.light, borderTop:`1px solid ${B.border}` }}>
+        <div style={{ maxWidth:680, margin:'0 auto', textAlign:'center' }}>
+          <div style={{ fontSize:40, marginBottom:20 }}>👋</div>
+          <blockquote style={{ fontSize:'clamp(17px,2.5vw,21px)', fontWeight:500, color:B.navy, lineHeight:1.7, fontStyle:'italic', marginBottom:24 }}>
+            "TextReminder was built by an exterior cleaner who knew the job didn't end when the cleaning was finished. The evenings were often spent sending the same messages to tomorrow's customers. TextReminder exists to remove that repetitive admin."
+          </blockquote>
+          <div style={{ fontSize:14, color:B.muted, fontWeight:600 }}>— Founder, TextReminder · Exterior cleaning business owner</div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" style={{ padding:'88px 20px', background:B.white }}>
+        <div style={{ maxWidth:1080, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:56 }}>
+            <div style={{ display:'inline-block', background:'#dbeafe', color:B.blue, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>Pricing</div>
+            <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>Simple pricing. No surprises.</h2>
+            <p style={{ fontSize:16, color:B.muted, maxWidth:460, margin:'0 auto' }}>Start free with 20 SMS credits. Upgrade when you need more.</p>
+          </div>
+          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, alignItems:'start' }}>
+            {PLANS.map(plan=>(
+              <div key={plan.name} style={{ border:plan.popular?`2px solid ${B.blue}`:`1px solid ${B.border}`, borderRadius:16, padding:'28px 22px', position:'relative', background:plan.popular?B.sky:B.white, boxShadow:plan.popular?'0 4px 24px rgba(37,99,235,0.12)':'none' }}>
+                {plan.popular && <div style={{ position:'absolute', top:-13, left:'50%', transform:'translateX(-50%)', background:B.blue, color:'#fff', fontSize:11, fontWeight:700, padding:'3px 14px', borderRadius:20, whiteSpace:'nowrap' }}>Most popular</div>}
+                <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:4 }}>{plan.name}</div>
+                <div style={{ fontSize:13, color:B.muted, marginBottom:16 }}>{plan.desc}</div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:3, marginBottom:6 }}>
+                  <span style={{ fontSize:38, fontWeight:900, color:B.navy, letterSpacing:'-1px' }}>{plan.price===0?'Free':`£${plan.price}`}</span>
+                  {plan.price>0 && <span style={{ fontSize:14, color:B.muted }}>/month</span>}
                 </div>
+                <div style={{ fontSize:13, color:B.blue, fontWeight:600, marginBottom:20 }}>{plan.sms} SMS per month</div>
+                <div style={{ marginBottom:22 }}>
+                  {plan.features.map(f=>(
+                    <div key={f} style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:8 }}>
+                      <span style={{ color:B.green, marginTop:2, flexShrink:0 }}>✓</span>
+                      <span style={{ fontSize:13, color:B.text, lineHeight:1.5 }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={go} style={{ width:'100%', padding:'11px', fontSize:14, fontWeight:700, borderRadius:8, cursor:'pointer', background:plan.popular?B.blue:'transparent', color:plan.popular?'#fff':B.blue, border:plan.popular?'none':`1.5px solid ${B.blue}` }}>
+                  {plan.cta}
+                </button>
               </div>
             ))}
           </div>
+          <p style={{ textAlign:'center', fontSize:13, color:B.muted, marginTop:24 }}>All plans include automatic SMS opt-out handling. No contracts. Cancel any time.</p>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" style={{ padding:'80px 24px', background:'#fff' }}>
-        <div style={{ maxWidth:560, margin:'0 auto', textAlign:'center' }}>
-          <div style={{ display:'inline-block', background:'#f3e8ff', color:'#7c3aed', fontSize:11, fontWeight:700, letterSpacing:'2px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:14 }}>Pricing</div>
-          <h2 style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(26px,4vw,38px)', fontWeight:800, color:'#0f172a', marginBottom:10 }}>One simple price</h2>
-          <p style={{ fontSize:15, color:'#6b7280', marginBottom:36, lineHeight:1.7 }}>£20/month or £180/year. No setup fees. No hidden costs. Just pay for what you send.</p>
-          <div style={{ background:'linear-gradient(135deg,#0f172a,#1e0a3c)', borderRadius:20, padding:'36px 32px', marginBottom:16, position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:-40, right:-40, width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle,rgba(168,85,247,0.2),transparent 70%)' }}/>
-            <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)', letterSpacing:'2px', textTransform:'uppercase', marginBottom:6 }}>Monthly</div>
-            <div style={{ fontSize:56, fontWeight:900, color:'#fff', lineHeight:1, marginBottom:4, fontFamily:'Syne,sans-serif' }}>£20<span style={{ fontSize:20, fontWeight:400, color:'rgba(255,255,255,0.4)' }}>/month</span></div>
-            <div style={{ fontSize:13, color:'rgba(255,255,255,0.4)', marginBottom:24 }}>or £180/year — save two months</div>
-            {['Google, Apple & Outlook Calendar','SMS, Email & WhatsApp','Unlimited contacts & reminders','AI support assistant','Full message log','Free plan included'].map((f,i)=>(
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:9, marginBottom:9 }}>
-                <span style={{ color:'#22c55e' }}>✓</span>
-                <span style={{ fontSize:13, color:'rgba(255,255,255,0.8)' }}>{f}</span>
+      {/* FAQ */}
+      <section id="faq" style={{ padding:'88px 20px', background:B.light, borderTop:`1px solid ${B.border}` }}>
+        <div style={{ maxWidth:740, margin:'0 auto' }}>
+          <div style={{ textAlign:'center', marginBottom:48 }}>
+            <h2 style={{ fontSize:'clamp(26px,4vw,38px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px' }}>Common questions</h2>
+          </div>
+          {FAQS.map(faq=><FAQItem key={faq.q} q={faq.q} a={faq.a}/>)}
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section style={{ padding:'88px 20px', background:B.navy }}>
+        <div style={{ maxWidth:600, margin:'0 auto', textAlign:'center' }}>
+          <LogoMark light/>
+          <h2 style={{ fontSize:'clamp(26px,4vw,42px)', fontWeight:800, color:'#fff', letterSpacing:'-1px', margin:'24px 0 14px', lineHeight:1.15 }}>Ready to stop texting tomorrow's customers manually?</h2>
+          <p style={{ fontSize:16, color:'rgba(255,255,255,0.5)', marginBottom:32, lineHeight:1.7 }}>Start with 20 free SMS credits. No credit card required. Set up takes minutes.</p>
+          <button onClick={go} style={{ background:B.blue, color:'#fff', border:'none', borderRadius:9, padding:'16px 40px', fontSize:17, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(37,99,235,0.4)' }}>Start free today</button>
+          <div style={{ marginTop:16, fontSize:12, color:'rgba(255,255,255,0.25)' }}>textreminder.co.uk · Built for UK exterior cleaning businesses</div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ background:'#070c14', padding:'40px 20px' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto' }}>
+          <div className="g2" style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:40, marginBottom:36 }}>
+            <div>
+              <LogoMark light/>
+              <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', marginTop:14, lineHeight:1.7, maxWidth:260 }}>Automatic customer notifications for exterior cleaning businesses. Stop spending your evenings texting tomorrow's customers.</p>
+            </div>
+            <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:24 }}>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.3)', letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:14 }}>Product</div>
+                {[['/#how','How it works'],['/#pricing','Pricing'],['/login','Log in'],['/signup','Start free']].map(([to,label])=>(
+                  <Link key={to} to={to} style={{ display:'block', fontSize:13, color:'rgba(255,255,255,0.45)', textDecoration:'none', marginBottom:9 }}>{label}</Link>
+                ))}
               </div>
-            ))}
-            <Link to="/signup" style={{ display:'block', background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:10, padding:15, fontSize:15, fontWeight:700, textDecoration:'none', marginTop:22, boxShadow:'0 4px 16px rgba(236,72,153,0.4)' }}>Start Free Trial →</Link>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:10 }}>Free plan available · No credit card required</div>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.3)', letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:14 }}>Who it's for</div>
+                {[['/window-cleaners','Window cleaners'],['/gutter-cleaners','Gutter cleaners'],['/pressure-washing','Pressure washing'],['/roof-cleaning','Roof cleaning'],['/solar-panel-cleaning','Solar panels']].map(([to,label])=>(
+                  <Link key={to} to={to} style={{ display:'block', fontSize:13, color:'rgba(255,255,255,0.45)', textDecoration:'none', marginBottom:9 }}>{label}</Link>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.3)', letterSpacing:'1.5px', textTransform:'uppercase', marginBottom:14 }}>Company</div>
+                {[['/blog','Blog'],['mailto:hello@textreminder.co.uk','Contact']].map(([to,label])=>(
+                  to.startsWith('mailto')?
+                  <a key={to} href={to} style={{ display:'block', fontSize:13, color:'rgba(255,255,255,0.45)', textDecoration:'none', marginBottom:9 }}>{label}</a>:
+                  <Link key={to} to={to} style={{ display:'block', fontSize:13, color:'rgba(255,255,255,0.45)', textDecoration:'none', marginBottom:9 }}>{label}</Link>
+                ))}
+              </div>
+            </div>
           </div>
-          <div style={{ background:'#fef9c3', borderRadius:12, padding:'14px 18px', display:'flex', alignItems:'center', gap:12 }}>
-            <span style={{ fontSize:20 }}>💡</span>
-            <div style={{ fontSize:13, color:'#713f12', textAlign:'left' }}><strong>Currently paying £25+/month?</strong> Switch to TextReminder and pay less for more.</div>
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:20, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.2)' }}>© 2026 Rollright Publishing Ltd · textreminder.co.uk</div>
+            <div style={{ display:'flex', gap:16 }}>
+              {[['/',  'Privacy'],['/', 'Terms']].map(([to,label])=>(
+                <Link key={label} to={to} style={{ fontSize:12, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>{label}</Link>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section style={{ padding:'80px 24px', background:'linear-gradient(135deg,#0f172a,#1e0a3c)', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(ellipse at 30% 50%,rgba(236,72,153,0.1),transparent 50%),radial-gradient(ellipse at 70% 50%,rgba(168,85,247,0.12),transparent 50%)', pointerEvents:'none' }}/>
-        <div style={{ maxWidth:580, margin:'0 auto', textAlign:'center', position:'relative' }}>
-          <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}><Logo size={56}/></div>
-          <h2 style={{ fontFamily:'Syne,sans-serif', fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:'#fff', marginBottom:12, lineHeight:1.15 }}>Stop losing jobs to no-shows</h2>
-          <p style={{ fontSize:15, color:'rgba(255,255,255,0.5)', marginBottom:30, lineHeight:1.75 }}>5 minutes to set up. Saves hours every week. Pays for itself the first time a customer actually turns up.</p>
-          <Link to="/signup" style={{ display:'inline-block', background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', borderRadius:10, padding:'15px 36px', fontSize:16, fontWeight:700, textDecoration:'none', boxShadow:'0 6px 24px rgba(236,72,153,0.4)' }}>Start Free Trial →</Link>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginTop:14 }}>textreminder.co.uk · Built for UK tradespeople · Part of Rollright Publishing Ltd</div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ background:'#070412', padding:'28px 24px' }}>
-        <div style={{ maxWidth:1100, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-          <LogoMark/>
-          <div style={{ display:'flex', gap:20 }}>
-            {[['Window Cleaners','/window-cleaners'],['Plumbers','/plumbers'],['Electricians','/electricians'],['Hairdressers','/hairdressers']].map(([l,to])=>(
-              <Link key={to} to={to} style={{ fontSize:12, color:'rgba(255,255,255,0.3)', textDecoration:'none' }}>{l}</Link>
-            ))}
-          </div>
-          <div style={{ fontSize:12, color:'rgba(255,255,255,0.2)' }}>© 2025 Rollright Publishing Ltd · Remind. Confirm. Keep Appointments.</div>
         </div>
       </footer>
     </div>

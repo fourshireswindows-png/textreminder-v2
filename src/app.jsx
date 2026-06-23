@@ -422,325 +422,6 @@ function AppNav({ page, setPage, user, onLogout }) {
   )
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// PAGE: HOME (landing)
-// ═════════════════════════════════════════════════════════════════════════════
-function HomePage({ onLogin, onSignup, onNavigate }) {
-  return (
-    <div style={{ background: '#fff' }}>
-      <PublicNav onLogin={onLogin} onSignup={onSignup} onNavigate={onNavigate} />
-
-      {/* Hero */}
-      <section style={{ background: C.navy, padding: '90px 20px 110px' }}>
-        <div style={{ maxWidth: 780, margin: '0 auto', textAlign: 'center' }} className="fade-in">
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 24, background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', borderRadius: 24, padding: '6px 16px' }}>
-            <IC.Bell />
-            <span style={{ color: C.pink, fontSize: 13, fontWeight: 600 }}>Built by tradespeople, for tradespeople.</span>
-          </div>
-          <h1 style={{ fontSize: 'clamp(34px, 5.5vw, 58px)', fontWeight: 800, color: '#fff', lineHeight: 1.13, letterSpacing: '-1.5px', marginBottom: 22 }}>
-            Customers Who Feel Informed{' '}
-            <span style={{ color: C.pink }}>Come Back for More</span>
-          </h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.62)', lineHeight: 1.75, maxWidth: 580, margin: '0 auto 16px' }}>
-            Research shows that customers who receive timely updates feel more valued — and are far more likely to rebook. TextReminder sends automatic SMS reminders before every appointment, so your customers always feel looked after.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={onSignup} style={{ padding: '14px 30px', fontSize: 16 }}>Start Free — No Card Needed</button>
-            <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '14px 30px', fontSize: 16, fontWeight: 500, border: '1.5px solid rgba(255,255,255,0.18)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}>See How It Works</button>
-          </div>
-          {/* Trust signals */}
-          <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28 }}>
-            {['No contracts','Cancel any time','UK-based','98% SMS open rate'].map(t => (
-              <span key={t} style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ color: C.success }}>✓</span> {t}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats strip */}
-      <section style={{ background: '#faf5ff', borderBottom: '1px solid #e9d5ff', padding: '32px 20px' }}>
-        <div style={{ maxWidth: 880, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 24, textAlign: 'center' }}>
-          {[['98%','SMS open rate'],['40%','Happier customers'],['2 min','Setup time'],['0','Manual work']].map(([n, l]) => (
-            <div key={l}>
-              <div style={{ fontSize: 34, fontWeight: 800, color: C.purple, letterSpacing: '-1px' }}>{n}</div>
-              <div style={{ fontSize: 13, color: C.muted, marginTop: 4, fontWeight: 500 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="how-it-works" style={{ padding: '88px 20px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 60 }}>
-            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Keep customers informed. Build a business they trust.</h2>
-            <p style={{ color: C.muted, fontSize: 16, marginTop: 12 }}>A simple text before every appointment makes customers feel valued — and keeps your diary full.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 22 }}>
-            {[
-              { Ic: IC.Calendar, title: 'Google Calendar sync', desc: 'Connect once. TextReminder reads your calendar and schedules reminders automatically.' },
-              { Ic: IC.Msg, title: 'Personalised SMS templates', desc: 'Include your business name, client name, date, and time in every message. Fully customisable.' },
-              { Ic: IC.Users, title: 'Contact management', desc: 'Store your client list securely. Add and remove contacts. Search and filter in seconds.' },
-              { Ic: IC.Trend, title: 'Delivery tracking', desc: 'See real-time status of every reminder — sent, pending, or failed. Full message log included.' },
-              { Ic: IC.Clock, title: 'Flexible timing', desc: 'Choose how far ahead reminders go out: 1 hour, 24 hours, 48 hours, or more.' },
-              { Ic: IC.Bell, title: 'Set it and forget it', desc: 'Once configured, everything runs automatically. No daily logins, no manual sending.' },
-            ].map(({ Ic, title, desc }) => (
-              <div key={title} className="card" style={{ cursor: 'default' }}>
-                <div style={{ width: 46, height: 46, background: '#faf5ff', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, marginBottom: 16 }}><Ic /></div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 9 }}>{title}</h3>
-                <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.65 }}>{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <PricingSection onSignup={onSignup} />
-
-      {/* ROI Calculator */}
-      <RoiSection onSignup={onSignup} />
-
-      {/* From the Blog */}
-      <BlogPreviewSection onNavigate={onNavigate} />
-
-      {/* Footer */}
-      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
-    </div>
-  )
-}
-
-// ─── Pricing Section (reusable with toggle) ──────────────────────────────────
-function PricingSection({ onSignup }) {
-  const [annual, setAnnual] = useState(false)
-  return (
-    <section style={{ background: '#f8fafc', padding: '88px 20px', borderTop: `1px solid ${C.border}` }}>
-      <div style={{ maxWidth: 1140, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, letterSpacing: '-0.8px' }}>Simple, honest pricing</h2>
-          <p style={{ color: C.muted, marginTop: 10, fontSize: 16 }}>No contracts. Cancel any time.</p>
-          {/* Toggle */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginTop: 24, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 40, padding: '6px 8px' }}>
-            <button onClick={() => setAnnual(false)} style={{ padding: '7px 18px', borderRadius: 30, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: !annual ? C.navy : 'transparent', color: !annual ? '#fff' : C.muted, transition: 'all 0.2s' }}>Monthly</button>
-            <button onClick={() => setAnnual(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 18px', borderRadius: 30, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', background: annual ? C.navy : 'transparent', color: annual ? '#fff' : C.muted, transition: 'all 0.2s' }}>
-              Annual
-              <span style={{ background: C.success, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>Save 2 months</span>
-            </button>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          {PLANS.map(plan => {
-            const monthlyEquiv = annual && plan.annualPrice > 0 ? (plan.annualPrice / 12).toFixed(2) : null
-            return (
-              <div key={plan.id} className="card" style={{ border: plan.popular ? `2px solid ${C.pink}` : `1px solid ${C.border}`, position: 'relative' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(168,85,247,0.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-                {plan.popular && <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: C.pink, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 14px', borderRadius: 20 }}>MOST POPULAR</div>}
-                <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.muted, marginBottom: 8 }}>{plan.name}</div>
-                <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, letterSpacing: '-1px', marginBottom: 2 }}>
-                  {plan.price === 0 ? 'Free' : annual ? `£${plan.annualPrice}` : `£${plan.price}`}
-                  {plan.price > 0 && <span style={{ fontSize: 14, fontWeight: 400, color: C.muted }}>{annual ? '/yr' : '/mo'}</span>}
-                </div>
-                {monthlyEquiv && <div style={{ fontSize: 12, color: C.success, fontWeight: 600, marginBottom: 14 }}>£{monthlyEquiv}/mo</div>}
-                {!monthlyEquiv && <div style={{ marginBottom: 14 }} />}
-                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, fontWeight: 500 }}>{plan.reminders} SMS/month</div>
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                  {plan.features.map(f => (
-                    <div key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5 }}>
-                      <span style={{ color: C.success, flexShrink: 0, marginTop: 1 }}><IC.Check /></span>{f}
-                    </div>
-                  ))}
-                </div>
-                <button className={plan.popular ? 'btn-primary' : 'btn-secondary'} onClick={onSignup} style={{ width: '100%', justifyContent: 'center', padding: 10, fontSize: 13 }}>
-                  {plan.price === 0 ? 'Get started free' : 'Get started'}
-                </button>
-              </div>
-            )
-          })}
-        </div>
-        <p style={{ textAlign: 'center', fontSize: 13, color: C.muted, marginTop: 24 }}>No contracts. Cancel any time.</p>
-      </div>
-    </section>
-  )
-}
-
-// ─── Blog data ────────────────────────────────────────────────────────────────
-const BLOG_POSTS = [
-  {
-    slug: 'why-window-cleaners-should-text-customers-before-every-job',
-    title: 'Why Window Cleaners Should Text Customers Before Every Job',
-    category: 'Window Cleaning',
-    date: '2026-05-29',
-    readTime: '4 min read',
-    metaDesc: 'A simple text the day before a window clean makes customers feel valued, prevents complaints, and builds the kind of loyalty that keeps your round full.',
-    excerpt: 'A text the day before costs almost nothing — but it changes how customers feel about your service completely.',
-    content: `
-Window cleaners are different from most trades. You don't need the customer to be home. You don't need them to unlock a door or make a decision. You just need access to the outside of their house, and you can get on with the job.
-
-So why would you bother texting them in advance?
-
-Because keeping customers informed isn't about logistics. It's about how they feel.
-
-**The difference between a service and a relationship**
-
-There's a reason some window cleaners keep customers for 10, 15, 20 years — and others struggle to hold onto anyone past a few cleans. It's not always about the finish on the glass. It's about how the customer feels throughout the whole experience.
-
-A customer who gets a friendly heads-up the evening before thinks: *"They're organised. They're professional. They care enough to let me know."*
-
-A customer who doesn't get one thinks: *"Oh, they've been. I didn't even know they were coming."*
-
-Both customers have clean windows. But only one feels like they're dealing with someone they can trust.
-
-**What the research says**
-
-Studies into customer satisfaction — including work referenced in popular business books — consistently show that customers who feel kept informed rate their experience significantly higher, even when the actual quality of the work is identical. The act of communication is itself part of the service.
-
-That's not a small thing. That's the difference between a customer who recommends you to a neighbour and one who switches to someone else without ever saying why.
-
-**The practical side: gates, dogs, and access**
-
-There's a real-world benefit too. A text the day before gives customers a chance to unlock the side gate, put the dog inside, or move the car out of the way. It reduces the number of times you arrive to find access blocked — and it gives customers a chance to flag anything that's changed before you make the trip.
-
-**What a good reminder text looks like**
-
-Keep it short. Keep it friendly. Give them the key details:
-
-*"Hi Sarah, just a heads-up — your window clean is tomorrow, Thursday 30th May. No need to be in. Just wanted to let you know we're coming. — Dave, Crystal Clear Windows"*
-
-That's it. No pressure, no hard sell. Just a professional, considerate message that makes the customer feel looked after.
-
-**How TextReminder handles it automatically**
-
-If you're running a round of 20, 30, or 50 customers, texting them all individually the night before isn't realistic. TextReminder connects to your Google Calendar and sends those messages automatically — 24 hours before each job, personalised with the customer's name.
-
-You book the job in your calendar like you always do. The text goes out without you having to think about it.
-
-It takes about 5 minutes to set up, and the first 20 reminders are free.
-    `
-  },
-  {
-    slug: 'how-to-write-the-perfect-appointment-reminder-text',
-    title: 'How to Write the Perfect Appointment Reminder Text',
-    category: 'SMS Tips',
-    date: '2026-06-05',
-    readTime: '4 min read',
-    excerpt: "A good reminder text is short, friendly, and gives the customer everything they need. Here's the formula that gets results.",
-    content: `The best reminder texts are ones customers actually read — and act on. Keep it short, personal, and include the key details: name, time, and how to reschedule.`
-  },
-  {
-    slug: 'gdpr-and-sms-reminders-what-uk-tradespeople-need-to-know',
-    title: 'GDPR and SMS Reminders: What UK Tradespeople Need to Know',
-    category: 'Legal & Compliance',
-    date: '2026-06-10',
-    readTime: '3 min read',
-    excerpt: "Sending reminder texts to customers is legal — but there are a few simple rules to follow. Here's the plain-English guide.",
-    content: `GDPR sounds scary, but for small trades businesses sending appointment reminders, the rules are straightforward. If a customer gave you their number to book a job, you can text them about that job.`
-  },
-  {
-    slug: '5-ways-tradespeople-lose-money-without-realising',
-    title: '5 Ways Tradespeople Lose Money Without Realising',
-    category: 'Business Tips',
-    date: '2026-06-15',
-    readTime: '5 min read',
-    excerpt: "No-shows, last-minute cancellations, chasing invoices — these silent money drains add up fast. Here's how to plug the leaks.",
-    content: `Running a trade business means wearing a lot of hats. Here are the five biggest hidden costs eating into your margins — and simple fixes for each one.`
-  },
-]
-
-// ─── Blog Preview Section ─────────────────────────────────────────────────────
-function BlogPreviewSection({ onNavigate }) {
-  const posts = BLOG_POSTS.slice(0, 4)
-  if (posts.length === 0) return null
-  return (
-    <section style={{ padding: '80px 20px', borderTop: `1px solid ${C.border}` }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40, flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h2 style={{ fontSize: 'clamp(22px, 3.5vw, 32px)', fontWeight: 800, letterSpacing: '-0.6px' }}>From the Blog</h2>
-            <p style={{ color: C.muted, fontSize: 15, marginTop: 6 }}>Tips and guides for UK tradespeople</p>
-          </div>
-          <button className="btn-secondary" onClick={() => onNavigate && onNavigate('blog')} style={{ fontSize: 13 }}>View all posts <IC.ChevRight /></button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-          {posts.map(post => (
-            <div key={post.slug} className="card" style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-              onClick={() => onNavigate && onNavigate('blog-post', post.slug)}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.08)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, background: '#faf5ff', color: C.purple, padding: '3px 10px', borderRadius: 12 }}>{post.category}</span>
-                <span style={{ fontSize: 11, color: C.muted }}>{post.readTime}</span>
-              </div>
-              <h3 style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4, marginBottom: 8 }}>{post.title}</h3>
-              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{post.excerpt}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── Site Footer ──────────────────────────────────────────────────────────────
-function SiteFooter({ onNavigate, onSignup }) {
-  const navLinks = [
-    ['home','Home'],['pricing','Pricing'],['compare','Compare'],
-    ['blog','Blog'],['resources','Resources'],['contact','Contact'],
-    ['privacy','Privacy Policy'],['terms','Terms'],
-  ]
-  return (
-    <footer style={{ background: C.navy, padding: '52px 20px 32px' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 32, marginBottom: 44 }}>
-          <div>
-            <LogoMark />
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 14, lineHeight: 1.7, maxWidth: 240 }}>
-              Built by tradespeople, for tradespeople. The UK's appointment reminder service.
-            </p>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Navigation</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {navLinks.map(([k, l]) => (
-                k === 'privacy'
-                  ? <a key={k} href="/privacy" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'left', textDecoration: 'none', transition: 'color 0.15s' }}
-                      onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.85)'}
-                      onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.5)'}>{l}</a>
-                  : <button key={k} onClick={() => onNavigate && onNavigate(k)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0, transition: 'color 0.15s' }}
-                      onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.85)'}
-                      onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.5)'}>{l}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Trades</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[['trade-window-cleaning','Window Cleaners'],['trade-plumbing','Plumbers'],['trade-electrical','Electricians'],['trade-gardening','Gardeners'],['trade-hairdressing','Hairdressers']].map(([k, l]) => (
-                <button key={k} onClick={() => onNavigate && onNavigate(k)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0, transition: 'color 0.15s' }}
-                  onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.85)'}
-                  onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.5)'}>{l}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>Get started</div>
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>Free tier available. No credit card required.</p>
-            <button className="btn-primary" onClick={onSignup} style={{ fontSize: 13, padding: '10px 20px' }}>Start free today</button>
-          </div>
-        </div>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>&copy; {new Date().getFullYear()} TextReminder. All rights reserved. Built by tradespeople, for tradespeople.</p>
-          <button onClick={() => onNavigate && onNavigate('compare')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer', transition: 'color 0.15s' }}
-            onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.6)'}
-            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.3)'}>Compare us to Remindlo →</button>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 // ─── PWA Install Banner ───────────────────────────────────────────────────────
 // ═════════════════════════════════════════════════════════════════════════════
 // AI CHAT WIDGET
@@ -1201,13 +882,20 @@ function BlogPostPage({ slug, onSignup, onNavigate }) {
 
 // ─── Page component imports ───────────────────────────────────────────────────
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom'
-import UpcomingPage   from './pages/Upcoming.jsx'
-import SettingsPage   from './pages/Settings.jsx'
-import ContactsPage   from './pages/Contacts.jsx'
-import MessageLogPage from './pages/MessageLog.jsx'
-import LoginPage      from './pages/Login.jsx'
-import SignupPage     from './pages/Signup.jsx'
-import AuthCallback   from './pages/AuthCallback.jsx'
+import UpcomingPage    from './pages/Upcoming.jsx'
+import SettingsPage    from './pages/Settings.jsx'
+import ContactsPage    from './pages/Contacts.jsx'
+import MessageLogPage  from './pages/MessageLog.jsx'
+import LoginPage       from './pages/Login.jsx'
+import SignupPage      from './pages/Signup.jsx'
+import AuthCallback    from './pages/AuthCallback.jsx'
+import HomePage        from './pages/Home.jsx'
+import WindowCleaners  from './pages/trades/WindowCleaners.jsx'
+import GutterCleaners  from './pages/trades/GutterCleaners.jsx'
+import PressureWashing from './pages/trades/PressureWashing.jsx'
+import RoofCleaning    from './pages/trades/RoofCleaning.jsx'
+import SolarPanels     from './pages/trades/SolarPanels.jsx'
+import CommercialExterior from './pages/trades/CommercialExterior.jsx'
 
 // ─── App shell (logged-in layout with AppNav) ─────────────────────────────────
 function AppShell({ user, onLogout, children }) {
@@ -1281,31 +969,37 @@ function AppRouter({ user, loading, onLogout }) {
 
   return (
     <Routes>
-      <Route path="/"                element={<HomePage {...pub} />} />
-      <Route path="/pricing"         element={<PricingPage {...pub} />} />
-      <Route path="/roi-calculator"  element={<RoiCalculatorPage {...pub} />} />
-      <Route path="/blog"            element={<BlogPage   {...pub} />} />
-      <Route path="/blog/:slug"      element={<BlogPostRoute {...pub} />} />
-      <Route path="/compare"         element={<ComparePage {...pub} />} />
-      <Route path="/window-cleaners" element={<HomePage {...pub} />} />
-      <Route path="/plumbers"        element={<HomePage {...pub} />} />
-      <Route path="/electricians"    element={<HomePage {...pub} />} />
-      <Route path="/gardeners"       element={<HomePage {...pub} />} />
-      <Route path="/hairdressers"    element={<HomePage {...pub} />} />
+      <Route path="/"                          element={<HomePage onSignup={pub.onSignup} />} />
+      <Route path="/pricing"                   element={<PricingPage {...pub} />} />
+      <Route path="/blog"                      element={<BlogPage   {...pub} />} />
+      <Route path="/blog/:slug"                element={<BlogPostRoute {...pub} />} />
+      <Route path="/compare"                   element={<ComparePage {...pub} />} />
+      <Route path="/window-cleaners"           element={<WindowCleaners onSignup={pub.onSignup} />} />
+      <Route path="/gutter-cleaners"           element={<GutterCleaners onSignup={pub.onSignup} />} />
+      <Route path="/pressure-washing"          element={<PressureWashing onSignup={pub.onSignup} />} />
+      <Route path="/roof-cleaning"             element={<RoofCleaning onSignup={pub.onSignup} />} />
+      <Route path="/solar-panel-cleaning"      element={<SolarPanels onSignup={pub.onSignup} />} />
+      <Route path="/commercial-exterior-cleaning" element={<CommercialExterior onSignup={pub.onSignup} />} />
+      {/* Legacy redirects */}
+      <Route path="/plumbers"        element={<Navigate to="/" replace />} />
+      <Route path="/electricians"    element={<Navigate to="/" replace />} />
+      <Route path="/gardeners"       element={<Navigate to="/" replace />} />
+      <Route path="/hairdressers"    element={<Navigate to="/" replace />} />
+      <Route path="/roi-calculator"  element={<Navigate to="/" replace />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
       <Route path="/auth/callback"   element={<AuthCallback />} />
       <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
       <Route path="/settings"        element={shell(<SettingsPage />)} />
       <Route path="/contacts"        element={shell(<ContactsPage />)} />
+      <Route path="/log"             element={shell(<MessageLogPage />)} />
       <Route path="*"                element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
-// ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user, setUser]       = useState(null)
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
