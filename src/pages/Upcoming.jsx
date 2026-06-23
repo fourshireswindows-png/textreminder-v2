@@ -236,9 +236,8 @@ export default function Upcoming() {
         start_time: startDt.toISOString(), end_time: endDt.toISOString(),
         phone: primaryPhone, phones: cleanedPhones,
         is_manual: true, reminder_sent: false,
-        template_id: addForm.templateId || 1,
       })
-      if (error) { setAddError('Failed to save. Try again.'); setSavingAdd(false); return }
+      if (error) { console.error('Save error:', error); setAddError('Failed to save: ' + (error.message || error.details || 'unknown error')); setSavingAdd(false); return }
     } else {
       const intervalDays = addForm.intervalNum * (addForm.intervalUnit === 'weeks' ? 7 : 1)
       const groupId      = crypto.randomUUID()
@@ -255,7 +254,6 @@ export default function Upcoming() {
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
           phone: primaryPhone, phones: cleanedPhones,
           is_manual: true, reminder_sent: false,
-          template_id: addForm.templateId || 1,
           recurring_group_id: groupId, recurring_interval_days: intervalDays,
           recurring_end_date: (addForm.endType === 'date' && addForm.endDate) ? addForm.endDate : null,
         })
@@ -263,7 +261,7 @@ export default function Upcoming() {
       }
       if (rows.length === 0) { setAddError('No appointments in that range.'); setSavingAdd(false); return }
       const { error } = await supabase.from('calendar_events').insert(rows)
-      if (error) { setAddError('Failed to save. Try again.'); setSavingAdd(false); return }
+      if (error) { console.error('Save error:', error); setAddError('Failed to save: ' + (error.message || error.details || 'unknown error')); setSavingAdd(false); return }
     }
 
     await loadEvents()
