@@ -392,7 +392,7 @@ export default function HomePage({ onSignup }) {
           <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:20, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.2)' }}>© 2026 Rollright Publishing Ltd · textreminder.co.uk</div>
             <div style={{ display:'flex', gap:16 }}>
-              {[['/',  'Privacy'],['/', 'Terms']].map(([to,label])=>(
+              {[['/privacy', 'Privacy'],['/', 'Terms']].map(([to,label])=>(
                 <Link key={label} to={to} style={{ fontSize:12, color:'rgba(255,255,255,0.2)', textDecoration:'none' }}>{label}</Link>
               ))}
             </div>
