@@ -1,5 +1,5 @@
 ﻿/*
- * TextReminder — src/App.jsx  (rebuilt: top nav, mobile-first)
+ * TextReminder — src/App.jsx  (rebuilt: top nav, mobile-first) v2
  *
  * SUPABASE SQL SETUP — run once in the Supabase SQL editor:
  *
