@@ -73,10 +73,12 @@ export default function Settings() {
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('profiles').update({
       google_calendar_connected: false,
-      google_calendar_email: null,
-      google_refresh_token: null,
+      google_calendar_email:     null,
+      google_refresh_token:      null,
+      google_access_token:       null,
+      calendar_provider:         null,
     }).eq('id', user.id)
-    setProfile(p => ({ ...p, google_calendar_connected: false, google_calendar_email: null }))
+    setProfile(p => ({ ...p, google_calendar_connected: false, google_calendar_email: null, calendar_provider: null }))
   }
 
   async function save() {
