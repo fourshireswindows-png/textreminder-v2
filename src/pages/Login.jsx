@@ -46,7 +46,7 @@ export default function Login() {
               <span style={{ color:'#fff' }}>text</span><span style={{ color:'#ec4899' }}>reminder</span>
             </span>
           </div>
-          <h1 style={{ fontFamily:'Syne,sans-serif', fontSize:28, fontWeight:800, color:'#fff', letterSpacing:'-0.5px', marginBottom:8 }}>Welcome back</h1>
+          <h1 style={{ fontFamily:'DM Sans,sans-serif', fontSize:28, fontWeight:800, color:'#fff', letterSpacing:'-0.5px', marginBottom:8 }}>Welcome back</h1>
           <p style={{ color:'rgba(255,255,255,0.45)', fontSize:15, lineHeight:1.5 }}>Sign in to manage your appointment reminders</p>
         </div>
 
@@ -92,5 +92,4 @@ export default function Login() {
         </div>
       </div>
     </div>
-  )
-}
+  )}
