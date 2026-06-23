@@ -17,8 +17,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -32,13 +30,11 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Commit and push built files
+      - name: Deploy app.js
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cp dist/app.js app.js
-          git fetch origin main
-          git reset --soft origin/main
-          git add app.js dist/
+          git add app.js
           git diff --staged --quiet || git commit -m "Auto-build [skip ci]"
-          git push origin HEAD:main
+          git push
