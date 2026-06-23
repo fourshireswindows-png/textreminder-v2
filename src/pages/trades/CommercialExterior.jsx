@@ -13,6 +13,7 @@ export default function CommercialExterior({ onSignup }) {
       onSignup={onSignup}
       title="Customer Communication for Commercial Exterior Cleaning Businesses | TextReminder"
       metaDesc="Keep commercial customers and site managers informed before every exterior cleaning visit. TextReminder sends automatic notifications, access confirmations and rescheduling messages for commercial exterior cleaning businesses."
+      canonical="https://textreminder.co.uk/commercial-exterior-cleaning"
       h1="Professional customer communication for commercial exterior cleaning"
       intro="Commercial exterior cleaning contracts require reliable, professional communication with site managers, facilities teams and business owners. TextReminder automatically sends the right message before every visit — keeping your commercial customers informed without manual effort."
       tradeLabel="commercial exterior cleaning businesses"

@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
 
+# Block app/logged-in pages
+Disallow: /upcoming
+Disallow: /settings
+Disallow: /contacts
+Disallow: /log
+Disallow: /auth/
+
 Sitemap: https://textreminder.co.uk/sitemap.xml

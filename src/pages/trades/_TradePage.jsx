@@ -66,6 +66,7 @@ export default function TradePage({
   onSignup,
   title,          // document.title
   metaDesc,       // meta description
+  canonical,      // canonical URL
   h1,             // page H1
   intro,          // intro paragraph
   tradeLabel,     // e.g. "window cleaners"
@@ -77,8 +78,17 @@ export default function TradePage({
   useEffect(() => {
     document.title = title
     const setMeta = (sel, val) => { const el = document.querySelector(sel); if (el) el.setAttribute('content', val) }
+    const setLink = (sel, val) => { const el = document.querySelector(sel); if (el) el.setAttribute('href', val) }
     setMeta('meta[name="description"]', metaDesc)
-  }, [title, metaDesc])
+    setMeta('meta[property="og:title"]', title)
+    setMeta('meta[property="og:description"]', metaDesc)
+    setMeta('meta[name="twitter:title"]', title)
+    setMeta('meta[name="twitter:description"]', metaDesc)
+    if (canonical) {
+      setMeta('meta[property="og:url"]', canonical)
+      setLink('link[rel="canonical"]', canonical)
+    }
+  }, [title, metaDesc, canonical])
 
   const handleSignup = onSignup || (() => { window.location.href = '/signup' })
 

@@ -89,7 +89,7 @@ function FAQItem({ q, a }) {
 
 export default function HomePage({ onSignup }) {
   useEffect(()=>{
-    document.title = 'TextReminder — Customer Notifications for Exterior Cleaning Businesses'
+    document.title = 'TextReminder — Automatic SMS Appointment Reminders for UK Trades'
     const s=(sel,val)=>{const el=document.querySelector(sel);if(el)el.setAttribute('content',val)}
     s('meta[name="description"]',"Stop spending your evenings texting customers about tomorrow's jobs. TextReminder automatically sends job reminders, access requests and weather-delay updates for exterior cleaning businesses.")
     s('meta[property="og:title"]','TextReminder — Customer Notifications for Exterior Cleaning Businesses')
