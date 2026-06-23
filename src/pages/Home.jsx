@@ -176,7 +176,7 @@ export default function HomePage({ onSignup }) {
 
       {/* THE PROBLEM */}
       <section style={{ padding:'88px 20px', background:B.white }}>
-        <div style={{ maxWidth:1080, margin:'0 auto' }}>
+        <div style={{ maxWidth:1280, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:56 }}>
             <div style={{ display:'inline-block', background:'#fef3c7', color:B.amber, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>The problem</div>
             <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>The job doesn't end when the cleaning does</h2>
@@ -302,13 +302,13 @@ export default function HomePage({ onSignup }) {
               </button>
             </div>
           </div>
-          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, alignItems:'start' }}>
+          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, alignItems:'start' }}>
             {PLANS.map(plan=>{
               const isAnnual = billing === 'annual' && plan.price > 0
               const displayPrice = isAnnual ? Math.round(plan.annualPrice/12) : plan.price
               const annualTotal = plan.annualPrice
               return (
-              <div key={plan.name} style={{ border:plan.popular?`2px solid ${B.pink}`:`1px solid ${B.border}`, borderRadius:16, padding:'28px 22px', position:'relative', background:plan.popular?B.sky:B.white, boxShadow:plan.popular?'0 4px 24px rgba(236,72,153,0.12)':'none' }}>
+              <div key={plan.name} style={{ border:plan.popular?`2px solid ${B.pink}`:`1px solid ${B.border}`, borderRadius:16, padding:'22px 16px', position:'relative', background:plan.popular?B.sky:B.white, boxShadow:plan.popular?'0 4px 24px rgba(236,72,153,0.12)':'none' }}>
                 {plan.popular && <div style={{ position:'absolute', top:-13, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', fontSize:11, fontWeight:700, padding:'3px 14px', borderRadius:20, whiteSpace:'nowrap' }}>Most popular</div>}
                 <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:4 }}>{plan.name}</div>
                 <div style={{ fontSize:13, color:B.muted, marginBottom:16 }}>{plan.desc}</div>
