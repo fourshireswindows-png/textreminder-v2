@@ -491,7 +491,7 @@ function AiChat() {
   return (
     <>
       {open && (
-        <div style={{ position: 'fixed', bottom: 84, right: 20, zIndex: 1000, width: 340, maxHeight: 480,
+        <div style={{ position: 'fixed', bottom: 84, right: 20, zIndex: 1000, width: 'min(340px, calc(100vw - 32px))', maxHeight: 480,
           background: '#fff', borderRadius: 18, border: '1px solid #e9d5ff',
           boxShadow: '0 16px 50px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
           animation: 'ellieSlideUp 0.25s ease' }}>

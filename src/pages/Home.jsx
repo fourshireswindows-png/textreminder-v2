@@ -62,9 +62,11 @@ function Nav({ onSignup }) {
       <div style={{ maxWidth:1140, margin:'0 auto', padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between', height:62 }}>
         <Link to="/" style={{ textDecoration:'none' }}><LogoMark/></Link>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-          {[['#how','How it works'],['#pricing','Pricing'],['#faq','FAQ']].map(([href,label])=>(
-            <a key={href} href={href} style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.6)', textDecoration:'none', padding:'8px 12px', borderRadius:7 }}>{label}</a>
-          ))}
+          <div className="nav-links" style={{ display:'flex', alignItems:'center', gap:0 }}>
+            {[['#how','How it works'],['#pricing','Pricing'],['#faq','FAQ']].map(([href,label])=>(
+              <a key={href} href={href} style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.6)', textDecoration:'none', padding:'8px 12px', borderRadius:7 }}>{label}</a>
+            ))}
+          </div>
           <Link to="/login" style={{ fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.6)', textDecoration:'none', padding:'8px 12px' }}>Log in</Link>
           <Link to="/signup" style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', borderRadius:8, padding:'9px 20px', fontSize:14, fontWeight:700, textDecoration:'none', marginLeft:4 }}>Start free</Link>
         </div>
@@ -106,7 +108,7 @@ export default function HomePage({ onSignup }) {
         .fu{animation:fadeUp 0.55s ease forwards;}
         .fu2{animation:fadeUp 0.55s ease 0.12s forwards;opacity:0;}
         .fu3{animation:fadeUp 0.55s ease 0.24s forwards;opacity:0;}
-        @media(max-width:768px){.hm{display:none!important}.g2{grid-template-columns:1fr!important}.g3{grid-template-columns:1fr!important}.g4{grid-template-columns:repeat(2,1fr)!important}}
+        @media(max-width:768px){.hm{display:none!important}.g2{grid-template-columns:1fr!important}.g3{grid-template-columns:1fr!important}.g4{grid-template-columns:repeat(2,1fr)!important}.pg{grid-template-columns:1fr!important}.nav-links{display:none!important}}
       `}</style>
 
       <Nav onSignup={go}/>
@@ -120,8 +122,7 @@ export default function HomePage({ onSignup }) {
             <span style={{ color:'#ec4899', fontSize:13, fontWeight:600 }}>Built for exterior cleaning businesses</span>
           </div>
           <h1 className="fu2" style={{ fontSize:'clamp(32px,5.5vw,58px)', fontWeight:800, color:'#fff', lineHeight:1.1, letterSpacing:'-1.5px', marginBottom:24 }}>
-            Stop spending your evenings<br/>
-            <span style={{ color:'#ec4899' }}>texting tomorrow's customers</span>
+            Stop spending your evenings <span style={{ color:'#ec4899' }}>texting tomorrow's customers</span>
           </h1>
           <p className="fu3" style={{ fontSize:'clamp(16px,2vw,19px)', color:'rgba(255,255,255,0.62)', lineHeight:1.75, maxWidth:580, margin:'0 auto 14px' }}>
             TextReminder automatically sends job reminders, access requests and weather-delay updates to your customers — so you finish the day and switch off.
@@ -302,7 +303,7 @@ export default function HomePage({ onSignup }) {
               </button>
             </div>
           </div>
-          <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, alignItems:'start' }}>
+          <div className="g4 pg" style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12, alignItems:'start' }}>
             {PLANS.map(plan=>{
               const isAnnual = billing === 'annual' && plan.price > 0
               const displayPrice = isAnnual ? Math.round(plan.annualPrice/12) : plan.price

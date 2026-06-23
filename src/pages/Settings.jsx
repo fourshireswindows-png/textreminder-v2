@@ -68,6 +68,17 @@ export default function Settings() {
     window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString()
   }
 
+  async function disconnectCalendar() {
+    if (!confirm('Disconnect Google Calendar? Reminders will stop syncing.')) return
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('profiles').update({
+      google_calendar_connected: false,
+      google_calendar_email: null,
+      google_refresh_token: null,
+    }).eq('id', user.id)
+    setProfile(p => ({ ...p, google_calendar_connected: false, google_calendar_email: null }))
+  }
+
   async function save() {
     setSaving(true)
     setSaveError(null)
@@ -99,13 +110,14 @@ export default function Settings() {
 
   return (
     <div>
+      <style>{`@media(max-width:640px){.sg{grid-template-columns:1fr!important}}`}</style>
       <div style={{ marginBottom:24 }}>
         <h1 style={{ fontSize:'clamp(22px,3.5vw,32px)', fontWeight:800, color:'#0f172a', marginBottom:4, letterSpacing:'-0.6px' }}>Settings</h1>
         <div style={{ fontSize:13, color:'#94a3b8' }}>Configure your account and reminders</div>
       </div>
 
       <Section title="Business Details" sub="Used in your reminder messages">
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+        <div className="sg" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
           <div>
             <label style={{ fontSize:11, fontWeight:700, color:'#475569', letterSpacing:'0.5px', textTransform:'uppercase', display:'block', marginBottom:6 }}>Business Name</label>
             <input value={form.business_name} onChange={e => set('business_name', e.target.value)} placeholder="e.g. Four Shires Window Cleaning" className="input"/>
@@ -221,17 +233,24 @@ export default function Settings() {
 
       <Section title="Google Calendar" sub="Connect your Google Calendar to sync appointments automatically.">
         {profile?.google_calendar_connected ? (
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
             <div style={{ width:10, height:10, borderRadius:'50%', background:'#10b981', flexShrink:0 }} />
             <div>
               <div style={{ fontSize:14, fontWeight:600, color:'#0f172a' }}>Connected</div>
               {profile.google_calendar_email && <div style={{ fontSize:12, color:'#94a3b8', marginTop:2 }}>{profile.google_calendar_email}</div>}
             </div>
-            <button
-              onClick={connectCalendar}
-              style={{ marginLeft:'auto', padding:'8px 16px', borderRadius:8, border:'1px solid #e2e8f0', background:'#f8fafc', color:'#64748b', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-              Reconnect
-            </button>
+            <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
+              <button
+                onClick={connectCalendar}
+                style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #e2e8f0', background:'#f8fafc', color:'#64748b', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                Reconnect
+              </button>
+              <button
+                onClick={disconnectCalendar}
+                style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #fecdd3', background:'#fff5f5', color:'#ef4444', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                Disconnect
+              </button>
+            </div>
           </div>
         ) : (
           <div>
