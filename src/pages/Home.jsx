@@ -114,11 +114,11 @@ export default function HomePage({ onSignup }) {
         <div style={{ maxWidth:860, margin:'0 auto', textAlign:'center', position:'relative' }}>
           <div className="fu" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(236,72,153,0.15)', border:'1px solid rgba(236,72,153,0.3)', borderRadius:24, padding:'6px 16px', marginBottom:28 }}>
             <span style={{ width:7, height:7, borderRadius:'50%', background:'#4ade80', display:'inline-block' }}/>
-            <span style={{ color:'#f9a8d4', fontSize:13, fontWeight:600 }}>Built for exterior cleaning businesses</span>
+            <span style={{ color:'#ec4899', fontSize:13, fontWeight:600 }}>Built for exterior cleaning businesses</span>
           </div>
           <h1 className="fu2" style={{ fontSize:'clamp(32px,5.5vw,58px)', fontWeight:800, color:'#fff', lineHeight:1.1, letterSpacing:'-1.5px', marginBottom:24 }}>
             Stop spending your evenings<br/>
-            <span style={{ color:'#f9a8d4' }}>texting tomorrow's customers</span>
+            <span style={{ color:'#ec4899' }}>texting tomorrow's customers</span>
           </h1>
           <p className="fu3" style={{ fontSize:'clamp(16px,2vw,19px)', color:'rgba(255,255,255,0.62)', lineHeight:1.75, maxWidth:580, margin:'0 auto 14px' }}>
             TextReminder automatically sends job reminders, access requests and weather-delay updates to your customers — so you finish the day and switch off.
@@ -162,7 +162,7 @@ export default function HomePage({ onSignup }) {
             <div style={{ display:'flex', gap:8, marginTop:14 }}>
               {[['0','Manual messages sent'],['8','Sent automatically'],['5 min','Time saved tonight']].map(([val,label])=>(
                 <div key={label} style={{ flex:1, background:'rgba(255,255,255,0.04)', borderRadius:8, padding:'9px 6px', textAlign:'center' }}>
-                  <div style={{ fontSize:16, fontWeight:800, color:'#f9a8d4' }}>{val}</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:'#ec4899' }}>{val}</div>
                   <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', lineHeight:1.4, marginTop:2 }}>{label}</div>
                 </div>
               ))}
