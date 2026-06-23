@@ -899,6 +899,7 @@ import PressureWashing from './pages/trades/PressureWashing.jsx'
 import RoofCleaning    from './pages/trades/RoofCleaning.jsx'
 import SolarPanels     from './pages/trades/SolarPanels.jsx'
 import CommercialExterior from './pages/trades/CommercialExterior.jsx'
+import PrivacyPage        from './pages/Privacy.jsx'
 
 // ─── App shell (logged-in layout with AppNav) ─────────────────────────────────
 function AppShell({ user, onLogout, children }) {
@@ -989,6 +990,7 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/gardeners"       element={<Navigate to="/" replace />} />
       <Route path="/hairdressers"    element={<Navigate to="/" replace />} />
       <Route path="/roi-calculator"  element={<Navigate to="/" replace />} />
+      <Route path="/privacy"          element={<PrivacyPage />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
       <Route path="/auth/callback"   element={<AuthCallback />} />
@@ -1016,11 +1018,15 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  async function onLogout() {
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
   return (
     <BrowserRouter>
       <GlobalStyles />
-        <AppRouter user={user} loading={loading} onLogout={async () => { await supabase.auth.signOut(); setUser(null) }} />
-        <AiChat />
+      <AppRouter user={user} loading={loading} onLogout={onLogout} />
     </BrowserRouter>
   )
 }

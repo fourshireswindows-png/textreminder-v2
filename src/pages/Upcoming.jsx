@@ -959,9 +959,8 @@ export default function Upcoming() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button onClick={() => deleteManualEvent(deleteTarget, 'one')} style={{ background: '#f1f5f9', color: text, border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete just this occurrence</button>
               <button onClick={() => deleteManualEvent(deleteTarget, 'all')} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Delete all in this series</button>
-              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>Cancel</button>
+              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', color: muted, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>Cancel</button>
             </div>
-
           </div>
         </div>
       )}
