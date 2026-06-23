@@ -15,7 +15,6 @@ export default function CommercialExterior({ onSignup }) {
       metaDesc="Keep commercial customers and site managers informed before every exterior cleaning visit. TextReminder sends automatic notifications, access confirmations and rescheduling messages for commercial exterior cleaning businesses."
       h1="Professional customer communication for commercial exterior cleaning"
       intro="Commercial exterior cleaning contracts require reliable, professional communication with site managers, facilities teams and business owners. TextReminder automatically sends the right message before every visit — keeping your commercial customers informed without manual effort."
-      emoji="🏢"
       tradeLabel="commercial exterior cleaning businesses"
       problems={[
         { title: "Site managers need advance notice", desc: "Commercial sites often require 24-48 hours notice before a cleaning visit — for security, access coordination, or staff notification. Manual reminders are easy to forget." },

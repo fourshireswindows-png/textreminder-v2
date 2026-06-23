@@ -15,7 +15,6 @@ export default function WindowCleaners({ onSignup }) {
       metaDesc="Stop spending your evenings texting tomorrow's window cleaning customers. TextReminder automatically sends job reminders, access requests and weather-delay notices for window cleaners."
       h1="The simple way for window cleaners to keep customers informed"
       intro="TextReminder automatically sends your customers a message before their window clean — reminding them you're coming, asking them to leave the side gate open, and notifying them about weather delays. No more evening texting sessions."
-      emoji="🪟"
       tradeLabel="window cleaners"
       problems={[
         { title: "Customers forget you're coming", desc: "They go out, leave the gate locked, or ring to cancel because no one told them their windows were due. A single automated message the night before prevents it." },

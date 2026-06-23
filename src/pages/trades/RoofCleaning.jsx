@@ -15,7 +15,6 @@ export default function RoofCleaning({ onSignup }) {
       metaDesc="Automatically notify customers before roof cleans, softwash treatments and moss removal visits. TextReminder handles access requests, day-before reminders and rescheduling for roof cleaning businesses."
       h1="Customer notifications for roof cleaning and softwash businesses"
       intro="Roof cleaning and softwash jobs require customer presence, clear access, and specific conditions. TextReminder automatically keeps customers informed before every visit — from the initial reminder to weather rescheduling."
-      emoji="🏠"
       tradeLabel="roof cleaning and softwash businesses"
       problems={[
         { title: "High-value jobs require customer presence", desc: "Roof cleans and softwash treatments often need the customer to be home or at least reachable. Without advance notice, you may arrive to find no one there." },

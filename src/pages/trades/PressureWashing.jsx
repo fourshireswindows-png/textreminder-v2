@@ -15,7 +15,6 @@ export default function PressureWashing({ onSignup }) {
       metaDesc="Automatically notify customers before driveway cleaning, patio washing and pressure washing jobs. TextReminder handles access requests, day-before reminders and weather rescheduling."
       h1="Customer communication for pressure washing and driveway cleaning businesses"
       intro="Pressure washing jobs often require clear access, pre-treatment preparation, and specific weather conditions. TextReminder automatically sends customers everything they need to know before you arrive — so every job runs smoothly."
-      emoji="💦"
       tradeLabel="pressure washing businesses"
       problems={[
         { title: "Customers haven't cleared the driveway", desc: "You arrive to find cars parked, bins blocking the area, or garden furniture in the way. A heads-up message telling them to prepare avoids the issue entirely." },

@@ -15,7 +15,6 @@ export default function GutterCleaners({ onSignup }) {
       metaDesc="Automatically notify customers before gutter clears and gutter cleaning visits. TextReminder sends access requests, day-before reminders and weather-delay messages for gutter cleaning businesses."
       h1="Customer notifications for gutter cleaning businesses"
       intro="Gutter cleaning customers often forget seasonal appointments and need to provide access. TextReminder automatically sends them a reminder before every visit — so you turn up to an open gate, not a locked one."
-      emoji="🍂"
       tradeLabel="gutter cleaners"
       problems={[
         { title: "Customers forget seasonal appointments", desc: "Gutter clears are often once or twice a year. Customers frequently forget the appointment exists — until you turn up unannounced." },

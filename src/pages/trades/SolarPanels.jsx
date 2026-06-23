@@ -15,7 +15,6 @@ export default function SolarPanels({ onSignup }) {
       metaDesc="Automatically notify customers before solar panel cleaning visits. TextReminder sends access requests, seasonal reminders and rescheduling messages for solar panel cleaning businesses."
       h1="Customer notifications for solar panel cleaning businesses"
       intro="Solar panel cleaning customers need advance notice, roof or ground access, and clear instructions. TextReminder automatically sends the right message at the right time — so every visit is expected and access is ready."
-      emoji="☀️"
       tradeLabel="solar panel cleaning businesses"
       problems={[
         { title: "Customers aren't home or don't know you're coming", desc: "Solar panel cleans often require the customer to be available or at least reachable. Showing up unannounced creates problems and damages trust." },

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 const B = {
-  navy:   '#0f172a', navy2:  '#1e293b', blue:   '#2563eb',
-  sky:    '#eff6ff', text:   '#1e293b', muted:  '#64748b',
+  navy:   '#0f172a', navy2:  '#1e293b', pink:   '#ec4899',
+  purple: '#a855f7', sky:    '#fdf2f8', text:   '#1e293b', muted:  '#64748b',
   light:  '#f8fafc', border: '#e2e8f0', green:  '#16a34a',
   amber:  '#b45309', white:  '#ffffff',
 }
@@ -38,14 +38,15 @@ const FAQS = [
 
 function LogoMark({ light = false }) {
   const textCol = light ? '#fff' : B.navy
-  const accentCol = light ? '#93c5fd' : B.blue
+  const accentCol = light ? '#f9a8d4' : B.pink
   return (
     <div style={{ display:'flex', alignItems:'center', gap:9 }}>
       <svg width="30" height="30" viewBox="0 0 48 48" fill="none">
-        <rect width="48" height="48" rx="11" fill={B.blue}/>
+        <defs><linearGradient id="lgm" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#ec4899"/><stop offset="100%" stopColor="#a855f7"/></linearGradient></defs>
+        <rect width="48" height="48" rx="11" fill="url(#lgm)"/>
         <path d="M10 14C10 11.8 11.8 10 14 10H34C36.2 10 38 11.8 38 14V28C38 30.2 36.2 32 34 32H27L21 38V32H14C11.8 32 10 30.2 10 28V14Z" fill="white" opacity="0.95"/>
-        <rect x="15" y="18" width="18" height="2.5" rx="1.25" fill={B.blue}/>
-        <rect x="15" y="23" width="12" height="2.5" rx="1.25" fill={B.blue}/>
+        <rect x="15" y="18" width="18" height="2.5" rx="1.25" fill="#ec4899"/>
+        <rect x="15" y="23" width="12" height="2.5" rx="1.25" fill="#ec4899"/>
       </svg>
       <span style={{ fontWeight:800, fontSize:17, letterSpacing:'-0.3px', fontFamily:'DM Sans, sans-serif' }}>
         <span style={{ color:textCol }}>text</span><span style={{ color:accentCol }}>reminder</span>
@@ -64,7 +65,7 @@ function Nav({ onSignup }) {
             <a key={href} href={href} style={{ fontSize:14, fontWeight:500, color:B.muted, textDecoration:'none', padding:'8px 12px', borderRadius:7 }}>{label}</a>
           ))}
           <Link to="/login" style={{ fontSize:14, fontWeight:500, color:B.muted, textDecoration:'none', padding:'8px 12px' }}>Log in</Link>
-          <Link to="/signup" style={{ background:B.blue, color:'#fff', borderRadius:8, padding:'9px 20px', fontSize:14, fontWeight:700, textDecoration:'none', marginLeft:4 }}>Start free</Link>
+          <Link to="/signup" style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', borderRadius:8, padding:'9px 20px', fontSize:14, fontWeight:700, textDecoration:'none', marginLeft:4 }}>Start free</Link>
         </div>
       </div>
     </nav>
@@ -78,7 +79,7 @@ function FAQItem({ q, a }) {
       <button onClick={()=>setOpen(o=>!o)}
         style={{ width:'100%', background:'none', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', gap:16, padding:0, textAlign:'left' }}>
         <span style={{ fontSize:16, fontWeight:600, color:B.text, lineHeight:1.4 }}>{q}</span>
-        <span style={{ fontSize:22, color:B.blue, flexShrink:0, transition:'transform 0.2s', transform:open?'rotate(45deg)':'none', lineHeight:1 }}>+</span>
+        <span style={{ fontSize:22, color:B.pink, flexShrink:0, transition:'transform 0.2s', transform:open?'rotate(45deg)':'none', lineHeight:1 }}>+</span>
       </button>
       {open && <p style={{ marginTop:14, fontSize:15, color:B.muted, lineHeight:1.75 }}>{a}</p>}
     </div>
@@ -110,15 +111,15 @@ export default function HomePage({ onSignup }) {
 
       {/* HERO */}
       <section style={{ background:B.navy, padding:'90px 20px 100px', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:0, right:0, width:600, height:600, background:'radial-gradient(circle at 80% 20%,rgba(37,99,235,0.18),transparent 60%)', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', top:0, right:0, width:600, height:600, background:'radial-gradient(circle at 80% 20%,rgba(236,72,153,0.18),transparent 60%)', pointerEvents:'none' }}/>
         <div style={{ maxWidth:860, margin:'0 auto', textAlign:'center', position:'relative' }}>
-          <div className="fu" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(37,99,235,0.15)', border:'1px solid rgba(37,99,235,0.3)', borderRadius:24, padding:'6px 16px', marginBottom:28 }}>
+          <div className="fu" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(236,72,153,0.15)', border:'1px solid rgba(236,72,153,0.3)', borderRadius:24, padding:'6px 16px', marginBottom:28 }}>
             <span style={{ width:7, height:7, borderRadius:'50%', background:'#4ade80', display:'inline-block' }}/>
-            <span style={{ color:'#93c5fd', fontSize:13, fontWeight:600 }}>Built for exterior cleaning businesses</span>
+            <span style={{ color:'#f9a8d4', fontSize:13, fontWeight:600 }}>Built for exterior cleaning businesses</span>
           </div>
           <h1 className="fu2" style={{ fontSize:'clamp(32px,5.5vw,58px)', fontWeight:800, color:'#fff', lineHeight:1.1, letterSpacing:'-1.5px', marginBottom:24 }}>
             Stop spending your evenings<br/>
-            <span style={{ color:'#60a5fa' }}>texting tomorrow's customers</span>
+            <span style={{ color:'#f9a8d4' }}>texting tomorrow's customers</span>
           </h1>
           <p className="fu3" style={{ fontSize:'clamp(16px,2vw,19px)', color:'rgba(255,255,255,0.62)', lineHeight:1.75, maxWidth:580, margin:'0 auto 14px' }}>
             TextReminder automatically sends job reminders, access requests and weather-delay updates to your customers — so you finish the day and switch off.
@@ -127,7 +128,7 @@ export default function HomePage({ onSignup }) {
             Built by an exterior cleaner, for exterior cleaning businesses.
           </p>
           <div className="fu3" style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
-            <button onClick={go} style={{ background:B.blue, color:'#fff', border:'none', borderRadius:9, padding:'15px 34px', fontSize:16, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(37,99,235,0.4)' }}>Start free</button>
+            <button onClick={go} style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', border:'none', borderRadius:9, padding:'15px 34px', fontSize:16, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(236,72,153,0.4)' }}>Start free</button>
             <a href="#how" style={{ background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.8)', border:'1.5px solid rgba(255,255,255,0.15)', borderRadius:9, padding:'14px 30px', fontSize:16, fontWeight:600, textDecoration:'none' }}>See how it works</a>
           </div>
           <div className="fu3" style={{ display:'flex', gap:20, justifyContent:'center', flexWrap:'wrap', marginTop:28 }}>
@@ -143,7 +144,7 @@ export default function HomePage({ onSignup }) {
         <div style={{ maxWidth:420, margin:'60px auto 0' }}>
           <div style={{ background:'#1e293b', border:'1px solid rgba(255,255,255,0.1)', borderRadius:16, padding:24, boxShadow:'0 24px 64px rgba(0,0,0,0.5)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16, paddingBottom:14, borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
-              <div style={{ width:36, height:36, borderRadius:9, background:B.blue, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ width:36, height:36, borderRadius:9, background:`linear-gradient(135deg,${B.pink},${B.purple})`, display:'flex', alignItems:'center', justifyContent:'center' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M3 5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H7l-4 4V5z"/></svg>
               </div>
               <div>
@@ -156,13 +157,13 @@ export default function HomePage({ onSignup }) {
               </div>
             </div>
             <div style={{ fontSize:12, color:'rgba(255,255,255,0.35)', marginBottom:8 }}>To: Mrs. Helen Booth · 07712 *** ***</div>
-            <div style={{ background:'rgba(37,99,235,0.12)', border:'1px solid rgba(37,99,235,0.2)', borderRadius:10, padding:'12px 14px', fontSize:14, color:'rgba(255,255,255,0.85)', lineHeight:1.7 }}>
+            <div style={{ background:'rgba(236,72,153,0.1)', border:'1px solid rgba(236,72,153,0.2)', borderRadius:10, padding:'12px 14px', fontSize:14, color:'rgba(255,255,255,0.85)', lineHeight:1.7 }}>
               Hi Helen, just to let you know we'll be cleaning your windows <strong style={{ color:'#fff' }}>tomorrow (Tuesday)</strong>. We'll be with you between <strong style={{ color:'#fff' }}>9–11am</strong>. Please leave the side gate unlocked if you can. Thanks — Dave, Crystal Clear Windows. Reply STOP to opt out.
             </div>
             <div style={{ display:'flex', gap:8, marginTop:14 }}>
               {[['0','Manual messages sent'],['8','Sent automatically'],['5 min','Time saved tonight']].map(([val,label])=>(
                 <div key={label} style={{ flex:1, background:'rgba(255,255,255,0.04)', borderRadius:8, padding:'9px 6px', textAlign:'center' }}>
-                  <div style={{ fontSize:16, fontWeight:800, color:'#60a5fa' }}>{val}</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:'#f9a8d4' }}>{val}</div>
                   <div style={{ fontSize:10, color:'rgba(255,255,255,0.3)', lineHeight:1.4, marginTop:2 }}>{label}</div>
                 </div>
               ))}
@@ -181,15 +182,14 @@ export default function HomePage({ onSignup }) {
           </div>
           <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
             {[
-              { icon:'😤', title:"Customers don't know you're coming", desc:"They go out, leave the gate locked, or call to cancel because no one told them they were due today." },
-              { icon:'🚧', title:'Gates and access are blocked', desc:"You turn up, can't get in, and lose the job. A simple heads-up the night before would have fixed it." },
-              { icon:'🌧️', title:'Weather disrupts your schedule', desc:"Rescheduling a full day's work means messaging every affected customer individually — while already stressed." },
-              { icon:'🌙', title:'Evenings spent texting', desc:"You finish a full physical day and then spend your evening manually texting tomorrow's customers. It shouldn't be that way." },
-              { icon:'📞', title:'Customers chase you for updates', desc:"Customers who aren't kept informed call asking where you are. It takes up time you don't have." },
-              { icon:'❌', title:'Access issues cost you money', desc:"Each failed visit is lost revenue and a wasted journey. Most are avoidable with a single message." },
-            ].map(({icon,title,desc})=>(
+              { title:"Customers don't know you're coming", desc:"They go out, leave the gate locked, or call to cancel because no one told them they were due today." },
+              { title:'Gates and access are blocked', desc:"You turn up, can't get in, and lose the job. A simple heads-up the night before would have fixed it." },
+              { title:'Weather disrupts your schedule', desc:"Rescheduling a full day's work means messaging every affected customer individually — while already stressed." },
+              { title:'Evenings spent texting', desc:"You finish a full physical day and then spend your evening manually texting tomorrow's customers. It shouldn't be that way." },
+              { title:'Customers chase you for updates', desc:"Customers who aren't kept informed call asking where you are. It takes up time you don't have." },
+              { title:'Access issues cost you money', desc:"Each failed visit is lost revenue and a wasted journey. Most are avoidable with a single message." },
+            ].map(({title,desc})=>(
               <div key={title} style={{ background:B.light, border:`1px solid ${B.border}`, borderRadius:13, padding:'24px 22px' }}>
-                <div style={{ fontSize:28, marginBottom:12 }}>{icon}</div>
                 <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:8 }}>{title}</div>
                 <div style={{ fontSize:14, color:B.muted, lineHeight:1.7 }}>{desc}</div>
               </div>
@@ -202,21 +202,21 @@ export default function HomePage({ onSignup }) {
       <section style={{ padding:'88px 20px', background:B.sky }}>
         <div style={{ maxWidth:1080, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:56 }}>
-            <div style={{ display:'inline-block', background:'#dbeafe', color:B.blue, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>The solution</div>
+            <div style={{ display:'inline-block', background:'#fce7f3', color:B.pink, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>The solution</div>
             <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>TextReminder handles the communication. You just do the cleaning.</h2>
             <p style={{ fontSize:16, color:B.muted, maxWidth:520, margin:'0 auto', lineHeight:1.7 }}>Set up your messages once. TextReminder sends them automatically — before every job, every time.</p>
           </div>
           <div className="g3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16 }}>
             {[
-              { icon:'📅', title:'Job reminders', desc:"Customers automatically receive a message the evening before or the morning of their clean. No more surprises on their doorstep." },
-              { icon:'🔑', title:'Access requests', desc:"Include a line asking them to leave the gate unlocked, have someone home, or move a car. Sent automatically with every reminder." },
-              { icon:'🌧️', title:'Weather-delay notices', desc:"Select affected jobs, choose your delay message, send to all customers at once. Takes 30 seconds instead of 30 minutes." },
-              { icon:'🔄', title:'Rescheduling messages', desc:"Move a job and notify the customer in one step. They'll always know when to expect you." },
-              { icon:'🚐', title:'"We\'re on our way" updates', desc:"Send a quick heads-up when you're nearby or running to time. Reduces calls and keeps customers happy." },
-              { icon:'📋', title:'Full message history', desc:"See exactly what was sent, when, and whether it was delivered. No guessing, no missed customers." },
-            ].map(({icon,title,desc})=>(
+              { title:'Job reminders', desc:"Customers automatically receive a message the evening before or the morning of their clean. No more surprises on their doorstep." },
+              { title:'Access requests', desc:"Include a line asking them to leave the gate unlocked, have someone home, or move a car. Sent automatically with every reminder." },
+              { title:'Weather-delay notices', desc:"Select affected jobs, choose your delay message, send to all customers at once. Takes 30 seconds instead of 30 minutes." },
+              { title:'Rescheduling messages', desc:"Move a job and notify the customer in one step. They'll always know when to expect you." },
+              { title:'"We\'re on our way" updates', desc:"Send a quick heads-up when you're nearby or running to time. Reduces calls and keeps customers happy." },
+              { title:'Full message history', desc:"See exactly what was sent, when, and whether it was delivered. No guessing, no missed customers." },
+            ].map(({title,desc})=>(
               <div key={title} style={{ background:B.white, border:`1px solid ${B.border}`, borderRadius:13, padding:'24px 22px', boxShadow:'0 2px 8px rgba(0,0,0,0.04)' }}>
-                <div style={{ fontSize:28, marginBottom:12 }}>{icon}</div>
+                <div style={{ color:B.green, fontWeight:700, marginBottom:8 }}>✓</div>
                 <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:8 }}>{title}</div>
                 <div style={{ fontSize:14, color:B.muted, lineHeight:1.7 }}>{desc}</div>
               </div>
@@ -239,10 +239,10 @@ export default function HomePage({ onSignup }) {
               { n:'3', title:'TextReminder sends everything automatically', desc:"Customers receive their message at the right time, every time. You finish work and switch off.", detail:'SMS delivered. You do nothing.' },
             ].map(({n,title,desc,detail})=>(
               <div key={n} style={{ textAlign:'center', padding:'8px 12px' }}>
-                <div style={{ width:52, height:52, borderRadius:'50%', background:B.blue, color:'#fff', fontWeight:800, fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>{n}</div>
+                <div style={{ width:52, height:52, borderRadius:'50%', background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', fontWeight:800, fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>{n}</div>
                 <h3 style={{ fontSize:17, fontWeight:700, color:B.navy, marginBottom:10 }}>{title}</h3>
                 <p style={{ fontSize:14, color:B.muted, lineHeight:1.75, marginBottom:12 }}>{desc}</p>
-                <div style={{ display:'inline-block', background:B.sky, color:B.blue, fontSize:12, fontWeight:600, padding:'5px 12px', borderRadius:20 }}>{detail}</div>
+                <div style={{ display:'inline-block', background:B.sky, color:B.pink, fontSize:12, fontWeight:600, padding:'5px 12px', borderRadius:20 }}>{detail}</div>
               </div>
             ))}
           </div>
@@ -258,17 +258,16 @@ export default function HomePage({ onSignup }) {
           </div>
           <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14 }}>
             {[
-              { emoji:'🪟', label:'Window cleaning', href:'/window-cleaners', desc:'Rounds, one-offs, access requests' },
-              { emoji:'🍂', label:'Gutter cleaning', href:'/gutter-cleaners', desc:'Seasonal jobs, access notices' },
-              { emoji:'💦', label:'Pressure washing', href:'/pressure-washing', desc:'Driveways, patios, one-off jobs' },
-              { emoji:'🏠', label:'Roof & softwash', href:'/roof-cleaning', desc:'Soft wash, moss treatment, roof cleans' },
-              { emoji:'☀️', label:'Solar panel cleaning', href:'/solar-panel-cleaning', desc:'Access, timing, seasonal cleans' },
-              { emoji:'🏢', label:'Commercial exterior', href:'/commercial-exterior-cleaning', desc:'Multi-site, regular schedules' },
-              { emoji:'🏡', label:'Fascia & soffit', href:'/', desc:'UPVC, cladding, conservatories' },
-              { emoji:'🧹', label:'Other exterior cleaning', href:'/', desc:'Any scheduled outdoor cleaning job' },
-            ].map(({emoji,label,href,desc})=>(
+              { label:'Window cleaning', href:'/window-cleaners', desc:'Rounds, one-offs, access requests' },
+              { label:'Gutter cleaning', href:'/gutter-cleaners', desc:'Seasonal jobs, access notices' },
+              { label:'Pressure washing', href:'/pressure-washing', desc:'Driveways, patios, one-off jobs' },
+              { label:'Roof & softwash', href:'/roof-cleaning', desc:'Soft wash, moss treatment, roof cleans' },
+              { label:'Solar panel cleaning', href:'/solar-panel-cleaning', desc:'Access, timing, seasonal cleans' },
+              { label:'Commercial exterior', href:'/commercial-exterior-cleaning', desc:'Multi-site, regular schedules' },
+              { label:'Fascia & soffit', href:'/', desc:'UPVC, cladding, conservatories' },
+              { label:'Other exterior cleaning', href:'/', desc:'Any scheduled outdoor cleaning job' },
+            ].map(({label,href,desc})=>(
               <Link key={label} to={href} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, padding:'20px 16px', textDecoration:'none', display:'block' }}>
-                <div style={{ fontSize:26, marginBottom:8 }}>{emoji}</div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:4 }}>{label}</div>
                 <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', lineHeight:1.5 }}>{desc}</div>
               </Link>
@@ -280,7 +279,6 @@ export default function HomePage({ onSignup }) {
       {/* FOUNDER */}
       <section style={{ padding:'80px 20px', background:B.light, borderTop:`1px solid ${B.border}` }}>
         <div style={{ maxWidth:680, margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontSize:40, marginBottom:20 }}>👋</div>
           <blockquote style={{ fontSize:'clamp(17px,2.5vw,21px)', fontWeight:500, color:B.navy, lineHeight:1.7, fontStyle:'italic', marginBottom:24 }}>
             "TextReminder was built by an exterior cleaner who knew the job didn't end when the cleaning was finished. The evenings were often spent sending the same messages to tomorrow's customers. TextReminder exists to remove that repetitive admin."
           </blockquote>
@@ -292,21 +290,21 @@ export default function HomePage({ onSignup }) {
       <section id="pricing" style={{ padding:'88px 20px', background:B.white }}>
         <div style={{ maxWidth:1080, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:56 }}>
-            <div style={{ display:'inline-block', background:'#dbeafe', color:B.blue, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>Pricing</div>
+            <div style={{ display:'inline-block', background:'#fce7f3', color:B.pink, fontSize:11, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'5px 14px', borderRadius:20, marginBottom:16 }}>Pricing</div>
             <h2 style={{ fontSize:'clamp(26px,4vw,40px)', fontWeight:800, color:B.navy, letterSpacing:'-0.8px', marginBottom:12 }}>Simple pricing. No surprises.</h2>
             <p style={{ fontSize:16, color:B.muted, maxWidth:460, margin:'0 auto' }}>Start free with 20 SMS credits. Upgrade when you need more.</p>
           </div>
           <div className="g4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, alignItems:'start' }}>
             {PLANS.map(plan=>(
-              <div key={plan.name} style={{ border:plan.popular?`2px solid ${B.blue}`:`1px solid ${B.border}`, borderRadius:16, padding:'28px 22px', position:'relative', background:plan.popular?B.sky:B.white, boxShadow:plan.popular?'0 4px 24px rgba(37,99,235,0.12)':'none' }}>
-                {plan.popular && <div style={{ position:'absolute', top:-13, left:'50%', transform:'translateX(-50%)', background:B.blue, color:'#fff', fontSize:11, fontWeight:700, padding:'3px 14px', borderRadius:20, whiteSpace:'nowrap' }}>Most popular</div>}
+              <div key={plan.name} style={{ border:plan.popular?`2px solid ${B.pink}`:`1px solid ${B.border}`, borderRadius:16, padding:'28px 22px', position:'relative', background:plan.popular?B.sky:B.white, boxShadow:plan.popular?'0 4px 24px rgba(236,72,153,0.12)':'none' }}>
+                {plan.popular && <div style={{ position:'absolute', top:-13, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', fontSize:11, fontWeight:700, padding:'3px 14px', borderRadius:20, whiteSpace:'nowrap' }}>Most popular</div>}
                 <div style={{ fontSize:15, fontWeight:700, color:B.navy, marginBottom:4 }}>{plan.name}</div>
                 <div style={{ fontSize:13, color:B.muted, marginBottom:16 }}>{plan.desc}</div>
                 <div style={{ display:'flex', alignItems:'baseline', gap:3, marginBottom:6 }}>
                   <span style={{ fontSize:38, fontWeight:900, color:B.navy, letterSpacing:'-1px' }}>{plan.price===0?'Free':`£${plan.price}`}</span>
                   {plan.price>0 && <span style={{ fontSize:14, color:B.muted }}>/month</span>}
                 </div>
-                <div style={{ fontSize:13, color:B.blue, fontWeight:600, marginBottom:20 }}>{plan.sms} SMS per month</div>
+                <div style={{ fontSize:13, color:B.pink, fontWeight:600, marginBottom:20 }}>{plan.sms} SMS per month</div>
                 <div style={{ marginBottom:22 }}>
                   {plan.features.map(f=>(
                     <div key={f} style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:8 }}>
@@ -315,7 +313,7 @@ export default function HomePage({ onSignup }) {
                     </div>
                   ))}
                 </div>
-                <button onClick={go} style={{ width:'100%', padding:'11px', fontSize:14, fontWeight:700, borderRadius:8, cursor:'pointer', background:plan.popular?B.blue:'transparent', color:plan.popular?'#fff':B.blue, border:plan.popular?'none':`1.5px solid ${B.blue}` }}>
+                <button onClick={go} style={{ width:'100%', padding:'11px', fontSize:14, fontWeight:700, borderRadius:8, cursor:'pointer', background:plan.popular?`linear-gradient(135deg,${B.pink},${B.purple})`:'transparent', color:plan.popular?'#fff':B.pink, border:plan.popular?'none':`1.5px solid ${B.pink}` }}>
                   {plan.cta}
                 </button>
               </div>
@@ -341,7 +339,7 @@ export default function HomePage({ onSignup }) {
           <LogoMark light/>
           <h2 style={{ fontSize:'clamp(26px,4vw,42px)', fontWeight:800, color:'#fff', letterSpacing:'-1px', margin:'24px 0 14px', lineHeight:1.15 }}>Ready to stop texting tomorrow's customers manually?</h2>
           <p style={{ fontSize:16, color:'rgba(255,255,255,0.5)', marginBottom:32, lineHeight:1.7 }}>Start with 20 free SMS credits. No credit card required. Set up takes minutes.</p>
-          <button onClick={go} style={{ background:B.blue, color:'#fff', border:'none', borderRadius:9, padding:'16px 40px', fontSize:17, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(37,99,235,0.4)' }}>Start free today</button>
+          <button onClick={go} style={{ background:`linear-gradient(135deg,${B.pink},${B.purple})`, color:'#fff', border:'none', borderRadius:9, padding:'16px 40px', fontSize:17, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 20px rgba(236,72,153,0.4)' }}>Start free today</button>
           <div style={{ marginTop:16, fontSize:12, color:'rgba(255,255,255,0.25)' }}>textreminder.co.uk · Built for UK exterior cleaning businesses</div>
         </div>
       </section>
