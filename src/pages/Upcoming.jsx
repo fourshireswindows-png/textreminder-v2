@@ -78,7 +78,7 @@ export default function Upcoming() {
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
-  const [viewMode, setViewMode]     = useState('calendar')
+  const [viewMode, setViewMode]     = useState(() => localStorage.getItem('tr_viewMode') || 'calendar')
   const [sentThisMonth, setSentThisMonth] = useState(0)
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -643,7 +643,7 @@ export default function Upcoming() {
           </button>
           <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: 8, padding: 3, gap: 2 }}>
             {[['calendar', 'Calendar'], ['list', 'List']].map(([mode, label]) => (
-              <button key={mode} onClick={() => { setViewMode(mode); setEditingTemplate(null); }}
+              <button key={mode} onClick={() => { setViewMode(mode); setEditingTemplate(null); localStorage.setItem('tr_viewMode', mode); }}
                 style={{ background: viewMode === mode ? '#fff' : 'transparent', color: viewMode === mode ? purple : muted, border: 'none', borderRadius: 6, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: viewMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
                 {label}
               </button>
