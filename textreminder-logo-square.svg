@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <defs>
+    <linearGradient id="bubbleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- White background -->
+  <rect width="800" height="800" fill="white"/>
+
+  <!-- Speech bubble (gradient stroke) -->
+  <path d="M195,100 Q155,100 155,140 L155,345 Q155,385 195,385 L350,385 L400,440 L450,385 L605,385 Q645,385 645,345 L645,140 Q645,100 605,100 Z"
+    fill="white" stroke="url(#bubbleGrad)" stroke-width="18" stroke-linejoin="round"/>
+
+  <!-- Text lines inside bubble -->
+  <line x1="225" y1="195" x2="565" y2="195" stroke="#1a1a2e" stroke-width="22" stroke-linecap="round"/>
+  <line x1="225" y1="255" x2="565" y2="255" stroke="#1a1a2e" stroke-width="22" stroke-linecap="round"/>
+  <line x1="225" y1="315" x2="460" y2="315" stroke="#1a1a2e" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Green checkmark badge -->
+  <circle cx="610" cy="128" r="60" fill="#22c55e"/>
+  <polyline points="582,128 600,148 638,105" fill="none" stroke="white" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- "text" -->
+  <text x="400" y="545" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="105" fill="#1a1a2e" text-anchor="middle">text</text>
+
+  <!-- "reminder.co.uk" with colour split -->
+  <text x="400" y="645" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="82" text-anchor="middle">
+    <tspan fill="#a855f7">reminder</tspan><tspan fill="#1a1a2e">.co.uk</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="400" y="720" font-family="Arial, sans-serif" font-weight="700" font-size="24" fill="#94a3b8" text-anchor="middle" letter-spacing="2.5">REMIND. CONFIRM. KEEP APPOINTMENTS.</text>
+</svg>
