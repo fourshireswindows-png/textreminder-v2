@@ -829,14 +829,9 @@ function RoiCalculatorPage({ onLogin, onSignup, onNavigate }) {
 }
 
 // PAGE: PRICING
-function PricingPage({ onLogin, onSignup, onNavigate }) {
-  return (
-    <div style={{ background: '#fff' }}>
-      <PublicNav onLogin={onLogin} onSignup={onSignup} onNavigate={onNavigate} />
-      <PricingSection onSignup={onSignup} />
-      <SiteFooter onNavigate={onNavigate} onSignup={onSignup} />
-    </div>
-  )
+function PricingPage() {
+  useEffect(() => { window.location.replace('/#pricing') }, [])
+  return null
 }
 
 // PAGE: BLOG POST
