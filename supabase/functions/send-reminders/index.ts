@@ -163,6 +163,12 @@ serve(async (req) => {
         const sentIndices: number[] = event.reminder_sent_indices ?? [];
         if (sentIndices.includes(schedIdx)) continue;
 
+        // If the event has specific template_ids selected, only fire slots whose template is in that list
+        const eventTemplateIds: number[] | null = Array.isArray(event.template_ids) && event.template_ids.length
+          ? event.template_ids.map(Number)
+          : null;
+        if (eventTemplateIds && !eventTemplateIds.includes(sched.template_id || 1)) continue;
+
         // Resolve phone list — prefer the phones array, fall back to phone field, then title extraction
         const phoneFromTitle = event.title?.match(/(\+44\d{10}|07\d{9})/)?.[0];
         const attendees: { name?: string; phone?: string }[] = event.attendees ?? [];

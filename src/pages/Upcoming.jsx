@@ -236,6 +236,7 @@ export default function Upcoming() {
         start_time: startDt.toISOString(), end_time: endDt.toISOString(),
         external_id: crypto.randomUUID(), phone: primaryPhone, phones: cleanedPhones,
         is_manual: true, reminder_sent: false,
+        template_ids: [addForm.templateId || 1],
       })
       if (error) { console.error('Save error:', error); setAddError('Failed to save: ' + (error.message || error.details || 'unknown error')); setSavingAdd(false); return }
     } else {
@@ -254,6 +255,7 @@ export default function Upcoming() {
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
           external_id: crypto.randomUUID(), phone: primaryPhone, phones: cleanedPhones,
           is_manual: true, reminder_sent: false,
+          template_ids: [addForm.templateId || 1],
           recurring_group_id: groupId, recurring_interval_days: intervalDays,
           recurring_end_date: (addForm.endType === 'date' && addForm.endDate) ? addForm.endDate : null,
         })
@@ -344,6 +346,7 @@ export default function Upcoming() {
           end_time: new Date(cur.getTime() + 60 * 60 * 1000).toISOString(),
           external_id: crypto.randomUUID(), phone: primaryPhone, phones: cleanedPhones,
           is_manual: true, reminder_sent: false,
+          template_ids: [addForm.templateId || 1],
           template_id: editForm.templateId || 1,
           recurring_group_id: editTarget.recurring_group_id,
           recurring_interval_days: intervalDays, recurring_end_date: endDate,
