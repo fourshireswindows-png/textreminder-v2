@@ -459,8 +459,8 @@ export default function Upcoming() {
   const todayIso = new Date().toISOString().split('T')[0]
 
   function renderAppointmentBlock(ev) {
-    const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
-    const activeTemplates = templates.filter(t => activeIds.includes(t.id))
+    const activeIds = (ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]).map(Number)
+    const activeTemplates = templates.filter(t => activeIds.includes(Number(t.id)))
     const currentPhones = getEventPhones(ev)
     const hasPhone = currentPhones.length > 0
 
@@ -519,8 +519,8 @@ export default function Upcoming() {
   }
 
   function renderListCard(ev) {
-    const activeIds = ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]
-    const activeTemplates = templates.filter(t => activeIds.includes(t.id))
+    const activeIds = (ev.template_ids?.length ? ev.template_ids : [ev.template_id || 1]).map(Number)
+    const activeTemplates = templates.filter(t => activeIds.includes(Number(t.id)))
     const currentPhones = getEventPhones(ev)
     const hasPhone = currentPhones.length > 0
     const timeStr = new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -643,7 +643,7 @@ export default function Upcoming() {
           </button>
           <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: 8, padding: 3, gap: 2 }}>
             {[['calendar', 'Calendar'], ['list', 'List']].map(([mode, label]) => (
-              <button key={mode} onClick={() => setViewMode(mode)}
+              <button key={mode} onClick={() => { setViewMode(mode); setEditingTemplate(null); }}
                 style={{ background: viewMode === mode ? '#fff' : 'transparent', color: viewMode === mode ? purple : muted, border: 'none', borderRadius: 6, padding: '5px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: viewMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
                 {label}
               </button>
