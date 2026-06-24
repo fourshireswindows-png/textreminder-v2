@@ -435,7 +435,7 @@ function AiChat() {
   const [started, setStarted] = useState(false)
   const bottomRef             = useRef(null)
 
-  const ELLIE_PHOTO = '/ellie.jpeg'
+  const ELLIE_PHOTO = '/ellie-avatar.jpg'
   const pink   = '#ec4899'
   const purple = '#a855f7'
   const grad   = `linear-gradient(135deg, ${pink}, ${purple})`
@@ -443,7 +443,7 @@ function AiChat() {
   const QUICK_REPLIES = ['How does it work?', 'What does it cost?', 'Will my customers read it?', 'Get started']
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 8000)
+    const t = setTimeout(() => setVisible(true), 3000)
     return () => clearTimeout(t)
   }, [])
 
