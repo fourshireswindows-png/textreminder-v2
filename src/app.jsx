@@ -971,7 +971,12 @@ function AppRouter({ user, loading, onLogout }) {
     )
   }
 
+  // Only show Ellie on public pages (not logged-in app)
+  const isPublicPage = !user && !['upcoming','settings','contacts','log'].some(p => location.pathname.includes(p))
+
   return (
+    <>
+    {isPublicPage && <AiChat />}
     <Routes>
       <Route path="/"                          element={<HomePage onSignup={pub.onSignup} />} />
       <Route path="/pricing"                   element={<PricingPage {...pub} />} />
@@ -1000,6 +1005,7 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/log"             element={shell(<MessageLogPage />)} />
       <Route path="*"                element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
 
@@ -1017,7 +1023,6 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
-
   async function onLogout() {
     await supabase.auth.signOut()
     setUser(null)
