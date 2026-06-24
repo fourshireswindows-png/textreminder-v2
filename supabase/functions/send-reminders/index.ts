@@ -269,6 +269,7 @@ serve(async (req) => {
             user_id:           profile.id,
             contact_name:      attendee.name ?? event.title ?? "Unknown",
             contact_phone:     toNumber,
+            appointment_time:  event.start_time,
             channel:           "sms",
             message,
             status,

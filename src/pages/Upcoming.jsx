@@ -624,12 +624,12 @@ export default function Upcoming() {
         <div>
           <h1 style={{ fontSize: 'clamp(22px,3.5vw,32px)', fontWeight: 800, color: text, marginBottom: 4, letterSpacing: '-0.6px' }}>Upcoming Appointments</h1>
           <div style={{ fontSize: 13, color: muted, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {(profile?.calendar_provider || profile?.google_calendar_connected) ? (
+            {(profile?.calendar_provider || profile?.google_calendar_connected || profile?.google_access_token) ? (
               <><span style={{ width: 6, height: 6, borderRadius: '50%', background: green, display: 'inline-block' }} /> Synced from {profile?.calendar_provider || 'Google'} calendar</>
             ) : (
               <><span style={{ color: '#f59e0b' }}>!</span> No calendar connected — <Link to="/settings" style={{ color: purple, fontWeight: 600 }}>connect in Settings</Link></>
             )}
-            {(profile?.calendar_provider || profile?.google_calendar_connected) && (
+            {(profile?.calendar_provider || profile?.google_calendar_connected || profile?.google_access_token) && (
               <>
                 {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>Last synced {lastSyncedText(events)}</span>}
                 <span style={{ fontSize: 11, color: muted }}>Syncs every 10 minutes</span>
@@ -786,11 +786,11 @@ export default function Upcoming() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Date</label>
-                <input type="date" min={todayIso} value={addForm.date} onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} />
+                <input type="date" min={todayIso} value={addForm.date} onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, appearance: 'auto', WebkitAppearance: 'auto' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Time</label>
-                <input type="time" value={addForm.time} onChange={e => setAddForm(f => ({ ...f, time: e.target.value }))} style={inputStyle} />
+                <input type="time" value={addForm.time} onChange={e => setAddForm(f => ({ ...f, time: e.target.value }))} style={{ ...inputStyle, appearance: 'auto', WebkitAppearance: 'auto' }} />
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
@@ -827,7 +827,7 @@ export default function Upcoming() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
                       <input type="radio" name="addEndType" value="date" checked={addForm.endType === 'date'} onChange={() => setAddForm(f => ({ ...f, endType: 'date' }))} style={{ accentColor: purple }} />
                       On date
-                      {addForm.endType === 'date' && <input type="date" min={addForm.date || todayIso} value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4 }} />}
+                      {addForm.endType === 'date' && <input type="date" min={addForm.date || todayIso} value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4, appearance: 'auto', WebkitAppearance: 'auto' }} />}
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
                       <input type="radio" name="addEndType" value="indefinite" checked={addForm.endType === 'indefinite'} onChange={() => setAddForm(f => ({ ...f, endType: 'indefinite', endDate: '' }))} style={{ accentColor: purple }} />
@@ -863,11 +863,11 @@ export default function Upcoming() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Date</label>
-                <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={inputStyle} />
+                <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, appearance: 'auto', WebkitAppearance: 'auto' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Time</label>
-                <input type="time" value={editForm.time} onChange={e => setEditForm(f => ({ ...f, time: e.target.value }))} style={inputStyle} />
+                <input type="time" value={editForm.time} onChange={e => setEditForm(f => ({ ...f, time: e.target.value }))} style={{ ...inputStyle, appearance: 'auto', WebkitAppearance: 'auto' }} />
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
