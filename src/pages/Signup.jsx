@@ -27,6 +27,14 @@ export default function Signup() {
     if (data?.user) {
       await supabase.from('profiles').update({ business_name: business }).eq('id', data.user.id)
     }
+    // Fire Google Ads conversion on successful signup
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', {
+        send_to: 'AW-18268434547/y2HvCKaI68QcEPPgiIdE',
+        value: 1.0,
+        currency: 'GBP',
+      })
+    }
     setConfirmed(true)
     setLoading(false)
   }
