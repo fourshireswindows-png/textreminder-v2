@@ -435,7 +435,7 @@ function AiChat() {
   const [started, setStarted] = useState(false)
   const bottomRef             = useRef(null)
 
-  const ELLIE_PHOTO = '/ellie-avatar.jpg'
+  const ELLIE_PHOTO = '/ellie.jpeg'
   const pink   = '#ec4899'
   const purple = '#a855f7'
   const grad   = `linear-gradient(135deg, ${pink}, ${purple})`
@@ -467,18 +467,13 @@ function AiChat() {
     setInput('')
     setLoading(true)
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/ai-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': window.ANTHROPIC_KEY || '', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 600,
-          system: "You are Ellie, a friendly support assistant for TextReminder — a UK SMS appointment reminder service built specifically for tradespeople (plumbers, electricians, window cleaners, gardeners, hairdressers, etc.). You help tradespeople stop losing jobs to no-shows by sending automatic SMS reminders to their customers before appointments.\n\nKey facts:\n- Free plan: 20 SMS/month, Google Calendar sync, up to 20 contacts\n- Starter: £15/month, 100 SMS\n- Professional: £29/month, 200 SMS (most popular)\n- Business: £55/month, 400 SMS\n- No contracts, cancel any time, UK-based\n- Setup takes about 5 minutes — connect Google Calendar, customise message, done\n- 98% SMS open rate, reduces no-shows by up to 40%\n\nBe warm, concise, and relatable to UK tradespeople. Use casual but professional language. If asked about technical issues, direct them to hello@textreminder.co.uk.",
-          messages: cleanMsgs
-        })
+        headers: { 'Content-Type': 'application/json', 'apikey': 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO' },
+        body: JSON.stringify({ messages: cleanMsgs })
       })
       const data = await res.json()
-      const reply = data.content?.find(b => b.type === 'text')?.text || "Sorry, something went wrong. Email hello@textreminder.co.uk and we'll get back to you."
+      const reply = data.reply || "Sorry, something went wrong. Email hello@textreminder.co.uk and we'll get back to you."
       setMsgs(p => [...p, { role: 'assistant', content: reply }])
     } catch {
       setMsgs(p => [...p, { role: 'assistant', content: "Something went wrong. Email hello@textreminder.co.uk and we'll be back to you within 4 hours." }])
