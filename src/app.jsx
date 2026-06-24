@@ -899,7 +899,8 @@ function AppShell({ user, onLogout, children }) {
   const page = raw === 'log' ? 'message-log' : raw
 
   function setPage(key) {
-    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
+    if (key === 'upgrade') { window.open('https://textreminder.co.uk/#pricing', '_blank'); return }
+    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts' }
     navigate(map[key] || '/upcoming')
   }
 
@@ -933,7 +934,7 @@ function AppRouter({ user, loading, onLogout }) {
 
   // After Google OAuth, user lands at '/' — redirect to upcoming
   useEffect(() => {
-    if (!loading && user && ['/', '/login', '/signup'].includes(location.pathname)) {
+    if (!loading && user && ['/', '/login', '/signup'].includes(location.pathname) && !window.location.hash) {
       navigate('/upcoming', { replace: true })
     }
   }, [user, loading, location.pathname])
