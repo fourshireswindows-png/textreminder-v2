@@ -1029,11 +1029,9 @@ function AppRouter({ user, loading, onLogout }) {
   }
 
   // Only show Ellie on public pages (not logged-in app)
-  const isPublicPage = !user && !['upcoming','settings','contacts','log'].some(p => location.pathname.includes(p))
-
   return (
     <>
-    {isPublicPage && <AiChat />}
+    <AiChat />
     <Routes>
       <Route path="/"                          element={<HomePage onSignup={pub.onSignup} />} />
       <Route path="/pricing"                   element={shell(<PricingPage user={user} />)} />
