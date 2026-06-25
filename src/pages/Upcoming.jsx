@@ -129,14 +129,22 @@ export default function Upcoming() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     try {
-      await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/sync-google-calendar', {
+      const res = await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/sync-google-calendar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO' },
         body: JSON.stringify({ user_id: user.id }),
       })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        console.error('Sync error:', data.error, data.detail)
+        setSyncMsg('Sync error: ' + (data.error || 'unknown'))
+        setTimeout(() => setSyncMsg(''), 8000)
+      }
       await loadEvents()
     } catch (e) {
       console.error('Sync failed', e)
+      setSyncMsg('Sync failed: ' + String(e))
+      setTimeout(() => setSyncMsg(''), 8000)
     }
   }
 
