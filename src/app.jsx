@@ -439,6 +439,7 @@ function AiChat() {
   const pink   = '#ec4899'
   const purple = '#a855f7'
   const grad   = `linear-gradient(135deg, ${pink}, ${purple})`
+  const isMob  = typeof window !== 'undefined' && window.innerWidth < 640
 
   const QUICK_REPLIES = ['How does it work?', 'What does it cost?', 'Will my customers read it?', 'Get started']
 
@@ -486,8 +487,12 @@ function AiChat() {
   return (
     <>
       {open && (
-        <div style={{ position: 'fixed', bottom: 84, right: 20, zIndex: 1000, width: 'min(340px, calc(100vw - 32px))', maxHeight: 480,
-          background: '#fff', borderRadius: 18, border: '1px solid #e9d5ff',
+        <div style={{
+          position: 'fixed', zIndex: 1000,
+          ...(isMob
+            ? { bottom: 0, left: 0, right: 0, top: 0, borderRadius: 0, maxHeight: '100dvh' }
+            : { bottom: 84, right: 20, width: 340, maxHeight: 520, borderRadius: 18 }),
+          background: '#fff', border: '1px solid #e9d5ff',
           boxShadow: '0 16px 50px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
           animation: 'ellieSlideUp 0.25s ease' }}>
           {/* Header */}
