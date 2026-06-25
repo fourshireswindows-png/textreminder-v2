@@ -144,9 +144,10 @@ export default function Upcoming() {
     async function load() {
       await loadEvents()
       setLoading(false)
+      syncCalendar()  // pull fresh from Google on mount
     }
     load()
-    const interval = setInterval(() => syncCalendar(), 10 * 60 * 1000)
+    const interval = setInterval(() => syncCalendar(), 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [location.key])
 
@@ -160,8 +161,8 @@ export default function Upcoming() {
     setSyncing(true)
     setSyncMsg('')
     try {
-      await loadEvents()
-      setSyncMsg('Refreshed')
+      await syncCalendar()
+      setSyncMsg('Synced')
     } catch (e) {
       setSyncMsg('Failed')
     } finally {
