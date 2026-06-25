@@ -468,9 +468,9 @@ export default function Upcoming() {
     return (
     <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? pink : purple}`, position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span title={ev.reminder_sent ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
+        <span title={(ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
           style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-            background: ev.reminder_sent ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
+            background: (ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
         {new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {ev.title}
         {ev.is_manual && ev.recurring_group_id && <span title="Recurring" style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>REC</span>}
       </div>
@@ -533,8 +533,8 @@ export default function Upcoming() {
         <div style={{ width: 1, background: border, alignSelf: 'stretch', flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-            <span title={ev.reminder_sent ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
-              style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: ev.reminder_sent ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
+            <span title={(ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
+              style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: (ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: text }}>{ev.title}</span>
             {ev.is_manual && ev.recurring_group_id && <span style={{ fontSize: 9, opacity: 0.6, color: muted }}>REC</span>}
           </div>
