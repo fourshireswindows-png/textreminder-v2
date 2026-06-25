@@ -786,7 +786,7 @@ export default function Upcoming() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Date</label>
-                <input type="date" min={todayIso} value={addForm.date} onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, appearance: 'auto', WebkitAppearance: 'auto' }} />
+                <input type="date" value={addForm.date} onChange={e => setAddForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Time</label>
@@ -827,7 +827,7 @@ export default function Upcoming() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
                       <input type="radio" name="addEndType" value="date" checked={addForm.endType === 'date'} onChange={() => setAddForm(f => ({ ...f, endType: 'date' }))} style={{ accentColor: purple }} />
                       On date
-                      {addForm.endType === 'date' && <input type="date" min={addForm.date || todayIso} value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4, appearance: 'auto', WebkitAppearance: 'auto' }} />}
+                      {addForm.endType === 'date' && <input type="date" value={addForm.endDate} onChange={e => setAddForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4, appearance: 'auto', WebkitAppearance: 'auto' }} />}
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
                       <input type="radio" name="addEndType" value="indefinite" checked={addForm.endType === 'indefinite'} onChange={() => setAddForm(f => ({ ...f, endType: 'indefinite', endDate: '' }))} style={{ accentColor: purple }} />
@@ -863,7 +863,7 @@ export default function Upcoming() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Date</label>
-                <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, appearance: 'auto', WebkitAppearance: 'auto' }} />
+                <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: text, marginBottom: 5 }}>Time</label>
@@ -915,7 +915,7 @@ export default function Upcoming() {
                           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
                             <input type="radio" name="editEndType" value="date" checked={editForm.endType === 'date'} onChange={() => setEditForm(f => ({ ...f, endType: 'date' }))} style={{ accentColor: purple }} />
                             On date
-                            {editForm.endType === 'date' && <input type="date" min={editForm.date || todayIso} value={editForm.endDate} onChange={e => setEditForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4 }} />}
+                            {editForm.endType === 'date' && <input type="date" value={editForm.endDate} onChange={e => setEditForm(f => ({ ...f, endDate: e.target.value }))} style={{ ...inputStyle, flex: 1, marginLeft: 4 }} />}
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: text }}>
                             <input type="radio" name="editEndType" value="indefinite" checked={editForm.endType === 'indefinite'} onChange={() => setEditForm(f => ({ ...f, endType: 'indefinite', endDate: '' }))} style={{ accentColor: purple }} />
