@@ -829,9 +829,67 @@ function RoiCalculatorPage({ onLogin, onSignup, onNavigate }) {
 }
 
 // PAGE: PRICING
-function PricingPage() {
-  useEffect(() => { window.location.replace('/#pricing') }, [])
-  return null
+function PricingPage({ user }) {
+  const [annual, setAnnual] = useState(false)
+  const currentPlan = 'free'
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Syne,sans-serif', color: C.navy, marginBottom: 8 }}>Choose your plan</h1>
+        <p style={{ color: C.muted, fontSize: 15, marginBottom: 20 }}>Upgrade or downgrade any time. No contracts.</p>
+        <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: 10, padding: 4, gap: 4 }}>
+          <button onClick={() => setAnnual(false)}
+            style={{ padding: '7px 18px', borderRadius: 7, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+              background: !annual ? '#fff' : 'transparent', color: !annual ? C.navy : C.muted,
+              boxShadow: !annual ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>Monthly</button>
+          <button onClick={() => setAnnual(true)}
+            style={{ padding: '7px 18px', borderRadius: 7, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+              background: annual ? '#fff' : 'transparent', color: annual ? C.navy : C.muted,
+              boxShadow: annual ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>Annual <span style={{ color: C.success, fontSize: 11 }}>save 2 months</span></button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+        {PLANS.map(plan => {
+          const price = annual ? Math.round(plan.annualPrice / 12) : plan.price
+          const isCurrent = plan.id === currentPlan
+          return (
+            <div key={plan.id} style={{
+              background: plan.popular ? `linear-gradient(160deg,${C.pink},${C.purple})` : '#fff',
+              borderRadius: 14, padding: '22px 18px',
+              border: plan.popular ? 'none' : isCurrent ? `2px solid ${C.pink}` : `1px solid ${C.border}`,
+              boxShadow: plan.popular ? '0 8px 32px rgba(236,72,153,0.25)' : '0 2px 8px rgba(0,0,0,0.05)',
+              position: 'relative'
+            }}>
+              {isCurrent && !plan.popular && <div style={{ position: 'absolute', top: -10, left: 16, background: C.pink, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 20 }}>Current plan</div>}
+              {plan.popular && <div style={{ position: 'absolute', top: -10, left: 16, background: '#fff', color: C.pink, fontSize: 10, fontWeight: 700, padding: '2px 10px', borderRadius: 20 }}>Most popular</div>}
+              <div style={{ color: plan.popular ? '#fff' : C.navy, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{plan.name}</div>
+              <div style={{ color: plan.popular ? 'rgba(255,255,255,0.9)' : C.navy, fontSize: 26, fontWeight: 800, marginBottom: 2 }}>
+                {plan.price === 0 ? 'Free' : `£${price}`}
+                {plan.price > 0 && <span style={{ fontSize: 13, fontWeight: 400 }}>/mo</span>}
+              </div>
+              <div style={{ color: plan.popular ? 'rgba(255,255,255,0.7)' : C.muted, fontSize: 12, marginBottom: 16 }}>{plan.reminders} SMS/month</div>
+              {plan.features.slice(0,4).map((f,i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: plan.popular ? 'rgba(255,255,255,0.85)' : C.text, marginBottom: 6, lineHeight: 1.4 }}>
+                  <span style={{ color: plan.popular ? '#fff' : C.success, fontWeight: 700, flexShrink: 0 }}>✓</span>{f}
+                </div>
+              ))}
+              <button style={{
+                marginTop: 16, width: '100%', padding: '9px 0', borderRadius: 8, border: 'none', cursor: isCurrent ? 'default' : 'pointer',
+                background: plan.popular ? '#fff' : isCurrent ? '#f1f5f9' : `linear-gradient(135deg,${C.pink},${C.purple})`,
+                color: plan.popular ? C.pink : isCurrent ? C.muted : '#fff',
+                fontWeight: 700, fontSize: 13
+              }} disabled={isCurrent}>
+                {isCurrent ? 'Current plan' : 'Upgrade →'}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+      <p style={{ textAlign: 'center', color: C.muted, fontSize: 13, marginTop: 24 }}>
+        Questions? Email <a href="mailto:hello@textreminder.co.uk" style={{ color: C.pink }}>hello@textreminder.co.uk</a>
+      </p>
+    </div>
+  )
 }
 
 // PAGE: BLOG POST
@@ -899,8 +957,7 @@ function AppShell({ user, onLogout, children }) {
   const page = raw === 'log' ? 'message-log' : raw
 
   function setPage(key) {
-    if (key === 'upgrade') { window.open('https://textreminder.co.uk/#pricing', '_blank'); return }
-    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts' }
+    const map = { upcoming: '/upcoming', settings: '/settings', contacts: '/contacts', upgrade: '/pricing' }
     navigate(map[key] || '/upcoming')
   }
 
@@ -970,7 +1027,7 @@ function AppRouter({ user, loading, onLogout }) {
     {isPublicPage && <AiChat />}
     <Routes>
       <Route path="/"                          element={<HomePage onSignup={pub.onSignup} />} />
-      <Route path="/pricing"                   element={<PricingPage {...pub} />} />
+      <Route path="/pricing"                   element={shell(<PricingPage user={user} />)} />
       <Route path="/blog"                      element={<BlogPage   {...pub} />} />
       <Route path="/blog/:slug"                element={<BlogPostRoute {...pub} />} />
       <Route path="/compare"                   element={<ComparePage {...pub} />} />
