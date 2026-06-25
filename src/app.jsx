@@ -832,6 +832,13 @@ function RoiCalculatorPage({ onLogin, onSignup, onNavigate }) {
 function PricingPage({ user }) {
   const [annual, setAnnual] = useState(false)
   const [currentPlan, setCurrentPlan] = useState('free')
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
+  const [isTablet, setIsTablet] = useState(window.innerWidth < 1024)
+  useEffect(() => {
+    const onResize = () => { setIsMobile(window.innerWidth < 640); setIsTablet(window.innerWidth < 1024) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
   useEffect(() => {
     async function fetchPlan() {
       const { data: { user: u } } = await supabase.auth.getUser()
@@ -841,9 +848,10 @@ function PricingPage({ user }) {
     }
     fetchPlan()
   }, [])
+  const cols = isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)'
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginBottom: 6 }}>Choose your plan</h1>
         <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Upgrade or downgrade any time. No contracts.</p>
         <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: 10, padding: 4, gap: 4 }}>
@@ -857,7 +865,7 @@ function PricingPage({ user }) {
               boxShadow: annual ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>Annual <span style={{ color: C.success, fontSize: 11 }}>save 2 months</span></button>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 12 }}>
         {PLANS.map(plan => {
           const price = annual ? Math.round(plan.annualPrice / 12) : plan.price
           const isCurrent = plan.id === currentPlan
