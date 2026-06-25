@@ -552,7 +552,7 @@ function AiChat() {
           <div style={{ padding: '10px 12px', borderTop: '1px solid #f3e8ff', display: 'flex', gap: 8 }}>
             <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
               placeholder="Ask anything..."
-              style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
+              style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '8px 12px', fontSize: 16, outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
               onFocus={e => e.target.style.borderColor = pink} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
             <button onClick={() => send()} disabled={!input.trim() || loading}
               style={{ background: input.trim() && !loading ? grad : '#e2e8f0', color: input.trim() && !loading ? '#fff' : '#94a3b8',
