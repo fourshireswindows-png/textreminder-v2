@@ -831,12 +831,21 @@ function RoiCalculatorPage({ onLogin, onSignup, onNavigate }) {
 // PAGE: PRICING
 function PricingPage({ user }) {
   const [annual, setAnnual] = useState(false)
-  const currentPlan = 'free'
+  const [currentPlan, setCurrentPlan] = useState('free')
+  useEffect(() => {
+    async function fetchPlan() {
+      const { data: { user: u } } = await supabase.auth.getUser()
+      if (!u) return
+      const { data } = await supabase.from('profiles').select('plan').eq('id', u.id).single()
+      if (data?.plan) setCurrentPlan(data.plan)
+    }
+    fetchPlan()
+  }, [])
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Syne,sans-serif', color: C.navy, marginBottom: 8 }}>Choose your plan</h1>
-        <p style={{ color: C.muted, fontSize: 15, marginBottom: 20 }}>Upgrade or downgrade any time. No contracts.</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginBottom: 6 }}>Choose your plan</h1>
+        <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Upgrade or downgrade any time. No contracts.</p>
         <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: 10, padding: 4, gap: 4 }}>
           <button onClick={() => setAnnual(false)}
             style={{ padding: '7px 18px', borderRadius: 7, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
@@ -848,7 +857,7 @@ function PricingPage({ user }) {
               boxShadow: annual ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>Annual <span style={{ color: C.success, fontSize: 11 }}>save 2 months</span></button>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
         {PLANS.map(plan => {
           const price = annual ? Math.round(plan.annualPrice / 12) : plan.price
           const isCurrent = plan.id === currentPlan
