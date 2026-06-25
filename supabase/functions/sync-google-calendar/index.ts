@@ -32,7 +32,9 @@ serve(async (req) => {
       .eq("id", user_id)
       .single();
 
+    console.log("[sync] user:", user_id, "has_token:", !!profile?.google_refresh_token);
     if (!profile?.google_refresh_token) {
+      console.error("[sync] No refresh token stored for user:", user_id);
       return new Response(JSON.stringify({ error: "No Google credentials" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -51,7 +53,9 @@ serve(async (req) => {
     });
     const tokenData = await tokenRes.json();
 
+    console.log("[sync] token response:", tokenData.error ?? "ok", "has_access_token:", !!tokenData.access_token);
     if (!tokenData.access_token) {
+      console.error("[sync] Token refresh failed:", JSON.stringify(tokenData));
       return new Response(JSON.stringify({ error: "Token refresh failed", detail: tokenData }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -74,7 +78,9 @@ serve(async (req) => {
     });
     const calData = await calRes.json();
 
+    console.log("[sync] calendar fetch:", calRes.status, "events:", calData.items?.length ?? 0);
     if (!calRes.ok) {
+      console.error("[sync] Calendar fetch failed:", JSON.stringify(calData));
       return new Response(JSON.stringify({ error: "Calendar fetch failed", detail: calData }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -128,18 +134,19 @@ serve(async (req) => {
         .upsert(rows, { onConflict: "user_id,external_id" });
     }
 
-    // Remove events no longer in Google Calendar (but preserve manually added ones)
+    // Remove events no longer in Google Calendar (preserve manually added ones)
     const ids = rows.map((r: any) => r.external_id);
     if (ids.length > 0) {
       await supabase
         .from("calendar_events")
         .delete()
         .eq("user_id", user_id)
+        .eq("is_manual", false)
         .gte("start_time", now.toISOString())
-        .not("external_id", "in", `(${ids.map((id: string) => `"${id}"`).join(",")})`)
-        .not("external_id", "like", "manual-%");
+        .not("external_id", "in", `(${ids.map((id: string) => `'${id}'`).join(",")})`);
     }
 
+    console.log("[sync] done, synced:", rows.length, "events");
     return new Response(
       JSON.stringify({ success: true, events_synced: rows.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
