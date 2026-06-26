@@ -32,9 +32,7 @@ serve(async (req) => {
       .eq("id", user_id)
       .single();
 
-    console.log("[sync] user:", user_id, "has_token:", !!profile?.google_refresh_token);
     if (!profile?.google_refresh_token) {
-      console.error("[sync] No refresh token stored for user:", user_id);
       return new Response(JSON.stringify({ error: "No Google credentials" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -53,9 +51,7 @@ serve(async (req) => {
     });
     const tokenData = await tokenRes.json();
 
-    console.log("[sync] token response:", tokenData.error ?? "ok", "has_access_token:", !!tokenData.access_token);
     if (!tokenData.access_token) {
-      console.error("[sync] Token refresh failed:", JSON.stringify(tokenData));
       return new Response(JSON.stringify({ error: "Token refresh failed", detail: tokenData }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -66,17 +62,7 @@ serve(async (req) => {
     const future = new Date();
     future.setDate(future.getDate() + 60);
 
-    // Get list of all calendars and log them so we can identify the right one
-    const calListRes  = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const calListData = await calListRes.json();
-    console.log("[sync] calendars available:", (calListData.items ?? []).map((c: any) => `${c.summary} (${c.id})`).join(" | "));
-
-    const calendarId = "primary";
-    console.log("[sync] using calendar:", calendarId);
-
-    const calUrl = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
+    const calUrl = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
     calUrl.searchParams.set("timeMin",      now.toISOString());
     calUrl.searchParams.set("timeMax",      future.toISOString());
     calUrl.searchParams.set("singleEvents", "true");
@@ -88,9 +74,7 @@ serve(async (req) => {
     });
     const calData = await calRes.json();
 
-    console.log("[sync] calendar fetch:", calRes.status, "events:", calData.items?.length ?? 0);
     if (!calRes.ok) {
-      console.error("[sync] Calendar fetch failed:", JSON.stringify(calData));
       return new Response(JSON.stringify({ error: "Calendar fetch failed", detail: calData }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -139,32 +123,23 @@ serve(async (req) => {
     });
 
     if (rows.length > 0) {
-      const { error: upsertError } = await supabase
+      await supabase
         .from("calendar_events")
         .upsert(rows, { onConflict: "user_id,external_id" });
-      if (upsertError) {
-        console.error("[sync] Upsert failed:", JSON.stringify(upsertError));
-        return new Response(
-          JSON.stringify({ error: "Upsert failed", detail: upsertError }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
     }
 
-    // Remove events no longer in Google Calendar (preserve manually added ones)
+    // Remove events no longer in Google Calendar (but preserve manually added ones)
     const ids = rows.map((r: any) => r.external_id);
     if (ids.length > 0) {
-      const { error: deleteError } = await supabase
+      await supabase
         .from("calendar_events")
         .delete()
         .eq("user_id", user_id)
-        .eq("is_manual", false)
         .gte("start_time", now.toISOString())
-        .not("external_id", "in", `(${ids.map((id: string) => `'${id}'`).join(",")})`)
-      if (deleteError) console.error("[sync] Delete error (non-fatal):", JSON.stringify(deleteError));
+        .not("external_id", "in", `(${ids.map((id: string) => `"${id}"`).join(",")})`)
+        .not("external_id", "like", "manual-%");
     }
 
-    console.log("[sync] done, synced:", rows.length, "events");
     return new Response(
       JSON.stringify({ success: true, events_synced: rows.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

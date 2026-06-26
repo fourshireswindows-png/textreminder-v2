@@ -78,7 +78,6 @@ export default function Upcoming() {
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
-  const [lastSyncTime, setLastSyncTime] = useState(null)
   const [viewMode, setViewMode]     = useState(() => localStorage.getItem('tr_viewMode') || 'calendar')
   const [sentThisMonth, setSentThisMonth] = useState(0)
 
@@ -130,24 +129,14 @@ export default function Upcoming() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     try {
-      const res = await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/sync-google-calendar', {
+      await fetch('https://fxzfaxlhhypiigcmlasx.supabase.co/functions/v1/sync-google-calendar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: 'sb_publishable_Z1cXjCDPE95Vo_GByx9kHA_Ff6dhdJO' },
         body: JSON.stringify({ user_id: user.id }),
       })
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        console.error('Sync error:', data.error, data.detail)
-        setSyncMsg('Sync error: ' + (data.error || 'unknown'))
-        setTimeout(() => setSyncMsg(''), 8000)
-      } else {
-        setLastSyncTime(new Date())
-      }
       await loadEvents()
     } catch (e) {
       console.error('Sync failed', e)
-      setSyncMsg('Sync failed: ' + String(e))
-      setTimeout(() => setSyncMsg(''), 8000)
     }
   }
 
@@ -402,9 +391,11 @@ export default function Upcoming() {
     else { deleteManualEvent(ev, 'one') }
   }
 
-  function lastSyncedText() {
-    if (!lastSyncTime) return null
-    const mins = Math.floor((Date.now() - lastSyncTime) / 60000)
+  function lastSyncedText(evs) {
+    const times = (evs || []).map(e => e.last_synced).filter(Boolean)
+    if (!times.length) return null
+    const latest = new Date(times.sort().at(-1))
+    const mins = Math.floor((Date.now() - latest) / 60000)
     if (mins < 1) return 'just now'
     if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`
     const hrs = Math.floor(mins / 60)
@@ -477,9 +468,9 @@ export default function Upcoming() {
     return (
     <div style={{ background: 'linear-gradient(135deg,#f3e8ff,#fdf4ff)', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 7px', marginBottom: 3, borderLeft: `3px solid ${ev.is_manual ? pink : purple}`, position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: text, lineHeight: 1.3, paddingRight: ev.is_manual ? 34 : 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <span title={(ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
+        <span title={ev.reminder_sent ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
           style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-            background: (ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
+            background: ev.reminder_sent ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
         {new Date(ev.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} {ev.title}
         {ev.is_manual && ev.recurring_group_id && <span title="Recurring" style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>REC</span>}
       </div>
@@ -542,8 +533,8 @@ export default function Upcoming() {
         <div style={{ width: 1, background: border, alignSelf: 'stretch', flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-            <span title={(ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
-              style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: (ev.reminder_sent || ev.reminder_sent_indices?.length > 0) ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
+            <span title={ev.reminder_sent ? 'Reminder sent' : hasPhone ? 'Reminder pending' : 'No phone — reminder will not send'}
+              style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: ev.reminder_sent ? '#22c55e' : hasPhone ? '#f59e0b' : '#cbd5e1' }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: text }}>{ev.title}</span>
             {ev.is_manual && ev.recurring_group_id && <span style={{ fontSize: 9, opacity: 0.6, color: muted }}>REC</span>}
           </div>
@@ -641,7 +632,7 @@ export default function Upcoming() {
             )}
             {(profile?.calendar_provider || profile?.google_calendar_connected || profile?.google_access_token || events.some(e => !e.is_manual)) && (
               <>
-                {lastSyncedText() && <span style={{ fontSize: 11, color: muted }}>Last synced {lastSyncedText()}</span>}
+                {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>Last synced {lastSyncedText(events)}</span>}
                 <span style={{ fontSize: 11, color: muted }}>Syncs every 10 minutes</span>
               </>
             )}
