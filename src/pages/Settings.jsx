@@ -78,6 +78,8 @@ export default function Settings() {
       google_access_token:       null,
       calendar_provider:         null,
     }).eq('id', user.id)
+    // Clear synced calendar events — manual ones are preserved
+    await supabase.from('calendar_events').delete().eq('user_id', user.id).eq('is_manual', false)
     setProfile(p => ({ ...p, google_calendar_connected: false, google_calendar_email: null, calendar_provider: null }))
   }
 
@@ -267,10 +269,6 @@ export default function Settings() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 Connect Google Calendar
-              </button>
-              <button onClick={disconnectCalendar}
-                style={{ padding:'8px 16px', borderRadius:8, border:'1px solid #fecdd3', background:'#fff5f5', color:'#ef4444', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-                Disconnect
               </button>
             </div>
           </div>

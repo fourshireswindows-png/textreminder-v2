@@ -66,7 +66,17 @@ serve(async (req) => {
     const future = new Date();
     future.setDate(future.getDate() + 60);
 
-    const calUrl = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
+    // Get list of all calendars and log them so we can identify the right one
+    const calListRes  = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const calListData = await calListRes.json();
+    console.log("[sync] calendars available:", (calListData.items ?? []).map((c: any) => `${c.summary} (${c.id})`).join(" | "));
+
+    const calendarId = "primary";
+    console.log("[sync] using calendar:", calendarId);
+
+    const calUrl = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     calUrl.searchParams.set("timeMin",      now.toISOString());
     calUrl.searchParams.set("timeMax",      future.toISOString());
     calUrl.searchParams.set("singleEvents", "true");
@@ -129,21 +139,29 @@ serve(async (req) => {
     });
 
     if (rows.length > 0) {
-      await supabase
+      const { error: upsertError } = await supabase
         .from("calendar_events")
         .upsert(rows, { onConflict: "user_id,external_id" });
+      if (upsertError) {
+        console.error("[sync] Upsert failed:", JSON.stringify(upsertError));
+        return new Response(
+          JSON.stringify({ error: "Upsert failed", detail: upsertError }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Remove events no longer in Google Calendar (preserve manually added ones)
     const ids = rows.map((r: any) => r.external_id);
     if (ids.length > 0) {
-      await supabase
+      const { error: deleteError } = await supabase
         .from("calendar_events")
         .delete()
         .eq("user_id", user_id)
         .eq("is_manual", false)
         .gte("start_time", now.toISOString())
-        .not("external_id", "in", `(${ids.map((id: string) => `'${id}'`).join(",")})`);
+        .not("external_id", "in", `(${ids.map((id: string) => `'${id}'`).join(",")})`)
+      if (deleteError) console.error("[sync] Delete error (non-fatal):", JSON.stringify(deleteError));
     }
 
     console.log("[sync] done, synced:", rows.length, "events");

@@ -78,6 +78,7 @@ export default function Upcoming() {
   const [isMobile, setIsMobile]     = useState(window.innerWidth < 768)
   const [syncing, setSyncing]       = useState(false)
   const [syncMsg, setSyncMsg]       = useState('')
+  const [lastSyncTime, setLastSyncTime] = useState(null)
   const [viewMode, setViewMode]     = useState(() => localStorage.getItem('tr_viewMode') || 'calendar')
   const [sentThisMonth, setSentThisMonth] = useState(0)
 
@@ -139,6 +140,8 @@ export default function Upcoming() {
         console.error('Sync error:', data.error, data.detail)
         setSyncMsg('Sync error: ' + (data.error || 'unknown'))
         setTimeout(() => setSyncMsg(''), 8000)
+      } else {
+        setLastSyncTime(new Date())
       }
       await loadEvents()
     } catch (e) {
@@ -399,11 +402,9 @@ export default function Upcoming() {
     else { deleteManualEvent(ev, 'one') }
   }
 
-  function lastSyncedText(evs) {
-    const times = (evs || []).map(e => e.last_synced).filter(Boolean)
-    if (!times.length) return null
-    const latest = new Date(times.sort().at(-1))
-    const mins = Math.floor((Date.now() - latest) / 60000)
+  function lastSyncedText() {
+    if (!lastSyncTime) return null
+    const mins = Math.floor((Date.now() - lastSyncTime) / 60000)
     if (mins < 1) return 'just now'
     if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`
     const hrs = Math.floor(mins / 60)
@@ -640,7 +641,7 @@ export default function Upcoming() {
             )}
             {(profile?.calendar_provider || profile?.google_calendar_connected || profile?.google_access_token || events.some(e => !e.is_manual)) && (
               <>
-                {lastSyncedText(events) && <span style={{ fontSize: 11, color: muted }}>Last synced {lastSyncedText(events)}</span>}
+                {lastSyncedText() && <span style={{ fontSize: 11, color: muted }}>Last synced {lastSyncedText()}</span>}
                 <span style={{ fontSize: 11, color: muted }}>Syncs every 10 minutes</span>
               </>
             )}

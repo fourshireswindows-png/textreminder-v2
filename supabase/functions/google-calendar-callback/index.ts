@@ -71,10 +71,23 @@ serve(async (req) => {
 
     const { access_token, refresh_token: new_refresh_token } = tokenData;
 
-    // ── Step 2: Save tokens to Supabase profiles ──────────────────────
+    // ── Step 2: Get Google account email ──────────────────────────────
+    let google_email = "";
+    try {
+      const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      const userInfo = await userInfoRes.json();
+      google_email   = userInfo.email ?? "";
+      console.log("Google email:", google_email);
+    } catch (e) {
+      console.error("Failed to fetch Google email:", e);
+    }
+
+    // ── Step 3: Save tokens to Supabase profiles ──────────────────────
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Read existing refresh token (use maybeSingle so missing row doesn't crash)
+    // Read existing refresh token in case Google doesn't return a new one
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("google_refresh_token")
@@ -85,14 +98,26 @@ serve(async (req) => {
       ? new_refresh_token
       : existingProfile?.google_refresh_token ?? null;
 
+    console.log("Saving token — new:", !!new_refresh_token, "existing:", !!existingProfile?.google_refresh_token, "saving:", !!refresh_token_to_save);
+
+    if (!refresh_token_to_save) {
+      console.error("No refresh token available — aborting");
+      return new Response(
+        JSON.stringify({ error: "No refresh token returned by Google. Please disconnect and reconnect to grant offline access." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Upsert so it works whether or not the profile row already exists
     const { error: profileError } = await supabase
       .from("profiles")
       .upsert({
-        id:                   user_id,
-        google_access_token:  access_token,
-        google_refresh_token: refresh_token_to_save,
-        calendar_provider:    "google",
+        id:                        user_id,
+        google_access_token:       access_token,
+        google_refresh_token:      refresh_token_to_save,
+        calendar_provider:         "google",
+        google_calendar_connected: true,
+        google_calendar_email:     google_email,
       }, { onConflict: "id" });
 
     if (profileError) {
@@ -140,21 +165,20 @@ serve(async (req) => {
 
     const events = calData.items ?? [];
 
-    // ── Step 4: Delete existing events for this user ──────────────────
+    // ── Step 4: Delete existing non-manual events for this user ──────────────────
     const { error: deleteError } = await supabase
       .from("calendar_events")
       .delete()
-      .eq("user_id", user_id);
+      .eq("user_id", user_id)
+      .eq("is_manual", false);
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
-      return new Response(
-        JSON.stringify({ error: "Failed to clear old events", detail: deleteError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // Non-fatal — continue with insert
     }
 
     // ── Step 5: Insert new events ─────────────────────────────────────
+    const now2 = new Date();
     const rows = events
       .filter((e: any) => e.start?.dateTime || e.start?.date)
       .map((e: any) => ({
@@ -164,6 +188,7 @@ serve(async (req) => {
         start_time:  e.start.dateTime ?? e.start.date,
         end_time:    e.end?.dateTime  ?? e.end?.date ?? e.start.dateTime ?? e.start.date,
         location:    e.location ?? null,
+        last_synced: now2.toISOString(),
       }));
 
     if (rows.length > 0) {
