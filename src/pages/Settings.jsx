@@ -53,7 +53,9 @@ export default function Settings() {
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
-  function connectCalendar() {
+  async function connectCalendar() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
     const GOOGLE_CLIENT_ID = '508681493155-5msuj56461c0tv3midh9tv05lmese9pd.apps.googleusercontent.com'
     const GOOGLE_REDIRECT  = 'https://www.textreminder.co.uk/auth/calendar/callback'
     const GOOGLE_SCOPE     = 'https://www.googleapis.com/auth/calendar.readonly'
@@ -64,6 +66,7 @@ export default function Settings() {
       scope:         GOOGLE_SCOPE,
       access_type:   'offline',
       prompt:        'consent',
+      state:         user.id,
     })
     window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString()
   }

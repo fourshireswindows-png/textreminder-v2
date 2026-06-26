@@ -1006,6 +1006,64 @@ function BlogPostRoute(props) {
   return <BlogPostPage slug={slug} {...props} />
 }
 
+// ─── CalendarCallback ─────────────────────────────────────────────────────────
+function CalendarCallback() {
+  const [status, setStatus] = useState('processing')
+  const [msg, setMsg]       = useState('Connecting your Google Calendar...')
+
+  useEffect(() => {
+    async function handle() {
+      const params = new URLSearchParams(window.location.search)
+      const code   = params.get('code')
+      const userId = params.get('state')
+      if (!code || !userId) {
+        setStatus('error'); setMsg('Invalid callback — missing required parameters.'); return
+      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch(EDGE_FN, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+          body:    JSON.stringify({ code, user_id: userId }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || `Server error ${res.status}`)
+        await supabase.from('profiles').update({ google_calendar_connected: true }).eq('id', userId)
+        setStatus('success'); setMsg('Google Calendar connected! Redirecting...')
+        setTimeout(() => { window.location.href = '/settings' }, 2000)
+      } catch (err) {
+        setStatus('error'); setMsg(err.message || 'Connection failed. Please try again.')
+      }
+    }
+    handle()
+  }, [])
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', padding:20 }}>
+      <div style={{ background:'#fff', borderRadius:16, padding:40, maxWidth:400, width:'100%', textAlign:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ fontSize:40, marginBottom:16 }}>
+          {status === 'success' ? '✅' : status === 'error' ? '❌' : '📅'}
+        </div>
+        <h2 style={{ fontSize:20, fontWeight:800, color:'#0f172a', marginBottom:10 }}>
+          {status === 'processing' ? 'Connecting calendar…' : status === 'success' ? 'Calendar connected!' : 'Connection failed'}
+        </h2>
+        <p style={{ fontSize:14, color:'#64748b', lineHeight:1.6 }}>{msg}</p>
+        {status === 'error' && (
+          <button onClick={() => window.location.href = '/settings'}
+            style={{ marginTop:20, padding:'10px 24px', background:'linear-gradient(135deg,#ec4899,#a855f7)', color:'#fff', border:'none', borderRadius:8, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+            Back to Settings
+          </button>
+        )}
+        {status === 'processing' && (
+          <div style={{ marginTop:20, display:'flex', justifyContent:'center' }}>
+            <div style={{ width:24, height:24, border:'3px solid #e2e8f0', borderTop:'3px solid #a855f7', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── AppRouter (must live inside BrowserRouter to use useNavigate) ────────────
 function AppRouter({ user, loading, onLogout }) {
   const navigate = useNavigate()
@@ -1066,7 +1124,8 @@ function AppRouter({ user, loading, onLogout }) {
       <Route path="/privacy"          element={<PrivacyPage />} />
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/signup"          element={<SignupPage />} />
-      <Route path="/auth/callback"   element={<AuthCallback />} />
+      <Route path="/auth/callback"          element={<AuthCallback />} />
+      <Route path="/auth/calendar/callback" element={<CalendarCallback />} />
       <Route path="/upcoming"        element={shell(<UpcomingPage />)} />
       <Route path="/settings"        element={shell(<SettingsPage />)} />
       <Route path="/contacts"        element={shell(<ContactsPage />)} />
