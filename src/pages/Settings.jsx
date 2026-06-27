@@ -72,7 +72,7 @@ export default function Settings() {
   }
 
   async function disconnectCalendar() {
-    if (!confirm('Disconnect Google Calendar? Reminders will stop syncing until you reconnect.')) return
+    if (!confirm('Disconnect Google Calendar? Your synced appointments will be removed. Manual appointments are kept.')) return
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('profiles').update({
       google_calendar_connected: false,
@@ -81,6 +81,7 @@ export default function Settings() {
       google_access_token:       null,
       calendar_provider:         null,
     }).eq('id', user.id)
+    await supabase.from('calendar_events').delete().eq('user_id', user.id).eq('is_manual', false)
     setProfile(p => ({ ...p, google_calendar_connected: false, google_calendar_email: null, calendar_provider: null }))
   }
 
