@@ -135,9 +135,9 @@ serve(async (req) => {
         .from("calendar_events")
         .delete()
         .eq("user_id", user_id)
+        .eq("is_manual", false)
         .gte("start_time", now.toISOString())
-        .not("external_id", "in", `(${ids.map((id: string) => `"${id}"`).join(",")})`)
-        .not("external_id", "like", "manual-%");
+        .not("external_id", "in", `(${ids.map((id: string) => `"${id}"`).join(",")})`);
     }
 
     return new Response(

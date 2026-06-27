@@ -972,6 +972,18 @@ import CommercialExterior from './pages/trades/CommercialExterior.jsx'
 import PrivacyPage        from './pages/Privacy.jsx'
 
 // ─── App shell (logged-in layout with AppNav) ─────────────────────────────────
+function AppFooter() {
+  return (
+    <div style={{ borderTop: '1px solid #1e293b', marginTop: 40, padding: '20px', textAlign: 'center' }}>
+      <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+        <a href="/privacy" style={{ color: '#94a3b8', textDecoration: 'none', marginRight: 16 }}>Privacy Policy</a>
+        <a href="mailto:support@textreminder.co.uk" style={{ color: '#94a3b8', textDecoration: 'none', marginRight: 16 }}>Contact Support</a>
+        <span style={{ color: '#475569' }}>© {new Date().getFullYear()} TextReminder</span>
+      </p>
+    </div>
+  )
+}
+
 function AppShell({ user, onLogout, children }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -989,6 +1001,7 @@ function AppShell({ user, onLogout, children }) {
       <div style={{ flex: 1, maxWidth: 1100, margin: '0 auto', width: '100%', padding: '24px 20px' }}>
         {children}
       </div>
+      <AppFooter />
     </div>
   )
 }

@@ -140,11 +140,12 @@ serve(async (req) => {
 
     const events = calData.items ?? [];
 
-    // ── Step 4: Delete existing events for this user ──────────────────
+    // ── Step 4: Delete existing synced events for this user (preserve manual) ──
     const { error: deleteError } = await supabase
       .from("calendar_events")
       .delete()
-      .eq("user_id", user_id);
+      .eq("user_id", user_id)
+      .eq("is_manual", false);
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
